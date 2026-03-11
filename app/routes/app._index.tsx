@@ -8,6 +8,7 @@ import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { createListing } from "~/services/listings.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -17,32 +18,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
-  const response = await admin.graphql(
-    `#graphql
-      mutation createProduct {
-        productCreate(product: { title: "Test Product From App" }) {
-          product {
-            id
-            title
-            handle
-            status
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-  );
+  const listing = await createListing({
+    admin,
+    styleId: "DD1391-100",
+    title: "Nike Dunk Panda",
+    brand: "Nike",
+    size: "9",
+    price: 350,
+    quantity: 2,
+    consignorId: "cmmlq8sfu0000cu6g84sy6kb6",
+  });
 
-  const json = await response.json();
-
-  console.log("Shopify response:", json);
-
-  return {
-    product: json?.data?.productCreate?.product,
-  };
+  return { listing };
 };
 
 export default function Index() {
@@ -54,47 +41,34 @@ export default function Index() {
     fetcher.formMethod === "POST";
 
   useEffect(() => {
-    if (fetcher.data?.product?.id) {
-      shopify.toast.show("Product created");
+    if (fetcher.data?.listing?.id) {
+      shopify.toast.show("Listing created");
     }
-  }, [fetcher.data?.product?.id, shopify]);
+  }, [fetcher.data?.listing?.id, shopify]);
 
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const createTestListing = () => fetcher.submit({}, { method: "POST" });
 
   return (
     <s-page heading="Shopify Consignment App">
-      <s-button slot="primary-action" onClick={generateProduct}>
-        Generate a product
+      <s-button slot="primary-action" onClick={createTestListing}>
+        Create test listing
       </s-button>
 
-      <s-section heading="Test Shopify product creation">
+      <s-section heading="Test listing creation">
         <s-paragraph>
-          Click the button to create a product in your Shopify dev store.
+          Click the button to create a test listing and sync the product to Shopify.
         </s-paragraph>
 
         <s-stack direction="inline" gap="base">
           <s-button
-            onClick={generateProduct}
+            onClick={createTestListing}
             {...(isLoading ? { loading: true } : {})}
           >
-            Generate product
+            Create test listing
           </s-button>
-
-          {fetcher.data?.product && (
-            <s-button
-              onClick={() => {
-                shopify.intents.invoke?.("edit:shopify/Product", {
-                  value: fetcher.data?.product?.id,
-                });
-              }}
-              variant="tertiary"
-            >
-              Edit product
-            </s-button>
-          )}
         </s-stack>
 
-        {fetcher.data?.product && (
+        {fetcher.data?.listing && (
           <s-box
             padding="base"
             borderWidth="base"
@@ -103,7 +77,7 @@ export default function Index() {
           >
             <pre style={{ margin: 0 }}>
               <code>
-                {JSON.stringify(fetcher.data.product, null, 2)}
+                {JSON.stringify(fetcher.data.listing, null, 2)}
               </code>
             </pre>
           </s-box>

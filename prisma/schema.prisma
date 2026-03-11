@@ -28,59 +28,70 @@ model Session {
 }
 
 model Consignor {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  commissionRate Float   @default(0.85)
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  commissionRate Float    @default(0.85)
 
-  listings      Listing[]
-  payouts       Payout[]
-  transactions  Transaction[]
+  listings       Listing[]
+  payouts        Payout[]
+  transactions   Transaction[]
 
-  createdAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  title       String
-  brand       String?
-  styleId     String?  @unique
-  description String?
+  id                String   @id @default(cuid())
+  title             String
+  brand             String?
+  styleId           String   @unique
+  description       String?
 
-  variants    Variant[]
+  shopifyProductId  String?  @unique
 
-  createdAt   DateTime @default(now())
+  variants          Variant[]
+
+  createdAt         DateTime @default(now())
 }
 
 model Variant {
-  id         String   @id @default(cuid())
-  productId  String
-  size       String
+  id                 String   @id @default(cuid())
+  productId          String
+  size               String
 
-  product    Product  @relation(fields: [productId], references: [id])
-  listings   Listing[]
+  shopifyVariantId   String?  @unique
+  inventoryItemId    String?
+
+  product            Product  @relation(fields: [productId], references: [id])
+  listings           Listing[]
+
+  createdAt          DateTime @default(now())
+
+  @@unique([productId, size])
 }
 
 model Listing {
-  id           String   @id @default(cuid())
-  consignorId  String
-  variantId    String
+  id            String   @id @default(cuid())
+  consignorId   String
+  variantId     String
 
-  price        Float
-  quantity     Int
-  status       String   @default("active")
+  price         Float
+  quantity      Int
+  status        String   @default("active")
 
-  consignor    Consignor @relation(fields: [consignorId], references: [id])
-  variant      Variant   @relation(fields: [variantId], references: [id])
+  consignor     Consignor @relation(fields: [consignorId], references: [id])
+  variant       Variant   @relation(fields: [variantId], references: [id])
 
-  orderItems   OrderItem[]
+  orderItems    OrderItem[]
 
-  createdAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([variantId])
 }
 
 model Order {
   id        String      @id @default(cuid())
-  shopifyId String?
+  shopifyId String?     @unique
   total     Float
 
   items     OrderItem[]
@@ -89,35 +100,35 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   orderId   String
   listingId String
 
   price     Float
   quantity  Int
 
-  order     Order   @relation(fields: [orderId], references: [id])
-  listing   Listing @relation(fields: [listingId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id])
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
-  consignorId String
-  amount      Float
-  type        String
+  id           String   @id @default(cuid())
+  consignorId  String
+  amount       Float
+  type         String
 
-  consignor   Consignor @relation(fields: [consignorId], references: [id])
+  consignor    Consignor @relation(fields: [consignorId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 }
 
 model Payout {
-  id          String   @id @default(cuid())
-  consignorId String
-  amount      Float
-  status      String   @default("pending")
+  id           String   @id @default(cuid())
+  consignorId  String
+  amount       Float
+  status       String   @default("pending")
 
-  consignor   Consignor @relation(fields: [consignorId], references: [id])
+  consignor    Consignor @relation(fields: [consignorId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 }

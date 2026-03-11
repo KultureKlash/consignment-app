@@ -18,11 +18,26 @@ These features form the foundation of the marketplace.
 
 ## Infrastructure
 
-[ ] Remix Shopify app setup
-[ ] PostgreSQL database
-[ ] Prisma ORM configuration
-[ ] Environment configuration
-[ ] Shopify OAuth authentication
+[x] Remix Shopify app setup
+[x] PostgreSQL / SQLite database
+[x] Prisma ORM configuration
+[x] Environment configuration
+[x] Shopify OAuth authentication (handled by Shopify template)
+
+---
+
+## Marketplace Roles
+
+The system supports three user roles:
+
+**Admin (Shopify Store Owner)**
+Logs in through Shopify Admin and manages the marketplace through the embedded Shopify app.
+
+**Consignors / Resellers**
+Log into the marketplace dashboard inside the application.
+
+**Customers**
+Purchase products through the Shopify storefront.
 
 ---
 
@@ -30,19 +45,18 @@ These features form the foundation of the marketplace.
 
 [ ] StockX API integration
 [ ] Product import by Style ID
-[ ] Variant creation (sizes)
-[ ] Product image import
 [ ] Store product catalog locally
+[ ] Product image import
+[ ] Variant creation (sizes)
 
 ---
 
-## Barcode Support
+## Catalog Integrity
 
-[ ] GTIN storage for variants
-[ ] Barcode scanner integration
-[ ] Camera scanning support
-[ ] USB scanner support
-[ ] Variant auto-detection from barcode
+[ ] Enforce unique `styleId` for products
+[ ] Prevent duplicate product creation
+[ ] Validate size variants per product
+[ ] Normalize brand and product naming
 
 ---
 
@@ -50,8 +64,9 @@ These features form the foundation of the marketplace.
 
 [ ] Consignor database model
 [ ] Consignor login system
-[ ] Consignor dashboard
+[ ] Consignor authentication (email / magic link)
 [ ] Consignor profile management
+[ ] Consignor dashboard base
 
 ---
 
@@ -61,16 +76,27 @@ These features form the foundation of the marketplace.
 [ ] Listing price input
 [ ] Listing quantity input
 [ ] Listing activation timestamp
-[ ] Listing status (active/inactive)
+[ ] Listing status (active / inactive)
 
 ---
 
-## Shopify Sync
+## Shopify Product Sync
 
 [ ] Create Shopify product from catalog
-[ ] Create Shopify variants
-[ ] Update Shopify variant price
+[ ] Create Shopify variants (sizes)
+[ ] Store Shopify `productId` in database
+[ ] Store Shopify `variantId` in database
 [ ] Sync lowest listing price to Shopify
+
+---
+
+## Inventory Synchronization
+
+[ ] Aggregate listing quantities per variant
+[ ] Sync total inventory to Shopify variant
+[ ] Trigger inventory sync when listing is created
+[ ] Trigger inventory sync when listing quantity changes
+[ ] Trigger inventory sync after order allocation
 
 ---
 
@@ -90,11 +116,12 @@ These features enable multi-seller marketplace functionality.
 
 ## Order Processing
 
-[ ] Shopify order webhook
+[ ] Shopify `orders/create` webhook
 [ ] Variant detection from order
 [ ] Listing allocation
-[ ] Quantity deduction
+[ ] Quantity deduction from listing
 [ ] Listing deactivation when quantity = 0
+[ ] Prevent oversell with database transactions
 
 ---
 
@@ -148,18 +175,30 @@ Improves usability for sellers.
 
 ---
 
-# Phase 4 — Admin Tools
+## Barcode Support
 
-Controls marketplace operations.
+[ ] GTIN storage for variants
+[ ] Barcode scanner integration
+[ ] Camera scanning support
+[ ] USB scanner support
+[ ] Variant auto-detection from barcode
 
 ---
 
-## Admin Dashboard
+# Phase 4 — Admin Tools
 
+Admins manage the marketplace from **inside Shopify Admin**.
+
+---
+
+## Admin Dashboard (Embedded Shopify App)
+
+[ ] Marketplace overview
 [ ] Consignor management
 [ ] Product catalog management
 [ ] Listing moderation
 [ ] Order monitoring
+[ ] Consignor account freeze / suspension
 
 ---
 
@@ -173,7 +212,7 @@ Controls marketplace operations.
 
 # Phase 5 — Advanced Marketplace Features
 
-These features will enhance the platform later.
+These features enhance the platform after the core system is stable.
 
 ---
 
