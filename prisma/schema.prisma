@@ -1,23 +1,17 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
   provider = "sqlite"
-  url      = "file:dev.sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Session {
-  id            String    @id
+  id            String   @id
   shop          String
   state         String
-  isOnline      Boolean   @default(false)
+  isOnline      Boolean  @default(false)
   scope         String?
   expires       DateTime?
   accessToken   String
@@ -25,10 +19,105 @@ model Session {
   firstName     String?
   lastName      String?
   email         String?
-  accountOwner  Boolean   @default(false)
+  accountOwner  Boolean  @default(false)
   locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
+  collaborator  Boolean? @default(false)
+  emailVerified Boolean? @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+}
+
+model Consignor {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  commissionRate Float   @default(0.85)
+
+  listings      Listing[]
+  payouts       Payout[]
+  transactions  Transaction[]
+
+  createdAt     DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  brand       String?
+  styleId     String?  @unique
+  description String?
+
+  variants    Variant[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Variant {
+  id         String   @id @default(cuid())
+  productId  String
+  size       String
+
+  product    Product  @relation(fields: [productId], references: [id])
+  listings   Listing[]
+}
+
+model Listing {
+  id           String   @id @default(cuid())
+  consignorId  String
+  variantId    String
+
+  price        Float
+  quantity     Int
+  status       String   @default("active")
+
+  consignor    Consignor @relation(fields: [consignorId], references: [id])
+  variant      Variant   @relation(fields: [variantId], references: [id])
+
+  orderItems   OrderItem[]
+
+  createdAt    DateTime @default(now())
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  shopifyId String?
+  total     Float
+
+  items     OrderItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  listingId String
+
+  price     Float
+  quantity  Int
+
+  order     Order   @relation(fields: [orderId], references: [id])
+  listing   Listing @relation(fields: [listingId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  consignorId String
+  amount      Float
+  type        String
+
+  consignor   Consignor @relation(fields: [consignorId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+model Payout {
+  id          String   @id @default(cuid())
+  consignorId String
+  amount      Float
+  status      String   @default("pending")
+
+  consignor   Consignor @relation(fields: [consignorId], references: [id])
+
+  createdAt   DateTime @default(now())
 }
