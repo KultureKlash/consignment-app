@@ -29,7 +29,11 @@ pnpm-debug.log*
 # Database
 /prisma/dev.sqlite
 /prisma/dev.sqlite-journal
+/prisma/test.sqlite
+/prisma/test.sqlite-journal
+/prisma/prisma/
 database.sqlite
+*.sqlite
 
 # OS files
 .DS_Store

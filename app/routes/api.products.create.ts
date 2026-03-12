@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import prisma from "~/db.server";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function action({ request }: any) {
   const body = await request.json();
 
