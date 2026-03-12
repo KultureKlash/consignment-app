@@ -2,6 +2,18 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
 
+async function getAllPublicationIds(admin: AdminApiContext): Promise<string[]> {
+  const response = await admin.graphql(`#graphql
+    query {
+      publications(first: 10) {
+        nodes { id name }
+      }
+    }
+  `);
+  const { data } = await response.json();
+  return data.publications.nodes.map((p: { id: string }) => p.id);
+}
+
 export async function ensureShopifyProductAndVariant({
   admin,
   product,
@@ -58,6 +70,23 @@ export async function ensureShopifyProductAndVariant({
     }
 
     const shopifyVariant = shopifyProduct.variants.nodes[0];
+
+    // Publish to all sales channels so it appears on storefront, Shop app, POS
+    const publicationIds = await getAllPublicationIds(admin);
+    await admin.graphql(
+      `#graphql
+      mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+        publishablePublish(id: $id, input: $input) {
+          userErrors { field message }
+        }
+      }`,
+      {
+        variables: {
+          id: shopifyProduct.id,
+          input: publicationIds.map((publicationId) => ({ publicationId })),
+        },
+      }
+    );
 
     await Promise.all([
       prisma.product.update({

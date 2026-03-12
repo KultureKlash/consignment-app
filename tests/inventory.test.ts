@@ -45,7 +45,7 @@ describe("inventory.server", () => {
       expect(quantities[0].quantity).toBe(0);
     });
 
-    it("aggregates quantity across multiple active listings", async () => {
+    it("only counts inventory at the lowest price tier", async () => {
       const { admin, findCalls } = createMockAdmin();
 
       const consignor1 = await createTestConsignor({ email: "a@test.com" });
@@ -62,9 +62,42 @@ describe("inventory.server", () => {
         },
       });
 
-      // Two consignors each have listings
+      // Two consignors at different prices
       await prisma.listing.create({
-        data: { consignorId: consignor1.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 1, status: "active" },
+      });
+      await prisma.listing.create({
+        data: { consignorId: consignor2.id, variantId: variant.id, price: 360, quantity: 4, status: "active" },
+      });
+
+      await syncInventory({ admin, variant });
+
+      const setCalls = findCalls("inventorySetQuantities");
+      const quantities = (setCalls[0].variables as Record<string, Record<string, unknown>>).input
+        .quantities as Array<Record<string, unknown>>;
+      expect(quantities[0].quantity).toBe(1); // only the $340 tier
+    });
+
+    it("aggregates quantity across consignors at the same lowest price", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const consignor1 = await createTestConsignor({ email: "a@test.com" });
+      const consignor2 = await createTestConsignor({ email: "b@test.com" });
+
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+      });
+      const variant = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+        },
+      });
+
+      // Two consignors at the same price
+      await prisma.listing.create({
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 2, status: "active" },
       });
       await prisma.listing.create({
         data: { consignorId: consignor2.id, variantId: variant.id, price: 340, quantity: 3, status: "active" },
@@ -75,7 +108,7 @@ describe("inventory.server", () => {
       const setCalls = findCalls("inventorySetQuantities");
       const quantities = (setCalls[0].variables as Record<string, Record<string, unknown>>).input
         .quantities as Array<Record<string, unknown>>;
-      expect(quantities[0].quantity).toBe(5); // 2 + 3
+      expect(quantities[0].quantity).toBe(5); // both at same price, so 2 + 3
     });
 
     it("excludes non-active listings from aggregation", async () => {
@@ -129,6 +162,175 @@ describe("inventory.server", () => {
         .quantities as Array<Record<string, unknown>>;
       expect(quantities[0].inventoryItemId).toBe("gid://shopify/InventoryItem/42");
       expect(quantities[0].locationId).toBe("gid://shopify/Location/1001");
+    });
+
+    it("syncs lowest active listing price to Shopify variant", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const consignor1 = await createTestConsignor({ email: "a@test.com" });
+      const consignor2 = await createTestConsignor({ email: "b@test.com" });
+
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+      });
+      const variant = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          shopifyVariantId: "gid://shopify/ProductVariant/1",
+        },
+      });
+
+      await prisma.listing.create({
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
+      });
+      await prisma.listing.create({
+        data: { consignorId: consignor2.id, variantId: variant.id, price: 340, quantity: 1, status: "active" },
+      });
+
+      await syncInventory({ admin, variant });
+
+      const priceCalls = findCalls("productVariantsBulkUpdate");
+      expect(priceCalls).toHaveLength(1);
+      const vars = priceCalls[0].variables as any;
+      expect(vars.productId).toBe("gid://shopify/Product/1");
+      expect(vars.variants[0].id).toBe("gid://shopify/ProductVariant/1");
+      expect(vars.variants[0].price).toBe("340"); // lowest ask
+    });
+
+    it("deletes Shopify variant when inventory hits 0 and other variants exist", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+      });
+      // Two variants — so it's safe to delete one
+      const variant9 = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          shopifyVariantId: "gid://shopify/ProductVariant/1",
+        },
+      });
+      await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "10",
+          inventoryItemId: "gid://shopify/InventoryItem/2",
+          shopifyVariantId: "gid://shopify/ProductVariant/2",
+        },
+      });
+
+      // No active listings for sz9
+      await syncInventory({ admin, variant: variant9 });
+
+      // Should delete the variant from Shopify
+      const deleteCalls = findCalls("productVariantsBulkDelete");
+      expect(deleteCalls).toHaveLength(1);
+      const vars = deleteCalls[0].variables as any;
+      expect(vars.variantsIds).toEqual(["gid://shopify/ProductVariant/1"]);
+
+      // DB should have cleared Shopify IDs
+      const updated = await prisma.variant.findUnique({ where: { id: variant9.id } });
+      expect(updated?.shopifyVariantId).toBeNull();
+      expect(updated?.inventoryItemId).toBeNull();
+
+      // No price update call — variant is gone
+      const priceCalls = findCalls("productVariantsBulkUpdate");
+      expect(priceCalls).toHaveLength(0);
+    });
+
+    it("keeps last variant with price $0 instead of deleting", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+      });
+      // Only one variant — can't delete it
+      const variant = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          shopifyVariantId: "gid://shopify/ProductVariant/1",
+        },
+      });
+
+      await syncInventory({ admin, variant });
+
+      // Should NOT delete
+      const deleteCalls = findCalls("productVariantsBulkDelete");
+      expect(deleteCalls).toHaveLength(0);
+
+      // Should set price to $0 as fallback
+      const priceCalls = findCalls("productVariantsBulkUpdate");
+      expect(priceCalls).toHaveLength(1);
+      const priceVars = priceCalls[0].variables as any;
+      expect(priceVars.variants[0].price).toBe("0");
+
+      // DB Shopify IDs should still be set
+      const updated = await prisma.variant.findUnique({ where: { id: variant.id } });
+      expect(updated?.shopifyVariantId).toBe("gid://shopify/ProductVariant/1");
+    });
+
+    it("skips price sync when variant has no shopifyVariantId", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const consignor = await createTestConsignor();
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+      });
+      const variant = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          shopifyVariantId: null,
+        },
+      });
+
+      await prisma.listing.create({
+        data: { consignorId: consignor.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
+      });
+
+      await syncInventory({ admin, variant });
+
+      const priceCalls = findCalls("productVariantsBulkUpdate");
+      expect(priceCalls).toHaveLength(0); // no price sync without shopifyVariantId
+    });
+
+    it("price updates to next lowest when cheapest listing is cancelled", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const consignor1 = await createTestConsignor({ email: "a@test.com" });
+      const consignor2 = await createTestConsignor({ email: "b@test.com" });
+
+      const product = await prisma.product.create({
+        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+      });
+      const variant = await prisma.variant.create({
+        data: {
+          productId: product.id,
+          size: "9",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          shopifyVariantId: "gid://shopify/ProductVariant/1",
+        },
+      });
+
+      await prisma.listing.create({
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 1, status: "cancelled" },
+      });
+      await prisma.listing.create({
+        data: { consignorId: consignor2.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
+      });
+
+      await syncInventory({ admin, variant });
+
+      const priceCalls = findCalls("productVariantsBulkUpdate");
+      const vars = priceCalls[0].variables as any;
+      expect(vars.variants[0].price).toBe("350"); // $340 is cancelled, so next lowest is $350
     });
   });
 });

@@ -17,6 +17,18 @@ export function createMockAdmin() {
   const graphql = vi.fn(async (query: string, options?: { variables?: Record<string, unknown> }) => {
     calls.push({ query, variables: options?.variables });
 
+    // Publications query
+    if (query.includes("publications(")) {
+      return mockResponse({
+        publications: {
+          nodes: [
+            { id: "gid://shopify/Publication/1", name: "Online Store" },
+            { id: "gid://shopify/Publication/2", name: "Shop" },
+          ],
+        },
+      });
+    }
+
     // Location query
     if (query.includes("locations(")) {
       return mockResponse({
@@ -56,6 +68,13 @@ export function createMockAdmin() {
       });
     }
 
+    // Publishable publish (publish to sales channels)
+    if (query.includes("publishablePublish")) {
+      return mockResponse({
+        publishablePublish: { userErrors: [] },
+      });
+    }
+
     // Inventory item update (tracked: true)
     if (query.includes("inventoryItemUpdate")) {
       return mockResponse({
@@ -68,6 +87,23 @@ export function createMockAdmin() {
       return mockResponse({
         inventorySetQuantities: {
           inventoryAdjustmentGroup: { reason: "correction" },
+          userErrors: [],
+        },
+      });
+    }
+
+    // Product variants bulk delete (remove out-of-stock variants)
+    if (query.includes("productVariantsBulkDelete")) {
+      return mockResponse({
+        productVariantsBulkDelete: { userErrors: [] },
+      });
+    }
+
+    // Product variants bulk update (price sync)
+    if (query.includes("productVariantsBulkUpdate")) {
+      return mockResponse({
+        productVariantsBulkUpdate: {
+          productVariants: [{ id: "gid://shopify/ProductVariant/1" }],
           userErrors: [],
         },
       });

@@ -23,11 +23,24 @@ export async function syncInventory({
 }): Promise<void> {
   if (!variant.inventoryItemId) return;
 
-  const agg = await prisma.listing.aggregate({
+  // Find the lowest active price for this variant
+  const lowestListing = await prisma.listing.findFirst({
     where: { variantId: variant.id, status: "active" },
-    _sum: { quantity: true },
+    orderBy: { price: "asc" },
+    select: { price: true },
   });
-  const totalQuantity = agg._sum.quantity ?? 0;
+
+  let totalQuantity: number;
+  if (!lowestListing) {
+    totalQuantity = 0;
+  } else {
+    // Only count inventory at the lowest price tier
+    const agg = await prisma.listing.aggregate({
+      where: { variantId: variant.id, status: "active", price: lowestListing.price },
+      _sum: { quantity: true },
+    });
+    totalQuantity = agg._sum.quantity ?? 0;
+  }
 
   const locationId = await getPrimaryLocationId(admin);
 
@@ -66,5 +79,77 @@ export async function syncInventory({
   const { userErrors } = data.inventorySetQuantities;
   if (userErrors.length > 0) {
     throw new Error(`Shopify inventorySetQuantities error: ${userErrors[0].message}`);
+  }
+
+  // Sync price or delete variant from Shopify
+  if (!variant.shopifyVariantId) return;
+
+  const product = await prisma.product.findUniqueOrThrow({
+    where: { id: variant.productId },
+  });
+
+  if (!product.shopifyProductId) return;
+
+  // If no active listings, delete the Shopify variant to avoid $0 price polluting sort
+  if (totalQuantity === 0) {
+    const siblingCount = await prisma.variant.count({
+      where: {
+        productId: variant.productId,
+        shopifyVariantId: { not: null },
+      },
+    });
+
+    if (siblingCount > 1) {
+      // Safe to delete — other variants still exist on the product
+      await admin.graphql(
+        `#graphql
+        mutation productVariantsBulkDelete($productId: ID!, $variantsIds: [ID!]!) {
+          productVariantsBulkDelete(productId: $productId, variantsIds: $variantsIds) {
+            userErrors { field message }
+          }
+        }`,
+        {
+          variables: {
+            productId: product.shopifyProductId,
+            variantsIds: [variant.shopifyVariantId],
+          },
+        }
+      );
+
+      // Clear Shopify IDs — variant row stays for future re-creation
+      await prisma.variant.update({
+        where: { id: variant.id },
+        data: { shopifyVariantId: null, inventoryItemId: null },
+      });
+
+      return;
+    }
+    // Last variant on product — can't delete, just set price to $0
+  }
+
+  // Sync lowest-ask price to Shopify variant (lowestListing already fetched above)
+  const priceResponse = await admin.graphql(
+    `#graphql
+    mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+        productVariants { id }
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        productId: product.shopifyProductId,
+        variants: [{
+          id: variant.shopifyVariantId,
+          price: lowestListing ? String(lowestListing.price) : "0",
+        }],
+      },
+    }
+  );
+
+  const priceData = await priceResponse.json();
+  const priceErrors = priceData.data.productVariantsBulkUpdate.userErrors;
+  if (priceErrors.length > 0) {
+    throw new Error(`Shopify price sync error: ${priceErrors[0].message}`);
   }
 }

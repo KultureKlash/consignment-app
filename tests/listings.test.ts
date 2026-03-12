@@ -160,6 +160,99 @@ describe("listings.server", () => {
       expect(await prisma.listing.count()).toBe(2);
     });
 
+    it("upserts when same consignor+variant+price already active", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 350,
+        quantity: 2,
+        consignorId: consignor.id,
+      });
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 350,
+        quantity: 3,
+        consignorId: consignor.id,
+      });
+
+      // Should merge into 1 listing with qty 5
+      expect(await prisma.listing.count()).toBe(1);
+      const listing = await prisma.listing.findFirst();
+      expect(listing?.quantity).toBe(5);
+    });
+
+    it("creates separate listings for different prices from same consignor", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 340,
+        quantity: 1,
+        consignorId: consignor.id,
+      });
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 350,
+        quantity: 2,
+        consignorId: consignor.id,
+      });
+
+      // Different prices = separate listings
+      expect(await prisma.listing.count()).toBe(2);
+    });
+
+    it("creates separate listings for different consignors at same price", async () => {
+      const { admin } = createMockAdmin();
+      const alice = await createTestConsignor({ name: "Alice", email: "alice@test.com" });
+      const bob = await createTestConsignor({ name: "Bob", email: "bob@test.com" });
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 350,
+        quantity: 2,
+        consignorId: alice.id,
+      });
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        price: 350,
+        quantity: 1,
+        consignorId: bob.id,
+      });
+
+      // Different consignors = separate listings
+      expect(await prisma.listing.count()).toBe(2);
+    });
+
     it("sets Shopify IDs on product and variant after sync", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();

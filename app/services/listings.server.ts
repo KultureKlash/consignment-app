@@ -36,19 +36,95 @@ export async function createListing({
   // Re-fetch variant to get updated inventoryItemId written by ensureShopifyProductAndVariant
   const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
 
-  // 4️⃣ Create listing
-  const listing = await prisma.listing.create({
-    data: {
+  // 4️⃣ Upsert listing: merge if same consignor+variant+price already active
+  const existingListing = await prisma.listing.findFirst({
+    where: {
       consignorId,
       variantId: variant.id,
       price,
-      quantity,
+      status: "active",
     },
-    include: { consignor: true },
   });
+
+  let listing;
+  if (existingListing) {
+    listing = await prisma.listing.update({
+      where: { id: existingListing.id },
+      data: { quantity: existingListing.quantity + quantity },
+      include: { consignor: true },
+    });
+  } else {
+    listing = await prisma.listing.create({
+      data: { consignorId, variantId: variant.id, price, quantity },
+      include: { consignor: true },
+    });
+  }
 
   // 5️⃣ Sync inventory to Shopify
   await syncInventory({ admin, variant: syncedVariant });
 
   return listing;
+}
+
+export async function cancelListing({
+  admin,
+  listingId,
+}: {
+  admin: AdminApiContext;
+  listingId: string;
+}) {
+  const listing = await prisma.listing.findUniqueOrThrow({
+    where: { id: listingId },
+    include: { variant: true },
+  });
+
+  if (listing.status !== "active") {
+    throw new Error(`Cannot cancel listing with status "${listing.status}"`);
+  }
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: "cancelled" },
+    include: { consignor: true },
+  });
+
+  await syncInventory({ admin, variant: listing.variant });
+
+  return updated;
+}
+
+export async function updateListingQuantity({
+  admin,
+  listingId,
+  quantity,
+}: {
+  admin: AdminApiContext;
+  listingId: string;
+  quantity: number;
+}) {
+  if (quantity < 0) {
+    throw new Error("Quantity cannot be negative");
+  }
+
+  const listing = await prisma.listing.findUniqueOrThrow({
+    where: { id: listingId },
+    include: { variant: true },
+  });
+
+  if (listing.status !== "active") {
+    throw new Error(`Cannot update listing with status "${listing.status}"`);
+  }
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: {
+      quantity,
+      ...(quantity === 0 ? { status: "cancelled" } : {}),
+    },
+    include: { consignor: true },
+  });
+
+  await syncInventory({ admin, variant: listing.variant });
+
+  return updated;
 }

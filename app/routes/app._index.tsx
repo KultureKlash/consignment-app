@@ -8,32 +8,42 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { createListing } from "~/services/listings.server";
+import { createListing, cancelListing, updateListingQuantity } from "~/services/listings.server";
 import prisma from "~/db.server";
 
 const PRESETS = [
   {
-    label: "Nike Dunk Panda — sz 9",
+    label: "Dunk Panda sz 9 — $340",
     styleId: "DD1391-100",
     title: "Nike Dunk Panda",
     brand: "Nike",
     size: "9",
-    price: "350",
-    quantity: "2",
-    purpose: "Creates product + first variant, or accumulates inventory",
+    price: "340",
+    quantity: "1",
+    purpose: "Lowest ask — Shopify price should show $340",
   },
   {
-    label: "Nike Dunk Panda — sz 10",
+    label: "Dunk Panda sz 9 — $360",
+    styleId: "DD1391-100",
+    title: "Nike Dunk Panda",
+    brand: "Nike",
+    size: "9",
+    price: "360",
+    quantity: "1",
+    purpose: "Higher ask — tests multi-price, same variant",
+  },
+  {
+    label: "Dunk Panda sz 10 — $350",
     styleId: "DD1391-100",
     title: "Nike Dunk Panda",
     brand: "Nike",
     size: "10",
-    price: "340",
+    price: "350",
     quantity: "1",
     purpose: "Adds new size variant to existing product",
   },
   {
-    label: "Jordan 1 Bred — sz 9",
+    label: "Jordan 1 Bred sz 9 — $450",
     styleId: "555088-001",
     title: "Jordan 1 Retro High OG Bred",
     brand: "Jordan",
@@ -41,16 +51,6 @@ const PRESETS = [
     price: "450",
     quantity: "1",
     purpose: "Creates a brand new product",
-  },
-  {
-    label: "Jordan 1 Bred — sz 11",
-    styleId: "555088-001",
-    title: "Jordan 1 Retro High OG Bred",
-    brand: "Jordan",
-    size: "11",
-    price: "460",
-    quantity: "3",
-    purpose: "Adds second size to second product",
   },
 ];
 
@@ -75,6 +75,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
+  const intent = formData.get("intent") as string ?? "create";
+
+  if (intent === "cancel") {
+    const listing = await cancelListing({
+      admin,
+      listingId: formData.get("listingId") as string,
+    });
+    return { listing, intent };
+  }
+
+  if (intent === "updateQuantity") {
+    const listing = await updateListingQuantity({
+      admin,
+      listingId: formData.get("listingId") as string,
+      quantity: parseInt(formData.get("quantity") as string, 10),
+    });
+    return { listing, intent };
+  }
 
   const listing = await createListing({
     admin,
@@ -87,7 +105,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     consignorId: formData.get("consignorId") as string,
   });
 
-  return { listing };
+  return { listing, intent };
 };
 
 export default function Index() {
@@ -105,12 +123,18 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data?.listing?.id) {
-      shopify.toast.show("Listing created");
+      const messages: Record<string, string> = {
+        create: "Listing created",
+        cancel: "Listing cancelled",
+        updateQuantity: "Quantity updated",
+      };
+      shopify.toast.show(messages[fetcher.data.intent] ?? "Done");
     }
-  }, [fetcher.data?.listing?.id, shopify]);
+  }, [fetcher.data?.listing?.id, shopify, fetcher.data?.intent]);
 
   const submitPreset = (preset: (typeof PRESETS)[number]) => {
     const data: Record<string, string> = {
+      intent: "create",
       styleId: preset.styleId,
       title: preset.title,
       brand: preset.brand,
@@ -120,6 +144,14 @@ export default function Index() {
       consignorId: selectedConsignor,
     };
     fetcher.submit(data, { method: "POST" });
+  };
+
+  const submitCancel = (listingId: string) => {
+    fetcher.submit({ intent: "cancel", listingId }, { method: "POST" });
+  };
+
+  const submitUpdateQty = (listingId: string, quantity: string) => {
+    fetcher.submit({ intent: "updateQuantity", listingId, quantity }, { method: "POST" });
   };
 
   return (
@@ -223,6 +255,7 @@ export default function Index() {
                 <th style={{ padding: "6px" }}>Qty</th>
                 <th style={{ padding: "6px" }}>Consignor</th>
                 <th style={{ padding: "6px" }}>Status</th>
+                <th style={{ padding: "6px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -239,6 +272,32 @@ export default function Index() {
                   <td style={{ padding: "6px" }}>{l.quantity}</td>
                   <td style={{ padding: "6px" }}>{l.consignor.name}</td>
                   <td style={{ padding: "6px" }}>{l.status}</td>
+                  <td style={{ padding: "6px" }}>
+                    {l.status === "active" ? (
+                      <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                        <button
+                          onClick={() => submitCancel(l.id)}
+                          disabled={isLoading}
+                          style={{ fontSize: "12px", cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                        <input
+                          type="number"
+                          defaultValue={l.quantity}
+                          min={0}
+                          style={{ width: "50px", fontSize: "12px", padding: "2px 4px" }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              submitUpdateQty(l.id, e.currentTarget.value);
+                            }
+                          }}
+                        />
+                      </span>
+                    ) : (
+                      <span style={{ color: "#999", fontSize: "12px" }}>—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

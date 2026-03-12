@@ -1,0 +1,35 @@
+import type { ActionFunctionArgs } from "react-router";
+import { authenticate, unauthenticated } from "../shopify.server";
+import { processOrder } from "~/services/orders.server";
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { shop, topic, payload } = await authenticate.webhook(request);
+
+  console.log(`Received ${topic} webhook for ${shop}`);
+
+  // Get an admin client for this shop (webhooks don't have session-based admin)
+  const { admin } = await unauthenticated.admin(shop);
+
+  // Shopify webhook sends REST-format numeric IDs; convert to GID format
+  const lineItems = payload.line_items.map(
+    (item: { variant_id: number; quantity: number; price: string }) => ({
+      shopifyVariantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+      quantity: item.quantity,
+      price: parseFloat(item.price),
+    })
+  );
+
+  try {
+    await processOrder({
+      admin,
+      shopifyOrderId: `gid://shopify/Order/${payload.id}`,
+      lineItems,
+    });
+    console.log(`Order ${payload.id} processed successfully`);
+  } catch (error) {
+    // Log but don't throw — return 200 so Shopify doesn't keep retrying
+    console.error(`Order ${payload.id} processing failed:`, error);
+  }
+
+  return new Response();
+};
