@@ -16,11 +16,17 @@ async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
 
 export async function syncInventory({
   admin,
-  variant,
+  variant: variantInput,
 }: {
   admin: AdminApiContext;
   variant: Variant;
 }): Promise<void> {
+  // Re-read variant from DB to get fresh Shopify IDs
+  // (they may have been cleared by a previous delete or updated by another operation)
+  const variant = await prisma.variant.findUniqueOrThrow({
+    where: { id: variantInput.id },
+  });
+
   if (!variant.inventoryItemId) return;
 
   // Find the lowest active price for this variant

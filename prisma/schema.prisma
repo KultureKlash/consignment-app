@@ -93,6 +93,7 @@ model Order {
   id        String      @id @default(cuid())
   shopifyId String?     @unique
   total     Float
+  status    String      @default("open")
 
   items     OrderItem[]
 
@@ -104,22 +105,48 @@ model OrderItem {
   orderId   String
   listingId String
 
-  price     Float
-  quantity  Int
+  price            Float
+  quantity         Int
+  quantityRefunded Int      @default(0)
 
   order     Order    @relation(fields: [orderId], references: [id])
   listing   Listing  @relation(fields: [listingId], references: [id])
+
+  transactions Transaction[]
 }
 
 model Transaction {
-  id           String   @id @default(cuid())
-  consignorId  String
-  amount       Float
-  type         String
+  id               String     @id @default(cuid())
+  consignorId      String
+  orderItemId      String?
+  type             String          // "sale" | "refund"
 
-  consignor    Consignor @relation(fields: [consignorId], references: [id])
+  // Audit-grade breakdown (immutable snapshot at creation time)
+  salePrice        Float    @default(0) // unit price at time of sale
+  quantity         Int      @default(0) // units in this transaction
+  commissionRate   Float    @default(0) // consignor's rate snapshot
+  grossAmount      Float    @default(0) // salePrice × quantity
+  commissionAmount Float    @default(0) // grossAmount × commissionRate
 
-  createdAt    DateTime @default(now())
+  // Net amount for balance calculations
+  // Sales: +commissionAmount. Refunds: -commissionAmount
+  amount           Float
+
+  consignor        Consignor  @relation(fields: [consignorId], references: [id])
+  orderItem        OrderItem? @relation(fields: [orderItemId], references: [id])
+
+  createdAt        DateTime @default(now())
+}
+
+model WebhookEvent {
+  id              String    @id @default(cuid())
+  shopifyEventId  String    @unique
+  topic           String
+  shopifyObjectId String
+  status          String    @default("processing") // "processing" | "completed" | "failed"
+  error           String?
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
 }
 
 model Payout {

@@ -45,24 +45,24 @@ Purchase products through the Shopify storefront.
 
 [ ] StockX API integration
 [ ] Product import by Style ID
-[ ] Store product catalog locally
+[x] Store product catalog locally
 [ ] Product image import
-[ ] Variant creation (sizes)
+[x] Variant creation (sizes)
 
 ---
 
 ## Catalog Integrity
 
-[ ] Enforce unique `styleId` for products
-[ ] Prevent duplicate product creation
-[ ] Validate size variants per product
+[x] Enforce unique `styleId` for products
+[x] Prevent duplicate product creation
+[x] Validate size variants per product
 [ ] Normalize brand and product naming
 
 ---
 
 ## Consignor Accounts
 
-[ ] Consignor database model
+[x] Consignor database model
 [ ] Consignor login system
 [ ] Consignor authentication (email / magic link)
 [ ] Consignor profile management
@@ -72,31 +72,33 @@ Purchase products through the Shopify storefront.
 
 ## Listing Engine
 
-[ ] Listing creation
-[ ] Listing price input
-[ ] Listing quantity input
-[ ] Listing activation timestamp
-[ ] Listing status (active / inactive)
+[x] Listing creation
+[x] Listing price input
+[x] Listing quantity input
+[x] Listing activation timestamp
+[x] Listing status (active / sold / cancelled)
+[x] Same consignor + same variant upserts quantity (pricing rule)
 
 ---
 
 ## Shopify Product Sync
 
-[ ] Create Shopify product from catalog
-[ ] Create Shopify variants (sizes)
-[ ] Store Shopify `productId` in database
-[ ] Store Shopify `variantId` in database
-[ ] Sync lowest listing price to Shopify
+[x] Create Shopify product from catalog
+[x] Create Shopify variants (sizes)
+[x] Store Shopify `productId` in database
+[x] Store Shopify `variantId` in database
+[x] Sync lowest listing price to Shopify
 
 ---
 
 ## Inventory Synchronization
 
-[ ] Aggregate listing quantities per variant
-[ ] Sync total inventory to Shopify variant
-[ ] Trigger inventory sync when listing is created
-[ ] Trigger inventory sync when listing quantity changes
-[ ] Trigger inventory sync after order allocation
+[x] Aggregate listing quantities per variant
+[x] Sync total inventory to Shopify variant
+[x] Trigger inventory sync when listing is created
+[x] Trigger inventory sync when listing quantity changes
+[x] Trigger inventory sync after order allocation
+[x] Delete Shopify variant when inventory reaches zero (unless last variant)
 
 ---
 
@@ -108,38 +110,55 @@ These features enable multi-seller marketplace functionality.
 
 ## Listing Selection
 
-[ ] FIFO listing allocation
-[ ] Lowest price selection
-[ ] Tie breaker using activation timestamp
+[x] FIFO listing allocation
+[x] Lowest price selection
+[x] Tie breaker using activation timestamp
 
 ---
 
 ## Order Processing
 
-[ ] Shopify `orders/create` webhook
-[ ] Variant detection from order
-[ ] Listing allocation
-[ ] Quantity deduction from listing
-[ ] Listing deactivation when quantity = 0
-[ ] Prevent oversell with database transactions
+[x] Shopify `orders/create` webhook
+[x] Variant detection from order
+[x] Listing allocation (FIFO lowest-price-first)
+[x] Quantity deduction from listing
+[x] Listing deactivation when quantity = 0
+[x] Prevent oversell with database transactions
+[x] Idempotent order processing (duplicate webhook protection)
+
+---
+
+## Refund & Cancellation
+
+[x] Shopify `orders/cancelled` webhook
+[x] Shopify `refunds/create` webhook
+[x] Full order cancellation (cancelOrder)
+[x] Full refund (refundOrder)
+[x] Partial refund support (per-line-item quantity)
+[x] Reverse-priority allocation (highest-price refunded first)
+[x] Void vs refund distinction (payment captured or not)
+[x] Restock handling (return / cancel / no_restock)
+[x] Inventory re-sync after refund
 
 ---
 
 ## Financial Ledger
 
-[ ] Ledger table
-[ ] Sale entry creation
-[ ] Commission calculation
-[ ] Consignor balance update
+[x] Transaction model (sale / refund types)
+[x] Sale entry creation per allocated unit
+[x] Commission calculation (grossAmount x commissionRate)
+[x] Consignor balance tracking (sum transactions minus payouts)
+[x] Snapshot audit fields (immutable at creation time)
 
 ---
 
 ## Payout System
 
+[x] Payout database model
+[x] Balance calculation respects completed payouts
 [ ] Payout request system
 [ ] Admin payout approval
 [ ] Payout record creation
-[ ] Consignor balance deduction
 
 ---
 
@@ -250,6 +269,15 @@ Final polish and design.
 [ ] Custom dashboard components
 [ ] Product card layouts
 [ ] Seller statistics visualization
+
+---
+
+# Dev Tooling
+
+[x] Test panel UI (embedded app, listing/order/refund testing)
+[x] Dev store reset script (`scripts/reset-dev-store.ts`)
+[x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
+[x] Vitest test suite (catalog, listings, inventory, orders, webhooks)
 
 ---
 
