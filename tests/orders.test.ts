@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { processOrder, cancelOrder, refundOrder, getConsignorBalance } from "~/services/orders.server";
+import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders.server";
 
 async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100") {
   const product = await prisma.product.create({
@@ -167,6 +167,7 @@ describe("orders.server — processOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/6",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     const transactions = await prisma.transaction.findMany();
@@ -247,6 +248,7 @@ describe("orders.server — processOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/snapshot-test",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 300 }],
+      financialStatus: "paid",
     });
 
     // Change the consignor's rate AFTER the sale
@@ -318,7 +320,7 @@ describe("orders.server — cancelOrder", () => {
     expect(restored?.status).toBe("active");
   });
 
-  it("creates void transactions when payment not captured (default)", async () => {
+  it("cancel unpaid order creates no void/refund transactions", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
@@ -331,34 +333,21 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // Sale transaction: 200 * 2 * 0.85 = 340
+    // No sale transactions (order is unpaid)
     const saleTxs = await prisma.transaction.findMany({ where: { type: "sale" } });
-    expect(saleTxs).toHaveLength(1);
-    expect(saleTxs[0].amount).toBe(340);
+    expect(saleTxs).toHaveLength(0);
 
-    // Cancel without financialStatus → void (payment never captured)
+    // Cancel unpaid order → no offsetting transactions needed
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11" });
 
-    // Should create void transaction (not refund)
-    const voidTxs = await prisma.transaction.findMany({ where: { type: "void" } });
-    expect(voidTxs).toHaveLength(1);
-    expect(voidTxs[0].amount).toBe(-340);
-
-    // Audit fields mirror the sale but negated amounts
-    expect(voidTxs[0].salePrice).toBe(200);
-    expect(voidTxs[0].quantity).toBe(2);
-    expect(voidTxs[0].commissionRate).toBe(0.85);
-    expect(voidTxs[0].grossAmount).toBe(-400);
-    expect(voidTxs[0].commissionAmount).toBe(-340);
-
-    // No refund transactions should exist
-    const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
-    expect(refundTxs).toHaveLength(0);
-
-    // Net should be zero
+    // No transactions of any kind
     const allTxs = await prisma.transaction.findMany();
-    const net = allTxs.reduce((sum, t) => sum + t.amount, 0);
-    expect(net).toBe(0);
+    expect(allTxs).toHaveLength(0);
+
+    // But inventory should be restored
+    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
+    expect(listing?.quantity).toBe(2);
+    expect(listing?.status).toBe("active");
   });
 
   it("creates refund transactions when payment was captured", async () => {
@@ -372,10 +361,11 @@ describe("orders.server — cancelOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/11b",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
-    // Cancel with financialStatus "paid" → refund (payment was captured)
-    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11b", financialStatus: "paid" });
+    // Cancel paid order → refund (payment was captured)
+    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11b" });
 
     // Should create refund transaction (not void)
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
@@ -392,7 +382,7 @@ describe("orders.server — cancelOrder", () => {
     expect(net).toBe(0);
   });
 
-  it("authorized financial status creates void transactions", async () => {
+  it("authorized financial status cancel creates no transactions (unpaid)", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
@@ -405,10 +395,11 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 350 }],
     });
 
-    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11c", financialStatus: "authorized" });
+    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11c" });
 
-    const voidTxs = await prisma.transaction.findMany({ where: { type: "void" } });
-    expect(voidTxs).toHaveLength(1);
+    // No transactions: order was never paid, so nothing to void
+    const allTxs = await prisma.transaction.findMany();
+    expect(allTxs).toHaveLength(0);
   });
 
   it("sets order status to cancelled", async () => {
@@ -502,6 +493,7 @@ describe("orders.server — cancelOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/16",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 350 }],
+      financialStatus: "paid",
     });
 
     // Shopify fires refunds/create first when cancelling with "Refund payment"
@@ -565,6 +557,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/20",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
+      financialStatus: "paid",
     });
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/20" });
@@ -577,6 +570,7 @@ describe("orders.server — refundOrder", () => {
     // Order status
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/20" } });
     expect(order?.status).toBe("refunded");
+    expect(order?.paymentStatus).toBe("refunded");
   });
 
   it("partial refund restores only specified items", async () => {
@@ -606,6 +600,7 @@ describe("orders.server — refundOrder", () => {
         { shopifyVariantId: "gid://shopify/ProductVariant/300", quantity: 2, price: 350 },
         { shopifyVariantId: "gid://shopify/ProductVariant/301", quantity: 1, price: 450 },
       ],
+      financialStatus: "paid",
     });
 
     // Partial refund: only variant1
@@ -655,6 +650,7 @@ describe("orders.server — refundOrder", () => {
         { shopifyVariantId: "gid://shopify/ProductVariant/400", quantity: 1, price: 350 },
         { shopifyVariantId: "gid://shopify/ProductVariant/401", quantity: 1, price: 450 },
       ],
+      financialStatus: "paid",
     });
 
     // Refund only one item
@@ -666,9 +662,10 @@ describe("orders.server — refundOrder", () => {
       ],
     });
 
-    // Order should still be open
+    // Order should still be open, paymentStatus still "paid" (partial refund)
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/22" } });
     expect(order?.status).toBe("open");
+    expect(order?.paymentStatus).toBe("paid");
 
     // Refund the second item
     await refundOrder({
@@ -679,9 +676,10 @@ describe("orders.server — refundOrder", () => {
       ],
     });
 
-    // Now order should be refunded
+    // Now order should be fully refunded
     const finalOrder = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/22" } });
     expect(finalOrder?.status).toBe("refunded");
+    expect(finalOrder?.paymentStatus).toBe("refunded");
   });
 
   it("creates correct refund transactions per item", async () => {
@@ -697,6 +695,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/23",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
+      financialStatus: "paid",
     });
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/23" });
@@ -730,6 +729,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/24",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 350 }],
+      financialStatus: "paid",
     });
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/24" });
@@ -750,6 +750,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/25",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 350 }],
+      financialStatus: "paid",
     });
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/25" });
@@ -770,6 +771,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/26",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 3, price: 350 }],
+      financialStatus: "paid",
     });
 
     // Refund 1 of the 3
@@ -821,6 +823,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/total-full",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
+      financialStatus: "paid",
     });
 
     let order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-full" } });
@@ -846,6 +849,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/total-partial",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 340 }],
+      financialStatus: "paid",
     });
 
     let order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-partial" } });
@@ -896,6 +900,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/chain-1",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 3, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Refund 1
@@ -963,6 +968,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/over-refund",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Refund 1
@@ -1001,6 +1007,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/reverse-prio",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 220 }],
+      financialStatus: "paid",
     });
 
     // Verify both listings sold
@@ -1044,6 +1051,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/tiebreak",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 300 }],
+      financialStatus: "paid",
     });
 
     // Refund 1 — should refund the NEWER listing first (reverse tiebreak)
@@ -1074,6 +1082,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/chain-balance",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 3, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Sale: 200 * 3 * 0.85 = 510
@@ -1122,6 +1131,7 @@ describe("orders.server — refundOrder", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/cancel-partial",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing: 5 - 2 = 3
@@ -1167,6 +1177,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/no-restock-1",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing: 3 - 2 = 1
@@ -1210,6 +1221,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/return-1",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing: 3 - 2 = 1
@@ -1241,6 +1253,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/no-restock-full",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing sold: qty 0
@@ -1275,6 +1288,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/mixed-restock",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing: 3 - 2 = 1
@@ -1323,6 +1337,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/default-restock",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Listing: 2 - 1 = 1. Refund without specifying restockType
@@ -1350,6 +1365,7 @@ describe("orders.server — refundOrder restock handling", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/dup-refund",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
     });
 
     // First refund: restore inventory
@@ -1398,6 +1414,7 @@ describe("orders.server — getConsignorBalance", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/30",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // 200 * 2 * 0.85 = 340
@@ -1416,6 +1433,7 @@ describe("orders.server — getConsignorBalance", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/31",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/31" });
@@ -1435,6 +1453,7 @@ describe("orders.server — getConsignorBalance", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/32",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 3, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Sale: 200 * 3 * 0.85 = 510
@@ -1463,6 +1482,7 @@ describe("orders.server — getConsignorBalance", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/33",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     // Sale: 200 * 2 * 0.85 = 340
@@ -1492,11 +1512,283 @@ describe("orders.server — getConsignorBalance", () => {
       admin,
       shopifyOrderId: "gid://shopify/Order/34",
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
     });
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/34" });
 
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(0);
+  });
+});
+
+describe("orders.server — payment status", () => {
+  it("processOrder without financialStatus: no transactions, paymentStatus pending", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-1",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+    });
+
+    // Inventory allocated
+    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
+    expect(listing?.quantity).toBe(1);
+
+    // No transactions created
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(0);
+
+    // Order is pending payment
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-1" } });
+    expect(order?.paymentStatus).toBe("pending");
+
+    // Balance is $0
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(0);
+  });
+
+  it("processOrder with financialStatus paid: creates transactions immediately", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-2",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Transactions created
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(1);
+    expect(txs[0].type).toBe("sale");
+    expect(txs[0].amount).toBe(340); // 200 * 2 * 0.85
+
+    // Order is paid
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-2" } });
+    expect(order?.paymentStatus).toBe("paid");
+
+    // Balance reflects sale
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(340);
+  });
+
+  it("creditOrder on pending order creates transactions and sets paymentStatus paid", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-3",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+    });
+
+    // Verify pending state
+    expect(await prisma.transaction.count()).toBe(0);
+
+    // Credit the order (simulates orders/paid webhook)
+    await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-3" });
+
+    // Transactions created
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(1);
+    expect(txs[0].type).toBe("sale");
+    expect(txs[0].amount).toBe(340);
+
+    // Order is now paid
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-3" } });
+    expect(order?.paymentStatus).toBe("paid");
+  });
+
+  it("creditOrder is idempotent: calling twice creates only one set of transactions", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-4",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+    });
+
+    await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-4" });
+    await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-4" });
+
+    // Only one sale transaction
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(1);
+  });
+
+  it("creditOrder on cancelled order is a no-op", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-5",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+    });
+
+    // Cancel the unpaid order
+    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-5" });
+
+    // Now payment webhook arrives late — should not credit a cancelled order
+    await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-5" });
+
+    // No transactions created
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(0);
+
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(0);
+  });
+
+  it("cancelOrder on paid order creates offsetting refund transactions", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-6",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Verify sale transaction exists
+    expect(await prisma.transaction.count()).toBe(1);
+
+    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-6" });
+
+    // Should have sale + refund transactions
+    const allTxs = await prisma.transaction.findMany();
+    expect(allTxs).toHaveLength(2);
+
+    const refundTx = allTxs.find((t) => t.type === "refund");
+    expect(refundTx).toBeDefined();
+    expect(refundTx!.amount).toBe(-340);
+
+    // Net balance = 0
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(0);
+
+    // paymentStatus should be "refunded" (payment was captured then returned)
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-6" } });
+    expect(order?.paymentStatus).toBe("refunded");
+  });
+
+  it("cancelOrder on unpaid order skips void transactions", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-7",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+    });
+
+    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-7" });
+
+    // No transactions at all
+    const txs = await prisma.transaction.findMany();
+    expect(txs).toHaveLength(0);
+
+    // Inventory restored
+    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
+    expect(listing?.quantity).toBe(2);
+
+    // paymentStatus should be "voided" (payment was never captured)
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-7" } });
+    expect(order?.paymentStatus).toBe("voided");
+  });
+
+  it("refundOrder on unpaid order throws", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-8",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+    });
+
+    await expect(
+      refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-8" })
+    ).rejects.toThrow("Cannot refund an unpaid order");
+  });
+
+  it("balance is $0 for unpaid orders", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 500, 3);
+
+    // Process multiple orders without payment
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-9a",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 500 }],
+    });
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-9b",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 500 }],
+    });
+
+    // Balance should be $0 — inventory allocated but no payment
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(0);
+  });
+
+  it("balance reflects only paid orders in mixed scenario", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const { variant } = await setupVariant();
+
+    await createListing(consignor.id, variant.id, 200, 5);
+
+    // Paid order: 200 * 2 * 0.85 = 340
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-10a",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Unpaid order: no balance impact
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/ps-10b",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+    });
+
+    const balance = await getConsignorBalance(consignor.id);
+    expect(balance).toBe(340); // only the paid order
   });
 });

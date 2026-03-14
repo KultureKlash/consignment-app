@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
-import { authenticate, unauthenticated } from "../shopify.server";
-import { cancelOrder } from "~/services/orders.server";
+import { authenticate } from "../shopify.server";
+import { creditOrder } from "~/services/orders.server";
 import { withWebhookDedup } from "~/services/webhooks.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -8,18 +8,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   console.log(`Received ${topic} webhook for ${shop}`);
 
-  const webhookId = request.headers.get("X-Shopify-Webhook-Id") ?? `cancel-${payload.id}`;
+  const webhookId = request.headers.get("X-Shopify-Webhook-Id") ?? `paid-${payload.id}`;
   const shopifyOrderId = `gid://shopify/Order/${payload.id}`;
-
-  const { admin } = await unauthenticated.admin(shop);
 
   try {
     await withWebhookDedup(webhookId, topic, shopifyOrderId, () =>
-      cancelOrder({ admin, shopifyOrderId })
+      creditOrder({ shopifyOrderId })
     );
-    console.log(`Order ${payload.id} cancelled successfully`);
+    console.log(`Order ${payload.id} credited successfully`);
   } catch (error) {
-    console.error(`Order ${payload.id} cancellation failed:`, error);
+    console.error(`Order ${payload.id} credit failed:`, error);
   }
 
   return new Response();

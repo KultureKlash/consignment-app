@@ -9,7 +9,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { createListing, cancelListing, updateListingQuantity } from "~/services/listings.server";
-import { processOrder, cancelOrder, refundOrder, getConsignorBalance } from "~/services/orders.server";
+import { processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance } from "~/services/orders.server";
 import prisma from "~/db.server";
 
 const PRESETS = [
@@ -145,6 +145,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { order, intent };
     }
 
+    if (intent === "capturePayment") {
+      const shopifyOrderId = formData.get("shopifyOrderId") as string;
+      await creditOrder({ shopifyOrderId });
+      return { success: true, intent };
+    }
+
     if (intent === "cancelOrder") {
       const shopifyOrderId = formData.get("shopifyOrderId") as string;
       await cancelOrder({ admin, shopifyOrderId });
@@ -213,7 +219,8 @@ export default function Index() {
       create: "Listing created",
       cancel: "Listing cancelled",
       updateQuantity: "Quantity updated",
-      simulateOrder: "Order simulated",
+      simulateOrder: "Order created (pending payment)",
+      capturePayment: "Payment captured — balance updated",
       cancelOrder: "Order cancelled (voided)",
       refundOrder: "Order refunded",
       partialRefund: "Partial refund applied",
@@ -251,6 +258,10 @@ export default function Index() {
       { intent: "simulateOrder", variantId, quantity: String(quantity) },
       { method: "POST" }
     );
+  };
+
+  const submitCapturePayment = (shopifyOrderId: string) => {
+    fetcher.submit({ intent: "capturePayment", shopifyOrderId }, { method: "POST" });
   };
 
   const submitCancelOrder = (shopifyOrderId: string) => {
@@ -354,7 +365,7 @@ export default function Index() {
         ) : (
           <s-stack gap="base">
             <s-paragraph>
-              Simulate a customer buying 1 unit of a variant. This allocates the cheapest listing, deducts inventory, and creates transactions.
+              Simulate a customer buying 1 unit. This allocates inventory but does NOT credit the balance yet. Use "Capture Payment" on the order to simulate payment and credit the consignor.
             </s-paragraph>
             {activeVariants.map((v) => (
               <s-card key={v.id}>
@@ -392,6 +403,7 @@ export default function Index() {
                 <th style={{ padding: "6px" }}>Order ID</th>
                 <th style={{ padding: "6px" }}>Total</th>
                 <th style={{ padding: "6px" }}>Status</th>
+                <th style={{ padding: "6px" }}>Payment</th>
                 <th style={{ padding: "6px" }}>Items</th>
                 <th style={{ padding: "6px" }}>Actions</th>
               </tr>
@@ -429,6 +441,20 @@ export default function Index() {
                       }}
                     >
                       {o.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: "6px" }}>
+                    <span
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        background: o.paymentStatus === "paid" ? "#e3f5e1" : "#fff3cd",
+                        color: o.paymentStatus === "paid" ? "#1a7f37" : "#856404",
+                      }}
+                    >
+                      {o.paymentStatus}
                     </span>
                   </td>
                   <td style={{ padding: "6px", fontSize: "11px" }}>
@@ -502,6 +528,15 @@ export default function Index() {
                   <td style={{ padding: "6px" }}>
                     {o.status === "open" && (
                       <span style={{ display: "flex", gap: "4px", flexDirection: "column" }}>
+                        {o.paymentStatus === "pending" && (
+                          <button
+                            onClick={() => submitCapturePayment(o.shopifyId!)}
+                            disabled={isLoading}
+                            style={{ fontSize: "12px", cursor: "pointer", color: "#1a7f37", fontWeight: "bold" }}
+                          >
+                            Capture Payment
+                          </button>
+                        )}
                         <button
                           onClick={() => submitCancelOrder(o.shopifyId!)}
                           disabled={isLoading}
@@ -509,13 +544,15 @@ export default function Index() {
                         >
                           Cancel (Void)
                         </button>
-                        <button
-                          onClick={() => submitRefundOrder(o.shopifyId!)}
-                          disabled={isLoading}
-                          style={{ fontSize: "12px", cursor: "pointer", color: "#856404" }}
-                        >
-                          Full Refund
-                        </button>
+                        {o.paymentStatus === "paid" && (
+                          <button
+                            onClick={() => submitRefundOrder(o.shopifyId!)}
+                            disabled={isLoading}
+                            style={{ fontSize: "12px", cursor: "pointer", color: "#856404" }}
+                          >
+                            Full Refund
+                          </button>
+                        )}
                       </span>
                     )}
                     {o.status !== "open" && (

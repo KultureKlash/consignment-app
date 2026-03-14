@@ -6,6 +6,7 @@ export async function processOrder({
   admin,
   shopifyOrderId,
   lineItems,
+  financialStatus,
 }: {
   admin: AdminApiContext;
   shopifyOrderId: string;
@@ -14,6 +15,7 @@ export async function processOrder({
     quantity: number;
     price: number;
   }>;
+  financialStatus?: string;
 }) {
   // Idempotency: if this order was already processed, return it
   const existing = await prisma.order.findUnique({
@@ -27,7 +29,7 @@ export async function processOrder({
 
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
-      data: { shopifyId: shopifyOrderId, total: 0, status: "open" },
+      data: { shopifyId: shopifyOrderId, total: 0, status: "open", paymentStatus: "pending" },
     });
 
     let orderTotal = 0;
@@ -70,30 +72,13 @@ export async function processOrder({
           },
         });
 
-        // Create order item
-        const orderItem = await tx.orderItem.create({
+        // Create order item (inventory allocated, but no transaction yet)
+        await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
             listingId: listing.id,
             price: listing.price,
             quantity: take,
-          },
-        });
-
-        // Create transaction for consignor, linked to order item
-        const grossAmount = listing.price * take;
-        const commissionAmount = grossAmount * listing.consignor.commissionRate;
-        await tx.transaction.create({
-          data: {
-            consignorId: listing.consignorId,
-            orderItemId: orderItem.id,
-            salePrice: listing.price,
-            quantity: take,
-            commissionRate: listing.consignor.commissionRate,
-            grossAmount,
-            commissionAmount,
-            amount: commissionAmount,
-            type: "sale",
           },
         });
 
@@ -124,6 +109,75 @@ export async function processOrder({
     await syncInventory({ admin, variant });
   }
 
+  // If payment is already captured, credit the consignor balance immediately
+  if (financialStatus === "paid") {
+    await creditOrder({ shopifyOrderId });
+    // Re-fetch to return the updated paymentStatus
+    return prisma.order.findUniqueOrThrow({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: true },
+    });
+  }
+
+  return order;
+}
+
+/**
+ * Credit consignor balances for a paid order. Creates sale Transactions
+ * for each order item. Called either from processOrder (if already paid)
+ * or from the orders/paid webhook (deferred payment).
+ *
+ * Idempotent: returns early if order is already paymentStatus "paid".
+ */
+export async function creditOrder({
+  shopifyOrderId,
+}: {
+  shopifyOrderId: string;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { shopifyId: shopifyOrderId },
+    include: {
+      items: {
+        include: {
+          listing: { include: { consignor: true } },
+          transactions: true,
+        },
+      },
+    },
+  });
+
+  if (!order) throw new Error(`Order not found: ${shopifyOrderId}`);
+  if (order.paymentStatus === "paid") return order; // idempotent
+  if (order.status === "cancelled") return order; // don't credit cancelled orders
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      // Skip if sale transactions already exist (defensive)
+      if (item.transactions.some((t) => t.type === "sale")) continue;
+
+      const grossAmount = item.price * item.quantity;
+      const commissionAmount = grossAmount * item.listing.consignor.commissionRate;
+      await tx.transaction.create({
+        data: {
+          consignorId: item.listing.consignorId,
+          orderItemId: item.id,
+          salePrice: item.price,
+          quantity: item.quantity,
+          commissionRate: item.listing.consignor.commissionRate,
+          grossAmount,
+          commissionAmount,
+          amount: commissionAmount,
+          type: "sale",
+        },
+      });
+    }
+
+    await tx.order.update({
+      where: { id: order.id },
+      data: { paymentStatus: "paid" },
+    });
+  });
+
   return order;
 }
 
@@ -137,11 +191,9 @@ export async function processOrder({
 export async function cancelOrder({
   admin,
   shopifyOrderId,
-  financialStatus,
 }: {
   admin: AdminApiContext;
   shopifyOrderId: string;
-  financialStatus?: string;
 }) {
   const order = await prisma.order.findUnique({
     where: { shopifyId: shopifyOrderId },
@@ -169,10 +221,8 @@ export async function cancelOrder({
     return;
   }
 
-  // Determine transaction type: void (payment never captured) vs refund (payment was captured)
-  const CAPTURED_STATUSES = ["paid", "partially_paid", "refunded", "partially_refunded"];
-  const paymentCaptured = CAPTURED_STATUSES.includes(financialStatus ?? "");
-  const txType = paymentCaptured ? "refund" : "void";
+  // Determine transaction type based on our own payment tracking
+  const txType = order.paymentStatus === "paid" ? "refund" : "void";
 
   const affectedVariantIds = new Set<string>();
 
@@ -199,30 +249,36 @@ export async function cancelOrder({
         data: { quantityRefunded: item.quantity },
       });
 
-      // Create offsetting transaction — void if payment never captured, refund if it was
-      const saleTx = item.transactions.find((t) => t.type === "sale");
-      const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
-      const refundGross = item.price * quantityToRestore;
-      const refundCommission = refundGross * rate;
-      await tx.transaction.create({
-        data: {
-          consignorId: item.listing.consignorId,
-          orderItemId: item.id,
-          salePrice: item.price,
-          quantity: quantityToRestore,
-          commissionRate: rate,
-          grossAmount: -refundGross,
-          commissionAmount: -refundCommission,
-          amount: -refundCommission,
-          type: txType,
-        },
-      });
+      // Only create offsetting transactions if the order was actually paid
+      if (order.paymentStatus === "paid") {
+        const saleTx = item.transactions.find((t) => t.type === "sale");
+        const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
+        const refundGross = item.price * quantityToRestore;
+        const refundCommission = refundGross * rate;
+        await tx.transaction.create({
+          data: {
+            consignorId: item.listing.consignorId,
+            orderItemId: item.id,
+            salePrice: item.price,
+            quantity: quantityToRestore,
+            commissionRate: rate,
+            grossAmount: -refundGross,
+            commissionAmount: -refundCommission,
+            amount: -refundCommission,
+            type: txType,
+          },
+        });
+      }
     }
 
-    // Update order status and recalculate total
+    // Update order status and paymentStatus
     await tx.order.update({
       where: { id: order.id },
-      data: { status: "cancelled", total: 0 },
+      data: {
+        status: "cancelled",
+        total: 0,
+        paymentStatus: order.paymentStatus === "paid" ? "refunded" : "voided",
+      },
     });
   });
 
@@ -269,6 +325,7 @@ export async function refundOrder({
   if (!order) throw new Error(`Order not found: ${shopifyOrderId}`);
   if (order.status === "cancelled") throw new Error("Order is cancelled");
   if (order.status === "refunded") throw new Error("Order already fully refunded");
+  if (order.paymentStatus === "pending") throw new Error("Cannot refund an unpaid order — cancel it instead");
 
   const affectedVariantIds = new Set<string>();
 
@@ -337,7 +394,7 @@ export async function refundOrder({
       where: { id: order.id },
       data: {
         total: newTotal,
-        ...(allRefunded ? { status: "refunded" } : {}),
+        ...(allRefunded ? { status: "refunded", paymentStatus: "refunded" } : {}),
       },
     });
   });
