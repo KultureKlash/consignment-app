@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     setupFiles: ["./tests/setup.ts"],
+    exclude: ["tests/e2e/**", "node_modules/**"],
     // Run test files sequentially (shared SQLite DB)
     fileParallelism: false,
     // Use a separate test database

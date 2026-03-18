@@ -15,19 +15,44 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
         consignorId: consignor.id,
       });
 
       expect(listing.price).toBe(350);
-      expect(listing.quantity).toBe(2);
       expect(listing.consignor.name).toBe("Test Consignor");
 
       // DB should have 1 product, 1 variant, 1 listing
       expect(await prisma.product.count()).toBe(1);
       expect(await prisma.variant.count()).toBe(1);
       expect(await prisma.listing.count()).toBe(1);
+    });
+
+    it("creates multiple listings with count parameter", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "TEST-GTIN-9",
+        price: 350,
+        count: 3,
+        consignorId: consignor.id,
+      });
+
+      // 1 product, 1 variant, 3 individual listings
+      expect(await prisma.product.count()).toBe(1);
+      expect(await prisma.variant.count()).toBe(1);
+      expect(await prisma.listing.count()).toBe(3);
+
+      // All listings should be active at the same price
+      const listings = await prisma.listing.findMany();
+      expect(listings.every((l) => l.price === 350 && l.status === "active")).toBe(true);
     });
 
     it("reuses existing product when same styleId is used", async () => {
@@ -40,8 +65,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
         consignorId: consignor.id,
       });
 
@@ -51,12 +76,12 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 340,
-        quantity: 1,
         consignorId: consignor.id,
       });
 
-      // Still 1 product and 1 variant, but 2 listings
+      // Still 1 product and 1 variant, but 2 listings (different prices)
       expect(await prisma.product.count()).toBe(1);
       expect(await prisma.variant.count()).toBe(1);
       expect(await prisma.listing.count()).toBe(2);
@@ -72,8 +97,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
         consignorId: consignor.id,
       });
 
@@ -83,8 +108,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "10",
+        gtin: "TEST-GTIN-10",
         price: 340,
-        quantity: 1,
         consignorId: consignor.id,
       });
 
@@ -103,8 +128,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
         consignorId: consignor.id,
       });
 
@@ -114,8 +139,8 @@ describe("listings.server", () => {
         title: "Jordan 1 Retro High OG Bred",
         brand: "Jordan",
         size: "9",
+        gtin: "TEST-GTIN-BRED-9",
         price: 450,
-        quantity: 1,
         consignorId: consignor.id,
       });
 
@@ -135,8 +160,9 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
+        count: 2,
         consignorId: alice.id,
       });
 
@@ -146,21 +172,22 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 360,
-        quantity: 3,
+        count: 3,
         consignorId: bob.id,
       });
 
       expect(listing1.consignor.name).toBe("Alice");
       expect(listing2.consignor.name).toBe("Bob");
 
-      // 1 product, 1 variant, 2 listings
+      // 1 product, 1 variant, 5 listings (2 + 3)
       expect(await prisma.product.count()).toBe(1);
       expect(await prisma.variant.count()).toBe(1);
-      expect(await prisma.listing.count()).toBe(2);
+      expect(await prisma.listing.count()).toBe(5);
     });
 
-    it("upserts when same consignor+variant+price already active", async () => {
+    it("creates separate listings for same consignor+variant+price (no upsert)", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
@@ -170,8 +197,9 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
+        count: 2,
         consignorId: consignor.id,
       });
 
@@ -181,15 +209,14 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 3,
+        count: 3,
         consignorId: consignor.id,
       });
 
-      // Should merge into 1 listing with qty 5
-      expect(await prisma.listing.count()).toBe(1);
-      const listing = await prisma.listing.findFirst();
-      expect(listing?.quantity).toBe(5);
+      // 5 separate listings (no merging)
+      expect(await prisma.listing.count()).toBe(5);
     });
 
     it("creates separate listings for different prices from same consignor", async () => {
@@ -202,8 +229,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 340,
-        quantity: 1,
         consignorId: consignor.id,
       });
 
@@ -213,13 +240,14 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
+        count: 2,
         consignorId: consignor.id,
       });
 
       // Different prices = separate listings
-      expect(await prisma.listing.count()).toBe(2);
+      expect(await prisma.listing.count()).toBe(3);
     });
 
     it("creates separate listings for different consignors at same price", async () => {
@@ -233,8 +261,9 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
+        count: 2,
         consignorId: alice.id,
       });
 
@@ -244,13 +273,79 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 1,
         consignorId: bob.id,
       });
 
       // Different consignors = separate listings
-      expect(await prisma.listing.count()).toBe(2);
+      expect(await prisma.listing.count()).toBe(3);
+    });
+
+    it("count=3 creates exactly 3 listing rows", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "TEST-GTIN-9",
+        price: 340,
+        count: 3,
+        consignorId: consignor.id,
+      });
+
+      const listings = await prisma.listing.findMany();
+      expect(listings).toHaveLength(3);
+    });
+
+    it("all created listings have status active, same variantId, and same price", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "TEST-GTIN-9",
+        price: 340,
+        count: 3,
+        consignorId: consignor.id,
+      });
+
+      const listings = await prisma.listing.findMany();
+      expect(listings).toHaveLength(3);
+
+      const variantId = listings[0].variantId;
+      expect(listings.every((l) => l.status === "active")).toBe(true);
+      expect(listings.every((l) => l.variantId === variantId)).toBe(true);
+      expect(listings.every((l) => l.price === 340)).toBe(true);
+    });
+
+    it("all created listings have listedAt set", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "TEST-GTIN-9",
+        price: 340,
+        count: 2,
+        consignorId: consignor.id,
+      });
+
+      const listings = await prisma.listing.findMany();
+      expect(listings).toHaveLength(2);
+      expect(listings.every((l) => l.listedAt !== null)).toBe(true);
     });
 
     it("sets Shopify IDs on product and variant after sync", async () => {
@@ -263,8 +358,8 @@ describe("listings.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
+        gtin: "TEST-GTIN-9",
         price: 350,
-        quantity: 2,
         consignorId: consignor.id,
       });
 
@@ -274,6 +369,58 @@ describe("listings.server", () => {
       expect(product?.shopifyProductId).toMatch(/gid:\/\/shopify\/Product\//);
       expect(variant?.shopifyVariantId).toMatch(/gid:\/\/shopify\/ProductVariant\//);
       expect(variant?.inventoryItemId).toMatch(/gid:\/\/shopify\/InventoryItem\//);
+    });
+
+    it("saves GTIN on variant", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "194956806653",
+        price: 350,
+        consignorId: consignor.id,
+      });
+
+      const variant = await prisma.variant.findFirst();
+      expect(variant?.gtin).toBe("194956806653");
+    });
+
+    it("reuses existing GTIN when same variant is used again", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "194956806653",
+        price: 350,
+        consignorId: consignor.id,
+      });
+
+      await createListing({
+        admin,
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "194956806653",
+        price: 340,
+        consignorId: consignor.id,
+      });
+
+      // Still 1 variant, GTIN intact
+      expect(await prisma.variant.count()).toBe(1);
+      const variant = await prisma.variant.findFirst();
+      expect(variant?.gtin).toBe("194956806653");
+      expect(await prisma.listing.count()).toBe(2);
     });
   });
 });

@@ -53,6 +53,7 @@ export async function ensureShopifyProductAndVariant({
         variables: {
           product: {
             title: product.title,
+            ...(product.brand ? { vendor: product.brand } : {}),
             status: "ACTIVE",
             productOptions: [
               { name: "Size", values: [{ name: variant.size }] },
@@ -111,6 +112,25 @@ export async function ensureShopifyProductAndVariant({
       ),
     ]);
 
+    // Set barcode (GTIN) on the auto-created variant (must run after product is fully committed)
+    if (variant.gtin) {
+      const barcodeRes = await admin.graphql(
+        `#graphql
+        mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants { id barcode }
+            userErrors { field message }
+          }
+        }`,
+        { variables: { productId: shopifyProduct.id, variants: [{ id: shopifyVariant.id, barcode: variant.gtin }] } }
+      );
+      const barcodeData = await barcodeRes.json();
+      const barcodeErrors = barcodeData.data.productVariantsBulkUpdate.userErrors;
+      if (barcodeErrors.length > 0) {
+        console.error("Barcode sync error:", barcodeErrors);
+      }
+    }
+
     return;
   }
 
@@ -135,7 +155,10 @@ export async function ensureShopifyProductAndVariant({
       variables: {
         productId: product.shopifyProductId,
         variants: [
-          { optionValues: [{ name: variant.size, optionName: "Size" }] },
+          {
+            optionValues: [{ name: variant.size, optionName: "Size" }],
+            barcode: variant.gtin || "",
+          },
         ],
       },
     }

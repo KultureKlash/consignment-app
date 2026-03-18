@@ -37,15 +37,26 @@ export async function findOrCreateProduct({
 export async function findOrCreateVariant({
   productId,
   size,
+  gtin,
 }: {
   productId: string;
   size: string;
+  gtin: string;
 }) {
   const existing = await prisma.variant.findFirst({
     where: { productId, size },
   });
-  if (existing) return existing;
+  if (existing) {
+    // Backfill GTIN if it was missing (pre-migration variants)
+    if (!existing.gtin && gtin) {
+      return prisma.variant.update({
+        where: { id: existing.id },
+        data: { gtin },
+      });
+    }
+    return existing;
+  }
   return prisma.variant.create({
-    data: { productId, size },
+    data: { productId, size, gtin },
   });
 }

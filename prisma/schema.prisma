@@ -58,6 +58,7 @@ model Variant {
   id                 String   @id @default(cuid())
   productId          String
   size               String
+  gtin               String   @default("")
 
   shopifyVariantId   String?  @unique
   inventoryItemId    String?
@@ -71,22 +72,27 @@ model Variant {
 }
 
 model Listing {
-  id            String   @id @default(cuid())
-  consignorId   String
-  variantId     String
+  id              String    @id @default(cuid())
+  consignorId     String
+  variantId       String
 
-  price         Float
-  quantity      Int
-  status        String   @default("active")
+  price           Float
+  status          String    @default("active") // "active" | "sold" | "cancelled"
 
-  consignor     Consignor @relation(fields: [consignorId], references: [id])
-  variant       Variant   @relation(fields: [variantId], references: [id])
+  // Lifecycle timestamps
+  createdAt       DateTime  @default(now())
+  receivedAt      DateTime?
+  authenticatedAt DateTime?
+  listedAt        DateTime?
+  soldAt          DateTime?
+  withdrawnAt     DateTime?
 
-  orderItems    OrderItem[]
+  consignor       Consignor @relation(fields: [consignorId], references: [id])
+  variant         Variant   @relation(fields: [variantId], references: [id])
 
-  createdAt     DateTime @default(now())
+  orderItems      OrderItem[]
 
-  @@index([variantId])
+  @@index([variantId, status, price, createdAt])
 }
 
 model Order {
@@ -106,9 +112,8 @@ model OrderItem {
   orderId   String
   listingId String
 
-  price            Float
-  quantity         Int
-  quantityRefunded Int      @default(0)
+  price     Float
+  status    String   @default("sold") // "sold" | "refunded"
 
   order     Order    @relation(fields: [orderId], references: [id])
   listing   Listing  @relation(fields: [listingId], references: [id])
@@ -124,9 +129,8 @@ model Transaction {
 
   // Audit-grade breakdown (immutable snapshot at creation time)
   salePrice        Float    @default(0) // unit price at time of sale
-  quantity         Int      @default(0) // units in this transaction
   commissionRate   Float    @default(0) // consignor's rate snapshot
-  grossAmount      Float    @default(0) // salePrice × quantity
+  grossAmount      Float    @default(0) // salePrice (per-item, always 1 unit)
   commissionAmount Float    @default(0) // grossAmount × commissionRate
 
   // Net amount for balance calculations

@@ -40,12 +40,10 @@ export async function syncInventory({
   if (!lowestListing) {
     totalQuantity = 0;
   } else {
-    // Only count inventory at the lowest price tier
-    const agg = await prisma.listing.aggregate({
+    // Count active listings at the lowest price tier (per-item model: each listing = 1 unit)
+    totalQuantity = await prisma.listing.count({
       where: { variantId: variant.id, status: "active", price: lowestListing.price },
-      _sum: { quantity: true },
     });
-    totalQuantity = agg._sum.quantity ?? 0;
   }
 
   const locationId = await getPrimaryLocationId(admin);

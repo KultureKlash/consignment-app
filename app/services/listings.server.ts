@@ -10,8 +10,9 @@ export async function createListing({
   title,
   brand,
   size,
+  gtin,
   price,
-  quantity,
+  count = 1,
   consignorId,
 }: {
   admin: AdminApiContext;
@@ -19,8 +20,9 @@ export async function createListing({
   title: string;
   brand?: string;
   size: string;
+  gtin: string;
   price: number;
-  quantity: number;
+  count?: number;
   consignorId: string;
 }) {
 
@@ -28,7 +30,7 @@ export async function createListing({
   const product = await findOrCreateProduct({ styleId, title, brand });
 
   // 2️⃣ Find or create variant in DB
-  const variant = await findOrCreateVariant({ productId: product.id, size });
+  const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
   // 3️⃣ Ensure product + variant exist in Shopify
   await ensureShopifyProductAndVariant({ admin, product, variant });
@@ -36,34 +38,21 @@ export async function createListing({
   // Re-fetch variant to get updated inventoryItemId written by ensureShopifyProductAndVariant
   const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
 
-  // 4️⃣ Upsert listing: merge if same consignor+variant+price already active
-  const existingListing = await prisma.listing.findFirst({
-    where: {
-      consignorId,
-      variantId: variant.id,
-      price,
-      status: "active",
-    },
-  });
-
-  let listing;
-  if (existingListing) {
-    listing = await prisma.listing.update({
-      where: { id: existingListing.id },
-      data: { quantity: existingListing.quantity + quantity },
+  // 4️⃣ Create N individual listings (per-item model: each listing = 1 physical item)
+  const listings = [];
+  for (let i = 0; i < count; i++) {
+    const listing = await prisma.listing.create({
+      data: { consignorId, variantId: variant.id, price, listedAt: new Date() },
       include: { consignor: true },
     });
-  } else {
-    listing = await prisma.listing.create({
-      data: { consignorId, variantId: variant.id, price, quantity },
-      include: { consignor: true },
-    });
+    listings.push(listing);
   }
 
   // 5️⃣ Sync inventory to Shopify
   await syncInventory({ admin, variant: syncedVariant });
 
-  return listing;
+  // Return first listing for backward compat with single-item callers
+  return listings[0];
 }
 
 export async function cancelListing({
@@ -85,42 +74,6 @@ export async function cancelListing({
   const updated = await prisma.listing.update({
     where: { id: listingId },
     data: { status: "cancelled" },
-    include: { consignor: true },
-  });
-
-  await syncInventory({ admin, variant: listing.variant });
-
-  return updated;
-}
-
-export async function updateListingQuantity({
-  admin,
-  listingId,
-  quantity,
-}: {
-  admin: AdminApiContext;
-  listingId: string;
-  quantity: number;
-}) {
-  if (quantity < 0) {
-    throw new Error("Quantity cannot be negative");
-  }
-
-  const listing = await prisma.listing.findUniqueOrThrow({
-    where: { id: listingId },
-    include: { variant: true },
-  });
-
-  if (listing.status !== "active") {
-    throw new Error(`Cannot update listing with status "${listing.status}"`);
-  }
-
-  const updated = await prisma.listing.update({
-    where: { id: listingId },
-    data: {
-      quantity,
-      ...(quantity === 0 ? { status: "cancelled" } : {}),
-    },
     include: { consignor: true },
   });
 

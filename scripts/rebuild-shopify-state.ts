@@ -107,11 +107,9 @@ async function syncVariantInventoryAndPrice(
 
   let totalQuantity = 0;
   if (lowestListing) {
-    const agg = await prisma.listing.aggregate({
+    totalQuantity = await prisma.listing.count({
       where: { variantId: variant.id, status: "active", price: lowestListing.price },
-      _sum: { quantity: true },
     });
-    totalQuantity = agg._sum.quantity ?? 0;
   }
 
   // Check current Shopify state for discrepancy logging

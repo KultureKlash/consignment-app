@@ -2,6 +2,15 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory.server";
 
+/**
+ * Process an incoming order — allocate per-item listings to order items.
+ *
+ * Allocation priority (StockX-style):
+ *   ORDER BY price ASC, createdAt ASC
+ *   → lowest price first, oldest listing first (FIFO tiebreak)
+ *
+ * Invariant: a listing cannot be sold if its status is not "active".
+ */
 export async function processOrder({
   admin,
   shopifyOrderId,
@@ -48,48 +57,38 @@ export async function processOrder({
 
       affectedVariantIds.add(variant.id);
 
-      // Get active listings sorted by price ASC, then createdAt ASC (FIFO tiebreak)
+      // Per-item allocation: find N active listings, lowest price first, FIFO tiebreak
+      // SQLite serializes writes implicitly; PostgreSQL needs FOR UPDATE (handled by DB adapter)
       const listings = await tx.listing.findMany({
         where: { variantId: variant.id, status: "active" },
         orderBy: [{ price: "asc" }, { createdAt: "asc" }],
+        take: lineItem.quantity,
         include: { consignor: true },
       });
 
-      let remaining = lineItem.quantity;
+      if (listings.length < lineItem.quantity) {
+        throw new Error(
+          `Insufficient inventory for variant ${lineItem.shopifyVariantId}: needed ${lineItem.quantity}, available ${listings.length}`
+        );
+      }
 
       for (const listing of listings) {
-        if (remaining <= 0) break;
-
-        const take = Math.min(listing.quantity, remaining);
-        const newQty = listing.quantity - take;
-
-        // Deduct from listing
+        // Mark listing as sold
         await tx.listing.update({
           where: { id: listing.id },
-          data: {
-            quantity: newQty,
-            ...(newQty === 0 ? { status: "sold" } : {}),
-          },
+          data: { status: "sold", soldAt: new Date() },
         });
 
-        // Create order item (inventory allocated, but no transaction yet)
+        // Create order item (1 per listing)
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
             listingId: listing.id,
             price: listing.price,
-            quantity: take,
           },
         });
 
-        orderTotal += listing.price * take;
-        remaining -= take;
-      }
-
-      if (remaining > 0) {
-        throw new Error(
-          `Insufficient inventory for variant ${lineItem.shopifyVariantId}: needed ${lineItem.quantity}, available ${lineItem.quantity - remaining}`
-        );
+        orderTotal += listing.price;
       }
     }
 
@@ -155,14 +154,13 @@ export async function creditOrder({
       // Skip if sale transactions already exist (defensive)
       if (item.transactions.some((t) => t.type === "sale")) continue;
 
-      const grossAmount = item.price * item.quantity;
+      const grossAmount = item.price;
       const commissionAmount = grossAmount * item.listing.consignor.commissionRate;
       await tx.transaction.create({
         data: {
           consignorId: item.listing.consignorId,
           orderItemId: item.id,
           salePrice: item.price,
-          quantity: item.quantity,
           commissionRate: item.listing.consignor.commissionRate,
           grossAmount,
           commissionAmount,
@@ -182,11 +180,12 @@ export async function creditOrder({
 }
 
 /**
- * Cancel an order — full reversal. Used when payment was never captured
- * or the order is rejected. Restores all listing quantities and creates
- * offsetting refund transactions.
+ * Cancel an order — full reversal. Restores all listing statuses to "active"
+ * and creates offsetting refund transactions if the order was paid.
  *
- * Respects partially-refunded items: only restores the un-refunded portion.
+ * Refund priority (reverse allocation):
+ *   ORDER BY price DESC, createdAt DESC
+ *   → last allocated item refunded first
  */
 export async function cancelOrder({
   admin,
@@ -221,46 +220,38 @@ export async function cancelOrder({
     return;
   }
 
-  // Determine transaction type based on our own payment tracking
   const txType = order.paymentStatus === "paid" ? "refund" : "void";
-
   const affectedVariantIds = new Set<string>();
 
   await prisma.$transaction(async (tx) => {
     for (const item of order.items) {
-      const quantityToRestore = item.quantity - item.quantityRefunded;
-      if (quantityToRestore === 0) continue;
+      if (item.status === "refunded") continue; // already refunded
 
       affectedVariantIds.add(item.listing.variantId);
 
-      // Restore listing quantity
-      const newQty = item.listing.quantity + quantityToRestore;
+      // Restore listing to active
       await tx.listing.update({
         where: { id: item.listingId },
-        data: {
-          quantity: newQty,
-          status: "active",
-        },
+        data: { status: "active", soldAt: null },
       });
 
-      // Mark order item as fully refunded
+      // Mark order item as refunded
       await tx.orderItem.update({
         where: { id: item.id },
-        data: { quantityRefunded: item.quantity },
+        data: { status: "refunded" },
       });
 
       // Only create offsetting transactions if the order was actually paid
       if (order.paymentStatus === "paid") {
         const saleTx = item.transactions.find((t) => t.type === "sale");
         const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
-        const refundGross = item.price * quantityToRestore;
+        const refundGross = item.price;
         const refundCommission = refundGross * rate;
         await tx.transaction.create({
           data: {
             consignorId: item.listing.consignorId,
             orderItemId: item.id,
             salePrice: item.price,
-            quantity: quantityToRestore,
             commissionRate: rate,
             grossAmount: -refundGross,
             commissionAmount: -refundCommission,
@@ -292,10 +283,10 @@ export async function cancelOrder({
 }
 
 /**
- * Refund an order — full or partial. Uses reverse priority (most expensive first)
- * and in-place quantityRefunded tracking for chained partial refund support.
+ * Refund an order — full or partial. Uses reverse allocation priority
+ * (highest price first, newest listing first) to determine which items to refund.
  *
- * If refundLineItems is omitted, refunds the entire order (remaining un-refunded units).
+ * If refundLineItems is omitted, refunds the entire order (all non-refunded items).
  */
 export async function refundOrder({
   admin,
@@ -331,64 +322,51 @@ export async function refundOrder({
 
   await prisma.$transaction(async (tx) => {
     if (!refundLineItems) {
-      // Full refund — refund all remaining units across all items
-      // Sort by reverse priority: most expensive first, newest first (tiebreak)
-      const itemsSorted = [...order.items]
-        .filter((item) => item.quantity > item.quantityRefunded)
+      // Full refund — refund all non-refunded items
+      // Reverse allocation: highest price first, newest listing first
+      const refundableItems = order.items
+        .filter((item) => item.status === "sold")
         .sort((a, b) => b.price - a.price || b.listing.createdAt.getTime() - a.listing.createdAt.getTime());
 
-      for (const item of itemsSorted) {
-        const refundableQty = item.quantity - item.quantityRefunded;
-        await refundUnits(tx, item, refundableQty, affectedVariantIds, true);
+      for (const item of refundableItems) {
+        await refundItem(tx, item, affectedVariantIds, true);
       }
     } else {
       // Partial refund — match refund lines to order items by variant
       for (const refundLine of refundLineItems) {
-        // Find order items for this variant with refundable units
-        // Sort by reverse priority: most expensive first, newest first
+        // Find order items for this variant that are still sold
+        // Reverse allocation: highest price first, newest first
         const matchingItems = order.items
           .filter(
             (item) =>
-              item.quantity > item.quantityRefunded &&
+              item.status === "sold" &&
               item.listing.variant.shopifyVariantId === refundLine.shopifyVariantId
           )
           .sort((a, b) => b.price - a.price || b.listing.createdAt.getTime() - a.listing.createdAt.getTime());
 
         // Over-refund protection
-        const totalRefundable = matchingItems.reduce(
-          (sum, item) => sum + (item.quantity - item.quantityRefunded),
-          0,
-        );
-        if (refundLine.quantity > totalRefundable) {
+        if (refundLine.quantity > matchingItems.length) {
           throw new Error(
-            `Cannot refund ${refundLine.quantity} units of variant ${refundLine.shopifyVariantId}: only ${totalRefundable} available to refund`
+            `Cannot refund ${refundLine.quantity} units of variant ${refundLine.shopifyVariantId}: only ${matchingItems.length} available to refund`
           );
         }
 
         const restoreInventory = ["return", "cancel"].includes(refundLine.restockType ?? "return");
 
-        let remaining = refundLine.quantity;
-        for (const item of matchingItems) {
-          if (remaining <= 0) break;
-
-          const refundableQty = item.quantity - item.quantityRefunded;
-          const take = Math.min(refundableQty, remaining);
-
-          await refundUnits(tx, item, take, affectedVariantIds, restoreInventory);
-          remaining -= take;
+        for (let i = 0; i < refundLine.quantity; i++) {
+          await refundItem(tx, matchingItems[i], affectedVariantIds, restoreInventory);
         }
       }
     }
 
-    // Recalculate order total and check if fully refunded
+    // Check if fully refunded
     const updatedItems = await tx.orderItem.findMany({
       where: { orderId: order.id },
     });
-    const allRefunded = updatedItems.every((item) => item.quantityRefunded >= item.quantity);
-    const newTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price * (item.quantity - item.quantityRefunded),
-      0,
-    );
+    const allRefunded = updatedItems.every((item) => item.status === "refunded");
+    const newTotal = updatedItems
+      .filter((item) => item.status === "sold")
+      .reduce((sum, item) => sum + item.price, 0);
 
     await tx.order.update({
       where: { id: order.id },
@@ -409,62 +387,44 @@ export async function refundOrder({
 }
 
 /**
- * In-place refund of `refundQty` units from a single order item.
- * Increments quantityRefunded, restores listing inventory, creates refund transaction.
+ * Refund a single order item. Sets OrderItem status to "refunded",
+ * restores listing to "active" (if restocking), and creates refund transaction.
  */
-async function refundUnits(
+async function refundItem(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   item: {
     id: string;
-    quantity: number;
-    quantityRefunded: number;
     price: number;
     listingId: string;
     listing: {
-      quantity: number;
       consignorId: string;
       variantId: string;
       consignor: { commissionRate: number };
     };
-    transactions: Array<{ type: string; amount: number; salePrice: number; quantity: number; commissionRate: number; grossAmount: number; commissionAmount: number }>;
+    transactions: Array<{ type: string; commissionRate: number }>;
   },
-  refundQty: number,
   affectedVariantIds: Set<string>,
   restoreInventory: boolean,
 ) {
-  // Invariant: never refund more than available
-  const refundableQty = item.quantity - item.quantityRefunded;
-  if (refundQty > refundableQty) {
-    throw new Error(
-      `Cannot refund ${refundQty} units from order item ${item.id}: only ${refundableQty} refundable`
-    );
-  }
-
-  // Only restore listing inventory when Shopify indicates restock (return/cancel)
-  // no_restock = damaged/lost/goodwill → do NOT create ghost inventory
+  // Restore listing to active (if restocking)
   if (restoreInventory) {
     affectedVariantIds.add(item.listing.variantId);
-
-    const newListingQty = Math.max(0, item.listing.quantity + refundQty);
     await tx.listing.update({
       where: { id: item.listingId },
-      data: { quantity: newListingQty, status: "active" },
+      data: { status: "active", soldAt: null },
     });
-    item.listing.quantity = newListingQty;
   }
 
-  // Increment quantityRefunded in-place (supports chained partial refunds)
-  const newQuantityRefunded = item.quantityRefunded + refundQty;
+  // Mark order item as refunded
   await tx.orderItem.update({
     where: { id: item.id },
-    data: { quantityRefunded: newQuantityRefunded },
+    data: { status: "refunded" },
   });
-  item.quantityRefunded = newQuantityRefunded;
 
-  // Create refund transaction using original sale's commission rate snapshot
+  // Create refund transaction
   const saleTx = item.transactions.find((t) => t.type === "sale");
   const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
-  const refundGross = item.price * refundQty;
+  const refundGross = item.price;
   const refundCommission = refundGross * rate;
 
   await tx.transaction.create({
@@ -472,7 +432,6 @@ async function refundUnits(
       consignorId: item.listing.consignorId,
       orderItemId: item.id,
       salePrice: item.price,
-      quantity: refundQty,
       commissionRate: rate,
       grossAmount: -refundGross,
       commissionAmount: -refundCommission,

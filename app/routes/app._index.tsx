@@ -8,58 +8,21 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { createListing, cancelListing, updateListingQuantity } from "~/services/listings.server";
-import { processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance } from "~/services/orders.server";
+import { createListing, cancelListing } from "~/services/listings.server";
+import { getConsignorBalance } from "~/services/orders.server";
 import prisma from "~/db.server";
 
-const PRESETS = [
-  {
-    label: "Dunk Panda sz 9 — $340",
-    styleId: "DD1391-100",
-    title: "Nike Dunk Panda",
-    brand: "Nike",
-    size: "9",
-    price: "340",
-    quantity: "1",
-    purpose: "Lowest ask — Shopify price should show $340",
-  },
-  {
-    label: "Dunk Panda sz 9 — $360",
-    styleId: "DD1391-100",
-    title: "Nike Dunk Panda",
-    brand: "Nike",
-    size: "9",
-    price: "360",
-    quantity: "1",
-    purpose: "Higher ask — tests multi-price, same variant",
-  },
-  {
-    label: "Dunk Panda sz 10 — $350",
-    styleId: "DD1391-100",
-    title: "Nike Dunk Panda",
-    brand: "Nike",
-    size: "10",
-    price: "350",
-    quantity: "1",
-    purpose: "Adds new size variant to existing product",
-  },
-  {
-    label: "Jordan 1 Bred sz 9 — $450",
-    styleId: "555088-001",
-    title: "Jordan 1 Retro High OG Bred",
-    brand: "Jordan",
-    size: "9",
-    price: "450",
-    quantity: "1",
-    purpose: "Creates a brand new product",
-  },
-];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
   const consignors = await prisma.consignor.findMany({
     orderBy: { name: "asc" },
+  });
+
+  const products = await prisma.product.findMany({
+    include: { variants: { orderBy: { size: "asc" } } },
+    orderBy: { title: "asc" },
   });
 
   const listings = await prisma.listing.findMany({
@@ -93,7 +56,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     balances[c.id] = await getConsignorBalance(c.id);
   }
 
-  return { consignors, listings, orders, balances };
+  return { consignors, products, listings, orders, balances };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -110,97 +73,98 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { listing, intent };
     }
 
-    if (intent === "updateQuantity") {
-      const listing = await updateListingQuantity({
-        admin,
-        listingId: formData.get("listingId") as string,
-        quantity: parseInt(formData.get("quantity") as string, 10),
-      });
-      return { listing, intent };
+    // ─── Normalization ───
+    const styleId = (formData.get("styleId") as string ?? "").trim().toUpperCase();
+    const title = (formData.get("title") as string ?? "").trim();
+    const brand = (formData.get("brand") as string ?? "").trim() || undefined;
+    const size = (formData.get("size") as string ?? "").trim();
+    const gtin = (formData.get("gtin") as string ?? "").trim();
+    const priceRaw = formData.get("price") as string;
+    const quantityRaw = formData.get("quantity") as string;
+    const consignorId = formData.get("consignorId") as string;
+
+    // ─── Validation: required fields ───
+    if (!consignorId || !styleId || !title || !size) {
+      return { error: "Consignor, Style ID, Title, and Size are required", intent };
     }
 
-    if (intent === "simulateOrder") {
-      const variantId = formData.get("variantId") as string;
-      const quantity = parseInt(formData.get("quantity") as string, 10);
-
-      const variant = await prisma.variant.findUniqueOrThrow({
-        where: { id: variantId },
-      });
-
-      if (!variant.shopifyVariantId) {
-        return { error: "Variant has no Shopify ID — create a listing first", intent };
-      }
-
-      const shopifyOrderId = `gid://shopify/Order/sim-${Date.now()}`;
-      const order = await processOrder({
-        admin,
-        shopifyOrderId,
-        lineItems: [{
-          shopifyVariantId: variant.shopifyVariantId,
-          quantity,
-          price: 0,
-        }],
-      });
-
-      return { order, intent };
+    if (!gtin) {
+      return { error: "GTIN (barcode) is required", intent };
     }
 
-    if (intent === "capturePayment") {
-      const shopifyOrderId = formData.get("shopifyOrderId") as string;
-      await creditOrder({ shopifyOrderId });
-      return { success: true, intent };
+    // ─── Validation: price ───
+    const price = Number(priceRaw);
+    if (isNaN(price) || price <= 0) {
+      return { error: "Price must be greater than 0", intent };
     }
 
-    if (intent === "cancelOrder") {
-      const shopifyOrderId = formData.get("shopifyOrderId") as string;
-      await cancelOrder({ admin, shopifyOrderId });
-      return { success: true, intent };
+    // ─── Validation: quantity ───
+    const quantity = parseInt(quantityRaw, 10) || 1;
+    if (quantity < 1 || quantity > 50) {
+      return { error: "Quantity must be between 1 and 50", intent };
     }
 
-    if (intent === "refundOrder") {
-      const shopifyOrderId = formData.get("shopifyOrderId") as string;
-      await refundOrder({ admin, shopifyOrderId });
-      return { success: true, intent };
+    // ─── Validation: consignor exists ───
+    const consignor = await prisma.consignor.findUnique({ where: { id: consignorId } });
+    if (!consignor) {
+      return { error: "Consignor not found", intent };
     }
 
-    if (intent === "partialRefund") {
-      const shopifyOrderId = formData.get("shopifyOrderId") as string;
-      const shopifyVariantId = formData.get("shopifyVariantId") as string;
-      const quantity = parseInt(formData.get("quantity") as string, 10);
-      await refundOrder({
-        admin,
-        shopifyOrderId,
-        refundLineItems: [{ shopifyVariantId, quantity }],
-      });
-      return { success: true, intent };
-    }
-
+    // ─── Single service call (creates N listings internally) ───
     const listing = await createListing({
-      admin,
-      styleId: formData.get("styleId") as string,
-      title: formData.get("title") as string,
-      brand: (formData.get("brand") as string) || undefined,
-      size: formData.get("size") as string,
-      price: parseFloat(formData.get("price") as string),
-      quantity: parseInt(formData.get("quantity") as string, 10),
-      consignorId: formData.get("consignorId") as string,
+      admin, styleId, title, brand, size, gtin, price, count: quantity, consignorId,
     });
 
-    return { listing, intent };
+    return { listing, intent, quantity };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { error: message, intent };
   }
 };
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 12px",
+  fontSize: "14px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+  boxSizing: "border-box",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "12px",
+  fontWeight: 600,
+  marginBottom: "4px",
+};
+
+
 export default function Index() {
-  const { consignors, listings, orders, balances } = useLoaderData<typeof loader>();
+  const { consignors, products, listings, orders, balances } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
   const [selectedConsignor, setSelectedConsignor] = useState(
     consignors[0]?.id ?? ""
   );
+
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [gtinLocked, setGtinLocked] = useState(false);
+  const [newSizeMode, setNewSizeMode] = useState(false);
+  const [newProductMode, setNewProductMode] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [formFields, setFormFields] = useState({
+    styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1",
+  });
+
+  const filteredProducts = productSearch.trim()
+    ? products.filter((p) =>
+        p.title.toLowerCase().includes(productSearch.toLowerCase()) ||
+        p.styleId.toLowerCase().includes(productSearch.toLowerCase())
+      )
+    : products;
+
 
   const isLoading =
     ["loading", "submitting"].includes(fetcher.state) &&
@@ -215,89 +179,23 @@ export default function Index() {
       return;
     }
 
-    const messages: Record<string, string> = {
-      create: "Listing created",
-      cancel: "Listing cancelled",
-      updateQuantity: "Quantity updated",
-      simulateOrder: "Order created (pending payment)",
-      capturePayment: "Payment captured — balance updated",
-      cancelOrder: "Order cancelled (voided)",
-      refundOrder: "Order refunded",
-      partialRefund: "Partial refund applied",
-    };
     const intent = data.intent as string;
-    if (intent) {
-      shopify.toast.show(messages[intent] ?? "Done");
+    if (intent === "create") {
+      const qty = (data as Record<string, unknown>).quantity ?? 1;
+      shopify.toast.show(`${qty} listing(s) created`);
+      setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1" });
+      setSelectedProductId(null);
+      setGtinLocked(false);
+      setNewSizeMode(false);
+      setNewProductMode(false);
+      setProductSearch("");
+    } else if (intent === "cancel") {
+      shopify.toast.show("Listing cancelled");
+    } else {
+      shopify.toast.show("Done");
     }
   }, [fetcher.data, shopify]);
 
-  const submitPreset = (preset: (typeof PRESETS)[number]) => {
-    const data: Record<string, string> = {
-      intent: "create",
-      styleId: preset.styleId,
-      title: preset.title,
-      brand: preset.brand,
-      size: preset.size,
-      price: preset.price,
-      quantity: preset.quantity,
-      consignorId: selectedConsignor,
-    };
-    fetcher.submit(data, { method: "POST" });
-  };
-
-  const submitCancel = (listingId: string) => {
-    fetcher.submit({ intent: "cancel", listingId }, { method: "POST" });
-  };
-
-  const submitUpdateQty = (listingId: string, quantity: string) => {
-    fetcher.submit({ intent: "updateQuantity", listingId, quantity }, { method: "POST" });
-  };
-
-  const submitSimulateOrder = (variantId: string, quantity: number) => {
-    fetcher.submit(
-      { intent: "simulateOrder", variantId, quantity: String(quantity) },
-      { method: "POST" }
-    );
-  };
-
-  const submitCapturePayment = (shopifyOrderId: string) => {
-    fetcher.submit({ intent: "capturePayment", shopifyOrderId }, { method: "POST" });
-  };
-
-  const submitCancelOrder = (shopifyOrderId: string) => {
-    fetcher.submit({ intent: "cancelOrder", shopifyOrderId }, { method: "POST" });
-  };
-
-  const submitRefundOrder = (shopifyOrderId: string) => {
-    fetcher.submit({ intent: "refundOrder", shopifyOrderId }, { method: "POST" });
-  };
-
-  const submitPartialRefund = (shopifyOrderId: string, shopifyVariantId: string, quantity: number) => {
-    fetcher.submit(
-      { intent: "partialRefund", shopifyOrderId, shopifyVariantId, quantity: String(quantity) },
-      { method: "POST" }
-    );
-  };
-
-  // Get unique variants with active listings for the order simulator
-  const activeVariants = listings
-    .filter((l) => l.status === "active")
-    .reduce(
-      (acc, l) => {
-        const key = l.variant.id;
-        if (!acc.find((v) => v.id === key)) {
-          acc.push({
-            id: l.variant.id,
-            label: `${l.variant.product.title} sz ${l.variant.size}`,
-            totalQty: listings
-              .filter((li) => li.variant.id === key && li.status === "active")
-              .reduce((sum, li) => sum + li.quantity, 0),
-          });
-        }
-        return acc;
-      },
-      [] as Array<{ id: string; label: string; totalQty: number }>
-    );
 
   return (
     <s-page heading="Consignment App — Test Panel">
@@ -329,65 +227,262 @@ export default function Index() {
         )}
       </s-section>
 
-      {/* Test presets */}
-      <s-section heading="Test Scenarios">
-        <s-paragraph>
-          Each button creates a listing with different parameters. Use them in
-          order to test all code paths.
-        </s-paragraph>
+      {/* Create Listing */}
+      <s-section heading="Create Listing">
+        {/* Product selector */}
+        <div style={{ marginBottom: "12px" }}>
+          <label style={labelStyle}>Product</label>
 
-        <s-stack gap="base">
-          {PRESETS.map((preset, i) => (
-            <s-card key={i}>
-              <s-stack direction="inline" gap="base" align="center">
-                <s-button
-                  onClick={() => submitPreset(preset)}
-                  {...(isLoading ? { disabled: true } : {})}
+          {/* State A: Product selected — show chip */}
+          {selectedProductId && (() => {
+            const p = products.find((p) => p.id === selectedProductId);
+            return p ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "8px 12px", background: "#e8f4fd", border: "1px solid #b3d9f2",
+                borderRadius: "6px", fontSize: "14px",
+              }}>
+                <span style={{ flex: 1 }}>{p.title} ({p.styleId}){p.brand ? ` — ${p.brand}` : ""}</span>
+                <span
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setSelectedProductId(null);
+                    setGtinLocked(false);
+                    setNewSizeMode(false);
+                    setProductSearch("");
+                    setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1" });
+                  }}
+                  style={{ cursor: "pointer", fontSize: "16px", color: "#666", fontWeight: "bold" }}
                 >
-                  {preset.label}
-                </s-button>
-                <s-text variant="bodyMd" tone="subdued">
-                  {preset.purpose}
-                </s-text>
-              </s-stack>
-              <s-text variant="bodySm" tone="subdued">
-                {preset.styleId} | ${preset.price} | qty {preset.quantity}
-              </s-text>
-            </s-card>
-          ))}
-        </s-stack>
-      </s-section>
+                  ✕
+                </span>
+              </div>
+            ) : null;
+          })()}
 
-      {/* Order Simulator */}
-      <s-section heading="Simulate Order">
-        {activeVariants.length === 0 ? (
-          <s-paragraph>No active listings to order from. Create listings first.</s-paragraph>
-        ) : (
-          <s-stack gap="base">
-            <s-paragraph>
-              Simulate a customer buying 1 unit. This allocates inventory but does NOT credit the balance yet. Use "Capture Payment" on the order to simulate payment and credit the consignor.
-            </s-paragraph>
-            {activeVariants.map((v) => (
-              <s-card key={v.id}>
-                <s-stack direction="inline" gap="base" align="center">
-                  <s-button
-                    onClick={() => submitSimulateOrder(v.id, 1)}
-                    {...(isLoading ? { disabled: true } : {})}
+          {/* State B: New product mode — show editable fields */}
+          {!selectedProductId && newProductMode && (
+            <>
+              <div style={{ marginBottom: "8px" }}>
+                <span
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setNewProductMode(false);
+                    setFormFields({ ...formFields, styleId: "", title: "", brand: "" });
+                  }}
+                  style={{ cursor: "pointer", color: "#2c6ecb", fontSize: "13px" }}
+                >
+                  ← Back to search
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={labelStyle}>Style ID *</label>
+                  <input
+                    type="text"
+                    value={formFields.styleId}
+                    onChange={(e) => setFormFields({ ...formFields, styleId: e.target.value })}
+                    placeholder="e.g. DD1391-100"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Title *</label>
+                  <input
+                    type="text"
+                    value={formFields.title}
+                    onChange={(e) => setFormFields({ ...formFields, title: e.target.value })}
+                    placeholder="e.g. Nike Dunk Panda"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Brand</label>
+                  <input
+                    type="text"
+                    value={formFields.brand}
+                    onChange={(e) => setFormFields({ ...formFields, brand: e.target.value })}
+                    placeholder="e.g. Nike"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* State C: Search mode — show search input + dropdown */}
+          {!selectedProductId && !newProductMode && (
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  setShowResults(true);
+                }}
+                onFocus={() => setShowResults(true)}
+                onBlur={() => setTimeout(() => setShowResults(false), 150)}
+                placeholder="Search by name or style ID..."
+                style={inputStyle}
+              />
+              {showResults && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+                  background: "white", border: "1px solid #ccc", borderRadius: "6px",
+                  maxHeight: "200px", overflowY: "auto", marginTop: "2px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                }}>
+                  {filteredProducts.map((p) => (
+                    <div
+                      key={p.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setSelectedProductId(p.id);
+                        setProductSearch("");
+                        setShowResults(false);
+                        setGtinLocked(false);
+                        setNewSizeMode(false);
+                        setFormFields({
+                          ...formFields,
+                          styleId: p.styleId,
+                          title: p.title,
+                          brand: p.brand ?? "",
+                          size: "", gtin: "", price: "", quantity: "1",
+                        });
+                      }}
+                      style={{
+                        padding: "8px 12px", cursor: "pointer", fontSize: "14px",
+                        borderBottom: "1px solid #f0f0f0",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
+                    >
+                      {p.title} ({p.styleId}){p.brand ? ` — ${p.brand}` : ""}
+                    </div>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div style={{ padding: "8px 12px", color: "#999", fontSize: "13px" }}>
+                      No products found
+                    </div>
+                  )}
+                  <div
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setNewProductMode(true);
+                      setProductSearch("");
+                      setShowResults(false);
+                    }}
+                    style={{
+                      padding: "8px 12px", cursor: "pointer", fontSize: "14px",
+                      color: "#2c6ecb", fontWeight: 600,
+                      borderTop: "1px solid #ddd",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
                   >
-                    Buy 1x {v.label}
-                  </s-button>
-                  <s-text variant="bodySm" tone="subdued">
-                    {v.totalQty} available
-                  </s-text>
-                </s-stack>
-              </s-card>
-            ))}
-          </s-stack>
-        )}
+                    + Add new product
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Variant details: Size → GTIN → Price → Quantity */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+          <div>
+            <label style={labelStyle}>Size *</label>
+            {selectedProductId && !newSizeMode ? (
+              <select
+                value={formFields.size}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "__new") {
+                    setNewSizeMode(true);
+                    setFormFields({ ...formFields, size: "", gtin: "" });
+                    setGtinLocked(false);
+                    return;
+                  }
+                  const selectedProduct = products.find((p) => p.id === selectedProductId);
+                  const existingVariant = selectedProduct?.variants.find((v) => v.size === val);
+                  const variantGtin = existingVariant?.gtin ?? "";
+                  setFormFields({ ...formFields, size: val, gtin: variantGtin });
+                  setGtinLocked(variantGtin.length > 0);
+                }}
+                style={inputStyle}
+              >
+                <option value="">Select size...</option>
+                {products.find((p) => p.id === selectedProductId)?.variants.map((v) => (
+                  <option key={v.id} value={v.size}>{v.size}</option>
+                ))}
+                <option value="__new">+ New size</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formFields.size}
+                onChange={(e) => setFormFields({ ...formFields, size: e.target.value })}
+                placeholder="e.g. 9"
+                style={inputStyle}
+              />
+            )}
+          </div>
+          <div>
+            <label style={labelStyle}>GTIN (barcode) *</label>
+            <input
+              type="text"
+              value={formFields.gtin}
+              onChange={(e) => setFormFields({ ...formFields, gtin: e.target.value })}
+              placeholder="e.g. 194956806653"
+              disabled={gtinLocked}
+              style={{ ...inputStyle, ...(gtinLocked ? { background: "#f0f0f0" } : {}) }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Price ($) *</label>
+            <input
+              type="number"
+              value={formFields.price}
+              onChange={(e) => setFormFields({ ...formFields, price: e.target.value })}
+              placeholder="e.g. 340"
+              min="1"
+              step="1"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Quantity</label>
+            <input
+              type="number"
+              value={formFields.quantity}
+              onChange={(e) => setFormFields({ ...formFields, quantity: e.target.value })}
+              min="1"
+              max="50"
+              step="1"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <s-button
+          variant="primary"
+          onClick={() => {
+            fetcher.submit(
+              { intent: "create", consignorId: selectedConsignor, ...formFields },
+              { method: "POST" }
+            );
+          }}
+          {...(isLoading ? { disabled: true } : {})}
+        >
+          {isLoading ? "Creating..." : "Create Listing"}
+        </s-button>
       </s-section>
 
       {/* Orders */}
       <s-section heading={`Orders (${orders.length})`}>
+        <s-paragraph>
+          To refund or cancel orders, go to Shopify Admin &rarr; Orders.
+        </s-paragraph>
         {orders.length === 0 ? (
           <s-paragraph>No orders yet. Simulate one above.</s-paragraph>
         ) : (
@@ -405,7 +500,6 @@ export default function Index() {
                 <th style={{ padding: "6px" }}>Status</th>
                 <th style={{ padding: "6px" }}>Payment</th>
                 <th style={{ padding: "6px" }}>Items</th>
-                <th style={{ padding: "6px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -461,48 +555,21 @@ export default function Index() {
                     {o.items.map((item, i) => (
                       <div key={i} style={{ marginBottom: "4px" }}>
                         <div>
-                          {item.quantity}x {item.listing.variant.product.title} sz{" "}
+                          {item.listing.variant.product.title} sz{" "}
                           {item.listing.variant.size} @ ${item.price}
-                          {item.quantityRefunded >= item.quantity
+                          {item.status === "refunded"
                             ? o.status === "cancelled"
                               ? " (cancelled)"
                               : " (refunded)"
-                            : item.quantityRefunded > 0
-                              ? ` (${item.quantityRefunded} refunded)`
-                              : ""}{" "}
+                            : ""}{" "}
                           <span style={{ color: "#999" }}>
                             — {item.listing.consignor.name}
                           </span>
-                          {/* Partial refund button for open orders with refundable units */}
-                          {o.status === "open" && item.quantity - item.quantityRefunded > 0 && (
-                            <button
-                              onClick={() =>
-                                submitPartialRefund(
-                                  o.shopifyId!,
-                                  item.listing.variant.shopifyVariantId!,
-                                  1
-                                )
-                              }
-                              disabled={isLoading}
-                              style={{
-                                fontSize: "10px",
-                                cursor: "pointer",
-                                color: "#856404",
-                                marginLeft: "6px",
-                                border: "1px solid #856404",
-                                borderRadius: "3px",
-                                padding: "0 4px",
-                                background: "transparent",
-                              }}
-                            >
-                              Refund 1
-                            </button>
-                          )}
                         </div>
                         {/* Transactions for this order item */}
                         {item.transactions && item.transactions.length > 0 && (
                           <div style={{ marginLeft: "12px", marginTop: "2px" }}>
-                            {item.transactions.map((tx: { id: string; type: string; amount: number; grossAmount: number; quantity: number }, ti: number) => (
+                            {item.transactions.map((tx: { id: string; type: string; amount: number; grossAmount: number }, ti: number) => (
                               <div
                                 key={ti}
                                 style={{
@@ -516,48 +583,13 @@ export default function Index() {
                                 }}
                               >
                                 {tx.type.toUpperCase()}: {tx.grossAmount >= 0 ? "+" : ""}${tx.grossAmount.toFixed(2)}{" "}
-                                ({tx.quantity} unit{tx.quantity !== 1 ? "s" : ""}, commission{" "}
-                                {tx.amount >= 0 ? "+" : ""}${tx.amount.toFixed(2)})
+                                (commission {tx.amount >= 0 ? "+" : ""}${tx.amount.toFixed(2)})
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
                     ))}
-                  </td>
-                  <td style={{ padding: "6px" }}>
-                    {o.status === "open" && (
-                      <span style={{ display: "flex", gap: "4px", flexDirection: "column" }}>
-                        {o.paymentStatus === "pending" && (
-                          <button
-                            onClick={() => submitCapturePayment(o.shopifyId!)}
-                            disabled={isLoading}
-                            style={{ fontSize: "12px", cursor: "pointer", color: "#1a7f37", fontWeight: "bold" }}
-                          >
-                            Capture Payment
-                          </button>
-                        )}
-                        <button
-                          onClick={() => submitCancelOrder(o.shopifyId!)}
-                          disabled={isLoading}
-                          style={{ fontSize: "12px", cursor: "pointer", color: "#c33" }}
-                        >
-                          Cancel (Void)
-                        </button>
-                        {o.paymentStatus === "paid" && (
-                          <button
-                            onClick={() => submitRefundOrder(o.shopifyId!)}
-                            disabled={isLoading}
-                            style={{ fontSize: "12px", cursor: "pointer", color: "#856404" }}
-                          >
-                            Full Refund
-                          </button>
-                        )}
-                      </span>
-                    )}
-                    {o.status !== "open" && (
-                      <span style={{ color: "#999", fontSize: "12px" }}>—</span>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -642,7 +674,6 @@ export default function Index() {
                 <th style={{ padding: "6px" }}>Product</th>
                 <th style={{ padding: "6px" }}>Size</th>
                 <th style={{ padding: "6px" }}>Price</th>
-                <th style={{ padding: "6px" }}>Qty</th>
                 <th style={{ padding: "6px" }}>Consignor</th>
                 <th style={{ padding: "6px" }}>Status</th>
                 <th style={{ padding: "6px" }}>Actions</th>
@@ -659,31 +690,20 @@ export default function Index() {
                   </td>
                   <td style={{ padding: "6px" }}>{l.variant.size}</td>
                   <td style={{ padding: "6px" }}>${l.price}</td>
-                  <td style={{ padding: "6px" }}>{l.quantity}</td>
                   <td style={{ padding: "6px" }}>{l.consignor.name}</td>
                   <td style={{ padding: "6px" }}>{l.status}</td>
                   <td style={{ padding: "6px" }}>
                     {l.status === "active" ? (
-                      <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                        <button
-                          onClick={() => submitCancel(l.id)}
-                          disabled={isLoading}
-                          style={{ fontSize: "12px", cursor: "pointer" }}
-                        >
-                          Cancel
-                        </button>
-                        <input
-                          type="number"
-                          defaultValue={l.quantity}
-                          min={0}
-                          style={{ width: "50px", fontSize: "12px", padding: "2px 4px" }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              submitUpdateQty(l.id, e.currentTarget.value);
-                            }
-                          }}
-                        />
-                      </span>
+                      <s-button
+                        tone="critical"
+                        size="slim"
+                        onClick={() => {
+                          fetcher.submit({ intent: "cancel", listingId: l.id }, { method: "POST" });
+                        }}
+                        {...(isLoading ? { disabled: true } : {})}
+                      >
+                        Cancel
+                      </s-button>
                     ) : (
                       <span style={{ color: "#999", fontSize: "12px" }}>—</span>
                     )}

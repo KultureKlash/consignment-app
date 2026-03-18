@@ -53,6 +53,11 @@ Thumbs.db
 .vscode
 .idea
 
+# Playwright
+tests/e2e/auth/storage-state.json
+playwright-report/
+test-results/
+
 # Misc
 coverage
 *.tgz

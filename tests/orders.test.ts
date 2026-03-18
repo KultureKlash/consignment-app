@@ -15,6 +15,7 @@ async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100
     data: {
       productId: product.id,
       size: "9",
+      gtin: "TEST-GTIN-9",
       shopifyVariantId,
       inventoryItemId: "gid://shopify/InventoryItem/1",
     },
@@ -22,24 +23,30 @@ async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100
   return { product, variant };
 }
 
-async function createListing(
+/** Create N individual listings (per-item model: each row = 1 physical item) */
+async function createListings(
   consignorId: string,
   variantId: string,
   price: number,
-  quantity: number,
+  count: number,
 ) {
-  return prisma.listing.create({
-    data: { consignorId, variantId, price, quantity, status: "active" },
-  });
+  const listings = [];
+  for (let i = 0; i < count; i++) {
+    const listing = await prisma.listing.create({
+      data: { consignorId, variantId, price, status: "active" },
+    });
+    listings.push(listing);
+  }
+  return listings;
 }
 
 describe("orders.server — processOrder", () => {
-  it("single listing partially fulfills order", async () => {
+  it("allocates individual listings and marks them sold", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 5);
+    await createListings(consignor.id, variant.id, 350, 5);
 
     const order = await processOrder({
       admin,
@@ -50,33 +57,18 @@ describe("orders.server — processOrder", () => {
     expect(order.total).toBe(700); // 350 * 2
     expect(order.status).toBe("open");
 
-    // Listing should have 3 remaining, still active
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(3);
-    expect(listing?.status).toBe("active");
+    // 2 listings should be sold, 3 should remain active
+    const soldListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "sold" } });
+    const activeListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "active" } });
+    expect(soldListings).toHaveLength(2);
+    expect(activeListings).toHaveLength(3);
 
-    // 1 order item
-    expect(order.items).toHaveLength(1);
-    expect(order.items[0].quantity).toBe(2);
-    expect(order.items[0].price).toBe(350);
-  });
+    // Each sold listing should have soldAt set
+    expect(soldListings.every((l) => l.soldAt !== null)).toBe(true);
 
-  it("listing fully consumed becomes sold", async () => {
-    const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor();
-    const { variant } = await setupVariant();
-
-    await createListing(consignor.id, variant.id, 350, 2);
-
-    await processOrder({
-      admin,
-      shopifyOrderId: "gid://shopify/Order/2",
-      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
-    });
-
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(0);
-    expect(listing?.status).toBe("sold");
+    // 2 order items (1 per listing)
+    expect(order.items).toHaveLength(2);
+    expect(order.items.every((i) => i.price === 350)).toBe(true);
   });
 
   it("allocates lowest price first across multiple listings", async () => {
@@ -84,10 +76,9 @@ describe("orders.server — processOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    // Listing A: cheaper, qty 1
-    const listingA = await createListing(consignor.id, variant.id, 340, 1);
-    // Listing B: more expensive, qty 2
-    const listingB = await createListing(consignor.id, variant.id, 350, 2);
+    // 1 listing at $340, 2 listings at $350
+    const [cheapListing] = await createListings(consignor.id, variant.id, 340, 1);
+    const expensiveListings = await createListings(consignor.id, variant.id, 350, 2);
 
     const order = await processOrder({
       admin,
@@ -95,17 +86,23 @@ describe("orders.server — processOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // Should take all of A (1 unit at $340) then 1 from B (at $350)
+    // Should take the $340 one first, then 1 of the $350 ones
     expect(order.total).toBe(690); // 340 + 350
     expect(order.items).toHaveLength(2);
 
-    const updatedA = await prisma.listing.findUnique({ where: { id: listingA.id } });
-    expect(updatedA?.quantity).toBe(0);
-    expect(updatedA?.status).toBe("sold");
+    // Cheap listing should be sold
+    const updatedCheap = await prisma.listing.findUnique({ where: { id: cheapListing.id } });
+    expect(updatedCheap?.status).toBe("sold");
 
-    const updatedB = await prisma.listing.findUnique({ where: { id: listingB.id } });
-    expect(updatedB?.quantity).toBe(1);
-    expect(updatedB?.status).toBe("active");
+    // One expensive listing sold, one still active
+    const soldExpensive = await prisma.listing.findMany({
+      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "sold" },
+    });
+    const activeExpensive = await prisma.listing.findMany({
+      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "active" },
+    });
+    expect(soldExpensive).toHaveLength(1);
+    expect(activeExpensive).toHaveLength(1);
   });
 
   it("FIFO tiebreak when prices are equal", async () => {
@@ -115,9 +112,9 @@ describe("orders.server — processOrder", () => {
     const { variant } = await setupVariant();
 
     // First listed (earlier createdAt)
-    const listingFirst = await createListing(consignor1.id, variant.id, 350, 1);
+    const [listingFirst] = await createListings(consignor1.id, variant.id, 350, 1);
     // Second listed (later createdAt)
-    await createListing(consignor2.id, variant.id, 350, 1);
+    await createListings(consignor2.id, variant.id, 350, 1);
 
     const order = await processOrder({
       admin,
@@ -135,7 +132,7 @@ describe("orders.server — processOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 2);
+    await createListings(consignor.id, variant.id, 350, 2);
 
     await expect(
       processOrder({
@@ -145,23 +142,22 @@ describe("orders.server — processOrder", () => {
       })
     ).rejects.toThrow("Insufficient inventory");
 
-    // Transaction should have rolled back — no order, no order items, no transactions
+    // Transaction should have rolled back
     expect(await prisma.order.count()).toBe(0);
     expect(await prisma.orderItem.count()).toBe(0);
     expect(await prisma.transaction.count()).toBe(0);
 
-    // Listing should be unchanged
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(2);
-    expect(listing?.status).toBe("active");
+    // Listings should be unchanged
+    const activeListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "active" } });
+    expect(activeListings).toHaveLength(2);
   });
 
-  it("creates transactions with correct commission and orderItemId", async () => {
+  it("creates per-item transactions with correct commission", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     const order = await processOrder({
       admin,
@@ -170,20 +166,17 @@ describe("orders.server — processOrder", () => {
       financialStatus: "paid",
     });
 
+    // Per-item model: 2 order items, each gets its own transaction
     const transactions = await prisma.transaction.findMany();
-    expect(transactions).toHaveLength(1);
-    expect(transactions[0].type).toBe("sale");
-    // amount = price * qty * commissionRate = 200 * 2 * 0.85 = 340
-    expect(transactions[0].amount).toBe(340);
-    expect(transactions[0].consignorId).toBe(consignor.id);
-    expect(transactions[0].orderItemId).toBe(order.items[0].id);
+    expect(transactions).toHaveLength(2);
+    expect(transactions.every((t) => t.type === "sale")).toBe(true);
 
-    // Audit fields
-    expect(transactions[0].salePrice).toBe(200);
-    expect(transactions[0].quantity).toBe(2);
-    expect(transactions[0].commissionRate).toBe(0.85);
-    expect(transactions[0].grossAmount).toBe(400); // 200 * 2
-    expect(transactions[0].commissionAmount).toBe(340); // 400 * 0.85
+    // Each transaction: 200 * 0.85 = 170
+    expect(transactions.every((t) => t.amount === 170)).toBe(true);
+    expect(transactions.every((t) => t.salePrice === 200)).toBe(true);
+    expect(transactions.every((t) => t.commissionRate === 0.85)).toBe(true);
+    expect(transactions.every((t) => t.grossAmount === 200)).toBe(true);
+    expect(transactions.every((t) => t.commissionAmount === 170)).toBe(true);
   });
 
   it("handles multiple line items (different variants)", async () => {
@@ -198,13 +191,14 @@ describe("orders.server — processOrder", () => {
       data: {
         productId: product2.id,
         size: "10",
+        gtin: "TEST-GTIN-10",
         shopifyVariantId: "gid://shopify/ProductVariant/201",
         inventoryItemId: "gid://shopify/InventoryItem/2",
       },
     });
 
-    await createListing(consignor.id, variant1.id, 350, 3);
-    await createListing(consignor.id, variant2.id, 450, 2);
+    await createListings(consignor.id, variant1.id, 350, 3);
+    await createListings(consignor.id, variant2.id, 450, 2);
 
     const order = await processOrder({
       admin,
@@ -224,7 +218,7 @@ describe("orders.server — processOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 5);
+    await createListings(consignor.id, variant.id, 350, 5);
 
     await processOrder({
       admin,
@@ -232,7 +226,6 @@ describe("orders.server — processOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // Should have called inventorySetQuantities
     const setCalls = findCalls("inventorySetQuantities");
     expect(setCalls.length).toBeGreaterThanOrEqual(1);
   });
@@ -242,7 +235,7 @@ describe("orders.server — processOrder", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 300, 2);
+    await createListings(consignor.id, variant.id, 300, 2);
 
     await processOrder({
       admin,
@@ -261,7 +254,7 @@ describe("orders.server — processOrder", () => {
     const txs = await prisma.transaction.findMany({ where: { type: "sale" } });
     expect(txs).toHaveLength(1);
     expect(txs[0].commissionRate).toBe(0.85);
-    expect(txs[0].commissionAmount).toBe(255); // 300 * 1 * 0.85
+    expect(txs[0].commissionAmount).toBe(255); // 300 * 0.85
     expect(txs[0].amount).toBe(255);
   });
 
@@ -270,7 +263,7 @@ describe("orders.server — processOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 5);
+    await createListings(consignor.id, variant.id, 350, 5);
 
     const order1 = await processOrder({
       admin,
@@ -286,19 +279,19 @@ describe("orders.server — processOrder", () => {
 
     expect(order2.id).toBe(order1.id);
 
-    // Listing should only have been deducted once
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(4);
+    // Only 1 listing should be sold (not 2)
+    const soldCount = await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } });
+    expect(soldCount).toBe(1);
   });
 });
 
 describe("orders.server — cancelOrder", () => {
-  it("restores listing quantity and re-activates sold listing", async () => {
+  it("restores listings to active and clears soldAt", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 350, 2);
+    const listings = await createListings(consignor.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -306,26 +299,30 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // Listing should be sold
-    const soldListing = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(soldListing?.status).toBe("sold");
-    expect(soldListing?.quantity).toBe(0);
+    // Both listings should be sold
+    for (const l of listings) {
+      const sold = await prisma.listing.findUnique({ where: { id: l.id } });
+      expect(sold?.status).toBe("sold");
+      expect(sold?.soldAt).not.toBeNull();
+    }
 
     // Cancel the order
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/10" });
 
-    // Listing should be restored
-    const restored = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(restored?.quantity).toBe(2);
-    expect(restored?.status).toBe("active");
+    // Both listings should be restored
+    for (const l of listings) {
+      const restored = await prisma.listing.findUnique({ where: { id: l.id } });
+      expect(restored?.status).toBe("active");
+      expect(restored?.soldAt).toBeNull();
+    }
   });
 
-  it("cancel unpaid order creates no void/refund transactions", async () => {
+  it("cancel unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -334,20 +331,16 @@ describe("orders.server — cancelOrder", () => {
     });
 
     // No sale transactions (order is unpaid)
-    const saleTxs = await prisma.transaction.findMany({ where: { type: "sale" } });
-    expect(saleTxs).toHaveLength(0);
+    expect(await prisma.transaction.count()).toBe(0);
 
-    // Cancel unpaid order → no offsetting transactions needed
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11" });
 
     // No transactions of any kind
-    const allTxs = await prisma.transaction.findMany();
-    expect(allTxs).toHaveLength(0);
+    expect(await prisma.transaction.count()).toBe(0);
 
-    // But inventory should be restored
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(2);
-    expect(listing?.status).toBe("active");
+    // But listings should be restored
+    const activeCount = await prisma.listing.count({ where: { variantId: variant.id, status: "active" } });
+    expect(activeCount).toBe(2);
   });
 
   it("creates refund transactions when payment was captured", async () => {
@@ -355,7 +348,7 @@ describe("orders.server — cancelOrder", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -364,13 +357,13 @@ describe("orders.server — cancelOrder", () => {
       financialStatus: "paid",
     });
 
-    // Cancel paid order → refund (payment was captured)
+    // Cancel paid order → refund transactions
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11b" });
 
-    // Should create refund transaction (not void)
+    // Per-item: 2 sale + 2 refund = 4 transactions
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
-    expect(refundTxs).toHaveLength(1);
-    expect(refundTxs[0].amount).toBe(-340);
+    expect(refundTxs).toHaveLength(2);
+    expect(refundTxs.every((t) => t.amount === -170)).toBe(true); // -(200 * 0.85)
 
     // No void transactions
     const voidTxs = await prisma.transaction.findMany({ where: { type: "void" } });
@@ -382,32 +375,12 @@ describe("orders.server — cancelOrder", () => {
     expect(net).toBe(0);
   });
 
-  it("authorized financial status cancel creates no transactions (unpaid)", async () => {
-    const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor();
-    const { variant } = await setupVariant();
-
-    await createListing(consignor.id, variant.id, 350, 1);
-
-    await processOrder({
-      admin,
-      shopifyOrderId: "gid://shopify/Order/11c",
-      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 350 }],
-    });
-
-    await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/11c" });
-
-    // No transactions: order was never paid, so nothing to void
-    const allTxs = await prisma.transaction.findMany();
-    expect(allTxs).toHaveLength(0);
-  });
-
   it("sets order status to cancelled", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 1);
+    await createListings(consignor.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -421,12 +394,12 @@ describe("orders.server — cancelOrder", () => {
     expect(order?.status).toBe("cancelled");
   });
 
-  it("marks all order items as fully refunded", async () => {
+  it("marks all order items as refunded", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 3);
+    await createListings(consignor.id, variant.id, 350, 3);
 
     await processOrder({
       admin,
@@ -437,7 +410,8 @@ describe("orders.server — cancelOrder", () => {
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/13" });
 
     const items = await prisma.orderItem.findMany();
-    expect(items.every((i) => i.quantityRefunded >= i.quantity)).toBe(true);
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => i.status === "refunded")).toBe(true);
   });
 
   it("syncs inventory back to Shopify after cancel", async () => {
@@ -445,7 +419,7 @@ describe("orders.server — cancelOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 2);
+    await createListings(consignor.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -457,7 +431,6 @@ describe("orders.server — cancelOrder", () => {
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/14" });
 
-    // Should have synced inventory again after cancel
     const callsAfter = findCalls("inventorySetQuantities").length;
     expect(callsAfter).toBeGreaterThan(callsBefore);
   });
@@ -467,7 +440,7 @@ describe("orders.server — cancelOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 1);
+    await createListings(consignor.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -487,7 +460,7 @@ describe("orders.server — cancelOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 1);
+    await createListings(consignor.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -508,9 +481,9 @@ describe("orders.server — cancelOrder", () => {
     order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/16" } });
     expect(order?.status).toBe("cancelled");
 
-    // No double inventory restore — listing should have qty 1 (restored by refund only)
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(1);
+    // Listing should be active (restored by refund)
+    const activeCount = await prisma.listing.count({ where: { variantId: variant.id, status: "active" } });
+    expect(activeCount).toBe(1);
   });
 
   it("restores multiple listings from multi-listing order", async () => {
@@ -519,8 +492,9 @@ describe("orders.server — cancelOrder", () => {
     const consignor2 = await createTestConsignor({ email: "b@test.com" });
     const { variant } = await setupVariant();
 
-    const listing1 = await createListing(consignor1.id, variant.id, 340, 1);
-    const listing2 = await createListing(consignor2.id, variant.id, 350, 2);
+    // 1 listing at $340, 2 listings at $350
+    const [listing1] = await createListings(consignor1.id, variant.id, 340, 1);
+    const listings2 = await createListings(consignor2.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -528,20 +502,14 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // listing1 should be sold (took 1), listing2 should have 1 left
+    // listing1 ($340) should be sold, 1 of listings2 should be sold
     expect((await prisma.listing.findUnique({ where: { id: listing1.id } }))?.status).toBe("sold");
-    expect((await prisma.listing.findUnique({ where: { id: listing2.id } }))?.quantity).toBe(1);
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/17" });
 
-    // Both listings should be restored
-    const restored1 = await prisma.listing.findUnique({ where: { id: listing1.id } });
-    expect(restored1?.quantity).toBe(1);
-    expect(restored1?.status).toBe("active");
-
-    const restored2 = await prisma.listing.findUnique({ where: { id: listing2.id } });
-    expect(restored2?.quantity).toBe(2);
-    expect(restored2?.status).toBe("active");
+    // All listings should be restored to active
+    const allActive = await prisma.listing.findMany({ where: { variantId: variant.id, status: "active" } });
+    expect(allActive).toHaveLength(3);
   });
 });
 
@@ -551,7 +519,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 350, 2);
+    const listings = await createListings(consignor.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -562,10 +530,12 @@ describe("orders.server — refundOrder", () => {
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/20" });
 
-    // Listing restored
-    const restored = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(restored?.quantity).toBe(2);
-    expect(restored?.status).toBe("active");
+    // Both listings restored to active
+    for (const l of listings) {
+      const restored = await prisma.listing.findUnique({ where: { id: l.id } });
+      expect(restored?.status).toBe("active");
+      expect(restored?.soldAt).toBeNull();
+    }
 
     // Order status
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/20" } });
@@ -590,8 +560,8 @@ describe("orders.server — refundOrder", () => {
       },
     });
 
-    const listing1 = await createListing(consignor.id, variant1.id, 350, 2);
-    const listing2 = await createListing(consignor.id, variant2.id, 450, 1);
+    await createListings(consignor.id, variant1.id, 350, 2);
+    await createListings(consignor.id, variant2.id, 450, 1);
 
     await processOrder({
       admin,
@@ -612,15 +582,13 @@ describe("orders.server — refundOrder", () => {
       ],
     });
 
-    // listing1 should be restored
-    const restored1 = await prisma.listing.findUnique({ where: { id: listing1.id } });
-    expect(restored1?.quantity).toBe(2);
-    expect(restored1?.status).toBe("active");
+    // variant1 listings should be restored to active
+    const v1Active = await prisma.listing.count({ where: { variantId: variant1.id, status: "active" } });
+    expect(v1Active).toBe(2);
 
-    // listing2 should still be sold
-    const unchanged2 = await prisma.listing.findUnique({ where: { id: listing2.id } });
-    expect(unchanged2?.quantity).toBe(0);
-    expect(unchanged2?.status).toBe("sold");
+    // variant2 listing should still be sold
+    const v2Sold = await prisma.listing.count({ where: { variantId: variant2.id, status: "sold" } });
+    expect(v2Sold).toBe(1);
   });
 
   it("partial refund keeps order open until all items refunded", async () => {
@@ -640,8 +608,8 @@ describe("orders.server — refundOrder", () => {
       },
     });
 
-    await createListing(consignor.id, variant1.id, 350, 1);
-    await createListing(consignor.id, variant2.id, 450, 1);
+    await createListings(consignor.id, variant1.id, 350, 1);
+    await createListings(consignor.id, variant2.id, 450, 1);
 
     await processOrder({
       admin,
@@ -662,7 +630,7 @@ describe("orders.server — refundOrder", () => {
       ],
     });
 
-    // Order should still be open, paymentStatus still "paid" (partial refund)
+    // Order should still be open
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/22" } });
     expect(order?.status).toBe("open");
     expect(order?.paymentStatus).toBe("paid");
@@ -688,8 +656,8 @@ describe("orders.server — refundOrder", () => {
     const consignor2 = await createTestConsignor({ email: "c2@test.com", commissionRate: 0.80 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor1.id, variant.id, 340, 1);
-    await createListing(consignor2.id, variant.id, 350, 1);
+    await createListings(consignor1.id, variant.id, 340, 1);
+    await createListings(consignor2.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -706,8 +674,8 @@ describe("orders.server — refundOrder", () => {
     });
     expect(refundTxs).toHaveLength(2);
 
-    // consignor1: -(340 * 1 * 0.85) = -289
-    // consignor2: -(350 * 1 * 0.80) = -280
+    // consignor1: -(340 * 0.85) = -289
+    // consignor2: -(350 * 0.80) = -280
     const amounts = refundTxs.map((t) => t.amount).sort((a, b) => a - b);
     expect(amounts[0]).toBe(-289); // consignor1
     expect(amounts[1]).toBe(-280); // consignor2
@@ -715,7 +683,7 @@ describe("orders.server — refundOrder", () => {
     // Net should be zero
     const allTxs = await prisma.transaction.findMany();
     const net = allTxs.reduce((sum, t) => sum + t.amount, 0);
-    expect(Math.abs(net)).toBeLessThan(0.001); // floating point safety
+    expect(Math.abs(net)).toBeLessThan(0.001);
   });
 
   it("throws if order is cancelled", async () => {
@@ -723,7 +691,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 1);
+    await createListings(consignor.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -744,7 +712,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 1);
+    await createListings(consignor.id, variant.id, 350, 1);
 
     await processOrder({
       admin,
@@ -760,12 +728,12 @@ describe("orders.server — refundOrder", () => {
     ).rejects.toThrow("already fully refunded");
   });
 
-  it("partial quantity refund uses in-place quantityRefunded (no item splitting)", async () => {
+  it("refund 1 of 3 items: correct item refunded, others remain sold", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 350, 5);
+    await createListings(consignor.id, variant.id, 350, 5);
 
     await processOrder({
       admin,
@@ -783,32 +751,27 @@ describe("orders.server — refundOrder", () => {
       ],
     });
 
-    // Listing should get 1 back (was 2 after order, now 3)
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(3);
+    // 1 listing restored to active (2 sold + 3 originally active = 4 active total, 2 sold)
+    const activeCount = await prisma.listing.count({ where: { variantId: variant.id, status: "active" } });
+    const soldCount = await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } });
+    expect(activeCount).toBe(3); // 2 never sold + 1 restored
+    expect(soldCount).toBe(2);
 
-    // Should have single order item with quantityRefunded = 1 (no splitting)
+    // 3 order items: 2 sold, 1 refunded
     const items = await prisma.orderItem.findMany();
-    expect(items).toHaveLength(1);
-    expect(items[0].quantity).toBe(3);
-    expect(items[0].quantityRefunded).toBe(1);
+    expect(items).toHaveLength(3);
+    expect(items.filter((i) => i.status === "sold")).toHaveLength(2);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(1);
 
-    // Refund transaction for 1 unit: -(350 * 1 * 0.85) = -297.5
+    // Refund transaction: -(350 * 0.85) = -297.5
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(1);
     expect(refundTxs[0].amount).toBe(-297.5);
 
-    // Partial refund audit fields
-    expect(refundTxs[0].salePrice).toBe(350);
-    expect(refundTxs[0].quantity).toBe(1);
-    expect(refundTxs[0].commissionRate).toBe(0.85);
-    expect(refundTxs[0].grossAmount).toBe(-350);
-    expect(refundTxs[0].commissionAmount).toBe(-297.5);
-
-    // Order should still be open (2 units not refunded)
+    // Order should still be open (2 items not refunded)
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/26" } });
     expect(order?.status).toBe("open");
-    // Order total should reflect only un-refunded units: 350 * 2 = 700
+    // Order total should reflect only sold items: 350 * 2 = 700
     expect(order?.total).toBe(700);
   });
 
@@ -817,7 +780,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 2);
+    await createListings(consignor.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -836,14 +799,14 @@ describe("orders.server — refundOrder", () => {
     expect(order?.status).toBe("refunded");
   });
 
-  it("order total recalculates correctly after partial refund on multi-item order", async () => {
+  it("order total recalculates correctly after partial refund on multi-price order", async () => {
     const { admin } = createMockAdmin();
     const consignor1 = await createTestConsignor({ email: "t1@test.com" });
     const consignor2 = await createTestConsignor({ email: "t2@test.com" });
     const { variant } = await setupVariant();
 
-    await createListing(consignor1.id, variant.id, 340, 1);
-    await createListing(consignor2.id, variant.id, 450, 1);
+    await createListings(consignor1.id, variant.id, 340, 1);
+    await createListings(consignor2.id, variant.id, 450, 1);
 
     await processOrder({
       admin,
@@ -872,7 +835,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 350, 2);
+    await createListings(consignor.id, variant.id, 350, 2);
 
     await processOrder({
       admin,
@@ -887,14 +850,14 @@ describe("orders.server — refundOrder", () => {
     expect(order?.status).toBe("cancelled");
   });
 
-  // === NEW TESTS: Infallible Refund System ===
+  // === Chained Refunds ===
 
-  it("chained partial refunds: refund 1 → 1 → 1 from qty 3", async () => {
+  it("chained partial refunds: refund 1 → 1 → 1 from 3 items", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 5);
+    await createListings(consignor.id, variant.id, 200, 5);
 
     await processOrder({
       admin,
@@ -911,8 +874,8 @@ describe("orders.server — refundOrder", () => {
     });
 
     let items = await prisma.orderItem.findMany();
-    expect(items).toHaveLength(1);
-    expect(items[0].quantityRefunded).toBe(1);
+    expect(items).toHaveLength(3);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(1);
 
     let order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/chain-1" } });
     expect(order?.status).toBe("open");
@@ -925,7 +888,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     items = await prisma.orderItem.findMany();
-    expect(items[0].quantityRefunded).toBe(2);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(2);
 
     order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/chain-1" } });
     expect(order?.status).toBe("open");
@@ -938,14 +901,14 @@ describe("orders.server — refundOrder", () => {
     });
 
     items = await prisma.orderItem.findMany();
-    expect(items[0].quantityRefunded).toBe(3);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(3);
 
     order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/chain-1" } });
     expect(order?.status).toBe("refunded");
 
-    // All 3 units restored to listing
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(5); // original 5 restored
+    // All 3 listings restored to active (5 total active)
+    const activeCount = await prisma.listing.count({ where: { variantId: variant.id, status: "active" } });
+    expect(activeCount).toBe(5);
 
     // 3 refund transactions
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
@@ -962,7 +925,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -987,20 +950,21 @@ describe("orders.server — refundOrder", () => {
       })
     ).rejects.toThrow("only 1 available to refund");
 
-    // Verify state unchanged after rejection (1 refunded, 1 remaining)
+    // Verify state unchanged after rejection (1 refunded, 1 remaining sold)
     const items = await prisma.orderItem.findMany();
-    expect(items).toHaveLength(1);
-    expect(items[0].quantityRefunded).toBe(1);
+    expect(items).toHaveLength(2);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(1);
+    expect(items.filter((i) => i.status === "sold")).toHaveLength(1);
   });
 
-  it("reverse priority: refunds most expensive listing first", async () => {
+  it("reverse priority: refunds last allocated item first (highest price)", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
     // Create two listings at different prices
-    const cheapListing = await createListing(consignor.id, variant.id, 200, 1);
-    const expensiveListing = await createListing(consignor.id, variant.id, 220, 1);
+    const [cheapListing] = await createListings(consignor.id, variant.id, 200, 1);
+    const [expensiveListing] = await createListings(consignor.id, variant.id, 220, 1);
 
     // Buy both (allocates cheapest first: $200 then $220)
     await processOrder({
@@ -1011,10 +975,10 @@ describe("orders.server — refundOrder", () => {
     });
 
     // Verify both listings sold
-    expect((await prisma.listing.findUnique({ where: { id: cheapListing.id } }))?.quantity).toBe(0);
-    expect((await prisma.listing.findUnique({ where: { id: expensiveListing.id } }))?.quantity).toBe(0);
+    expect((await prisma.listing.findUnique({ where: { id: cheapListing.id } }))?.status).toBe("sold");
+    expect((await prisma.listing.findUnique({ where: { id: expensiveListing.id } }))?.status).toBe("sold");
 
-    // Refund 1 unit — should refund the $220 listing first (reverse priority)
+    // Refund 1 — should refund the $220 listing first (reverse allocation: last allocated first)
     await refundOrder({
       admin,
       shopifyOrderId: "gid://shopify/Order/reverse-prio",
@@ -1023,11 +987,9 @@ describe("orders.server — refundOrder", () => {
 
     // Expensive listing should be restored, cheap listing still sold
     const updatedExpensive = await prisma.listing.findUnique({ where: { id: expensiveListing.id } });
-    expect(updatedExpensive?.quantity).toBe(1);
     expect(updatedExpensive?.status).toBe("active");
 
     const updatedCheap = await prisma.listing.findUnique({ where: { id: cheapListing.id } });
-    expect(updatedCheap?.quantity).toBe(0);
     expect(updatedCheap?.status).toBe("sold");
 
     // Verify the refund transaction is for the $220 item
@@ -1043,8 +1005,8 @@ describe("orders.server — refundOrder", () => {
     const { variant } = await setupVariant();
 
     // Both same price — older listing first
-    const olderListing = await createListing(consignor1.id, variant.id, 300, 1);
-    const newerListing = await createListing(consignor2.id, variant.id, 300, 1);
+    const [olderListing] = await createListings(consignor1.id, variant.id, 300, 1);
+    const [newerListing] = await createListings(consignor2.id, variant.id, 300, 1);
 
     // Buy both (purchase allocates oldest first)
     await processOrder({
@@ -1063,11 +1025,9 @@ describe("orders.server — refundOrder", () => {
 
     // Newer listing restored, older still sold
     const updatedNewer = await prisma.listing.findUnique({ where: { id: newerListing.id } });
-    expect(updatedNewer?.quantity).toBe(1);
     expect(updatedNewer?.status).toBe("active");
 
     const updatedOlder = await prisma.listing.findUnique({ where: { id: olderListing.id } });
-    expect(updatedOlder?.quantity).toBe(0);
     expect(updatedOlder?.status).toBe("sold");
   });
 
@@ -1076,7 +1036,7 @@ describe("orders.server — refundOrder", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 5);
+    await createListings(consignor.id, variant.id, 200, 5);
 
     await processOrder({
       admin,
@@ -1085,7 +1045,7 @@ describe("orders.server — refundOrder", () => {
       financialStatus: "paid",
     });
 
-    // Sale: 200 * 3 * 0.85 = 510
+    // Sale: 3 items × 200 × 0.85 = 510
     let balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(510);
 
@@ -1120,12 +1080,12 @@ describe("orders.server — refundOrder", () => {
     expect(balance).toBe(0);
   });
 
-  it("cancel partially-refunded order: restores only remaining units", async () => {
+  it("cancel partially-refunded order: restores only remaining items", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 5);
+    await createListings(consignor.id, variant.id, 200, 5);
 
     await processOrder({
       admin,
@@ -1134,8 +1094,9 @@ describe("orders.server — refundOrder", () => {
       financialStatus: "paid",
     });
 
-    // Listing: 5 - 2 = 3
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(3);
+    // 2 listings sold, 3 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(3);
 
     // Refund 1 of 2
     await refundOrder({
@@ -1144,20 +1105,20 @@ describe("orders.server — refundOrder", () => {
       refundLineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1 }],
     });
 
-    // Listing: 3 + 1 = 4
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(4);
+    // 1 sold, 4 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(1);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(4);
 
-    // Cancel the order — should only restore the remaining 1 un-refunded unit
+    // Cancel the order — should restore the remaining 1 sold item
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/cancel-partial" });
 
-    // Listing: 4 + 1 = 5 (fully restored)
-    const finalListing = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(finalListing?.quantity).toBe(5);
+    // All 5 listings should be active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(5);
 
-    // Order item should be fully refunded
+    // All order items should be refunded
     const items = await prisma.orderItem.findMany();
-    expect(items).toHaveLength(1);
-    expect(items[0].quantityRefunded).toBe(2); // all units accounted for
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => i.status === "refunded")).toBe(true);
 
     // Net balance should be zero
     const balance = await getConsignorBalance(consignor.id);
@@ -1171,7 +1132,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1180,8 +1141,8 @@ describe("orders.server — refundOrder restock handling", () => {
       financialStatus: "paid",
     });
 
-    // Listing: 3 - 2 = 1
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(1);
+    // 2 sold, 1 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
     // Refund 1 with no_restock (damaged/goodwill)
     await refundOrder({
@@ -1192,18 +1153,17 @@ describe("orders.server — refundOrder restock handling", () => {
       ],
     });
 
-    // Listing should NOT be restored — still 1
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(1);
+    // Listing should NOT be restored — still 1 active (sold listing stays sold)
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
-    // But quantityRefunded should be incremented
+    // But order item should be marked refunded
     const items = await prisma.orderItem.findMany();
-    expect(items[0].quantityRefunded).toBe(1);
+    expect(items.filter((i) => i.status === "refunded")).toHaveLength(1);
 
     // Refund transaction should exist
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(1);
-    expect(refundTxs[0].amount).toBe(-170); // 200 * 1 * 0.85
+    expect(refundTxs[0].amount).toBe(-170); // 200 * 0.85
 
     // Balance should be reduced
     const balance = await getConsignorBalance(consignor.id);
@@ -1215,7 +1175,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1224,7 +1184,7 @@ describe("orders.server — refundOrder restock handling", () => {
       financialStatus: "paid",
     });
 
-    // Listing: 3 - 2 = 1
+    // 1 active, 2 sold
     await refundOrder({
       admin,
       shopifyOrderId: "gid://shopify/Order/return-1",
@@ -1233,13 +1193,9 @@ describe("orders.server — refundOrder restock handling", () => {
       ],
     });
 
-    // Listing should be restored: 1 + 1 = 2
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(2);
-    expect(updated?.status).toBe("active");
-
-    const items = await prisma.orderItem.findMany();
-    expect(items[0].quantityRefunded).toBe(1);
+    // 1 listing restored → 2 active, 1 sold
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(2);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(1);
   });
 
   it("no_restock full refund sets order to refunded without restoring inventory", async () => {
@@ -1247,7 +1203,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 1);
+    await createListings(consignor.id, variant.id, 200, 1);
 
     await processOrder({
       admin,
@@ -1256,8 +1212,8 @@ describe("orders.server — refundOrder restock handling", () => {
       financialStatus: "paid",
     });
 
-    // Listing sold: qty 0
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(0);
+    // Listing sold
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(1);
 
     // Refund with no_restock
     await refundOrder({
@@ -1272,9 +1228,8 @@ describe("orders.server — refundOrder restock handling", () => {
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/no-restock-full" } });
     expect(order?.status).toBe("refunded");
 
-    // But listing should still be qty 0 — no ghost inventory
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(0);
+    // But listing should still be sold — no ghost inventory
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(1);
   });
 
   it("mixed restock types: return + no_restock in chained refunds", async () => {
@@ -1282,7 +1237,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1291,7 +1246,7 @@ describe("orders.server — refundOrder restock handling", () => {
       financialStatus: "paid",
     });
 
-    // Listing: 3 - 2 = 1
+    // 1 active, 2 sold
 
     // Refund 1 with return (restore inventory)
     await refundOrder({
@@ -1302,8 +1257,8 @@ describe("orders.server — refundOrder restock handling", () => {
       ],
     });
 
-    // Listing: 1 + 1 = 2
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(2);
+    // 2 active, 1 sold
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(2);
 
     // Refund 1 with no_restock (do NOT restore)
     await refundOrder({
@@ -1314,16 +1269,16 @@ describe("orders.server — refundOrder restock handling", () => {
       ],
     });
 
-    // Listing should still be 2 — no_restock did NOT add inventory
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(2);
+    // Still 2 active — no_restock did NOT add inventory
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(2);
 
     // Order should be fully refunded
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/mixed-restock" } });
     expect(order?.status).toBe("refunded");
 
-    // quantityRefunded should be 2
+    // Both order items refunded
     const items = await prisma.orderItem.findMany();
-    expect(items[0].quantityRefunded).toBe(2);
+    expect(items.every((i) => i.status === "refunded")).toBe(true);
   });
 
   it("default restockType is return (backward compat)", async () => {
@@ -1331,7 +1286,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1340,7 +1295,7 @@ describe("orders.server — refundOrder restock handling", () => {
       financialStatus: "paid",
     });
 
-    // Listing: 2 - 1 = 1. Refund without specifying restockType
+    // 1 active, 1 sold. Refund without specifying restockType
     await refundOrder({
       admin,
       shopifyOrderId: "gid://shopify/Order/default-restock",
@@ -1350,8 +1305,7 @@ describe("orders.server — refundOrder restock handling", () => {
     });
 
     // Should restore inventory (default = "return")
-    const updated = await prisma.listing.findUnique({ where: { id: listing.id } });
-    expect(updated?.quantity).toBe(2);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(2);
   });
 
   it("duplicate refund webhook does not double-restore inventory", async () => {
@@ -1359,7 +1313,7 @@ describe("orders.server — refundOrder restock handling", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    const listing = await createListing(consignor.id, variant.id, 200, 1);
+    await createListings(consignor.id, variant.id, 200, 1);
 
     await processOrder({
       admin,
@@ -1377,8 +1331,8 @@ describe("orders.server — refundOrder restock handling", () => {
       ],
     });
 
-    // Listing restored: 0 + 1 = 1
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(1);
+    // Listing restored
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
     // Second identical refund (webhook retry) — should throw, order already fully refunded
     await expect(
@@ -1392,7 +1346,7 @@ describe("orders.server — refundOrder restock handling", () => {
     ).rejects.toThrow("already fully refunded");
 
     // Listing should still be 1 — not double-restored
-    expect((await prisma.listing.findUnique({ where: { id: listing.id } }))?.quantity).toBe(1);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
   });
 });
 
@@ -1408,7 +1362,7 @@ describe("orders.server — getConsignorBalance", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1417,7 +1371,7 @@ describe("orders.server — getConsignorBalance", () => {
       financialStatus: "paid",
     });
 
-    // 200 * 2 * 0.85 = 340
+    // 2 items × 200 × 0.85 = 340
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(340);
   });
@@ -1427,7 +1381,7 @@ describe("orders.server — getConsignorBalance", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1447,7 +1401,7 @@ describe("orders.server — getConsignorBalance", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1456,9 +1410,9 @@ describe("orders.server — getConsignorBalance", () => {
       financialStatus: "paid",
     });
 
-    // Sale: 200 * 3 * 0.85 = 510
-    // Refund 1 unit: -(200 * 1 * 0.85) = -170
-    // Balance should be 510 - 170 = 340
+    // Sale: 3 × 200 × 0.85 = 510
+    // Refund 1: -(200 × 0.85) = -170
+    // Balance: 510 - 170 = 340
     await refundOrder({
       admin,
       shopifyOrderId: "gid://shopify/Order/32",
@@ -1476,7 +1430,7 @@ describe("orders.server — getConsignorBalance", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1485,7 +1439,7 @@ describe("orders.server — getConsignorBalance", () => {
       financialStatus: "paid",
     });
 
-    // Sale: 200 * 2 * 0.85 = 340
+    // Sale: 2 × 200 × 0.85 = 340
 
     // Create a completed payout of $100
     await prisma.payout.create({
@@ -1506,7 +1460,7 @@ describe("orders.server — getConsignorBalance", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1528,7 +1482,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1536,13 +1490,12 @@ describe("orders.server — payment status", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // Inventory allocated
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(1);
+    // 2 listings sold, 1 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
     // No transactions created
-    const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(0);
+    expect(await prisma.transaction.count()).toBe(0);
 
     // Order is pending payment
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-1" } });
@@ -1558,7 +1511,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1567,11 +1520,11 @@ describe("orders.server — payment status", () => {
       financialStatus: "paid",
     });
 
-    // Transactions created
+    // Per-item: 2 transactions
     const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(1);
-    expect(txs[0].type).toBe("sale");
-    expect(txs[0].amount).toBe(340); // 200 * 2 * 0.85
+    expect(txs).toHaveLength(2);
+    expect(txs.every((t) => t.type === "sale")).toBe(true);
+    expect(txs.every((t) => t.amount === 170)).toBe(true); // 200 * 0.85
 
     // Order is paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-2" } });
@@ -1587,7 +1540,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1601,11 +1554,11 @@ describe("orders.server — payment status", () => {
     // Credit the order (simulates orders/paid webhook)
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-3" });
 
-    // Transactions created
+    // Per-item: 2 transactions
     const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(1);
-    expect(txs[0].type).toBe("sale");
-    expect(txs[0].amount).toBe(340);
+    expect(txs).toHaveLength(2);
+    expect(txs.every((t) => t.type === "sale")).toBe(true);
+    expect(txs.every((t) => t.amount === 170)).toBe(true);
 
     // Order is now paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-3" } });
@@ -1617,7 +1570,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 3);
+    await createListings(consignor.id, variant.id, 200, 3);
 
     await processOrder({
       admin,
@@ -1628,9 +1581,9 @@ describe("orders.server — payment status", () => {
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-4" });
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-4" });
 
-    // Only one sale transaction
+    // Only 2 sale transactions (1 per item, not doubled)
     const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(1);
+    expect(txs).toHaveLength(2);
   });
 
   it("creditOrder on cancelled order is a no-op", async () => {
@@ -1638,7 +1591,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1653,8 +1606,7 @@ describe("orders.server — payment status", () => {
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-5" });
 
     // No transactions created
-    const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(0);
+    expect(await prisma.transaction.count()).toBe(0);
 
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(0);
@@ -1665,7 +1617,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1674,34 +1626,34 @@ describe("orders.server — payment status", () => {
       financialStatus: "paid",
     });
 
-    // Verify sale transaction exists
-    expect(await prisma.transaction.count()).toBe(1);
+    // Verify sale transactions exist (2 per-item)
+    expect(await prisma.transaction.count()).toBe(2);
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-6" });
 
-    // Should have sale + refund transactions
+    // Should have 2 sale + 2 refund = 4 transactions
     const allTxs = await prisma.transaction.findMany();
-    expect(allTxs).toHaveLength(2);
+    expect(allTxs).toHaveLength(4);
 
-    const refundTx = allTxs.find((t) => t.type === "refund");
-    expect(refundTx).toBeDefined();
-    expect(refundTx!.amount).toBe(-340);
+    const refundTxs = allTxs.filter((t) => t.type === "refund");
+    expect(refundTxs).toHaveLength(2);
+    expect(refundTxs.every((t) => t.amount === -170)).toBe(true);
 
     // Net balance = 0
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(0);
 
-    // paymentStatus should be "refunded" (payment was captured then returned)
+    // paymentStatus should be "refunded"
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-6" } });
     expect(order?.paymentStatus).toBe("refunded");
   });
 
-  it("cancelOrder on unpaid order skips void transactions", async () => {
+  it("cancelOrder on unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1712,14 +1664,12 @@ describe("orders.server — payment status", () => {
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/ps-7" });
 
     // No transactions at all
-    const txs = await prisma.transaction.findMany();
-    expect(txs).toHaveLength(0);
+    expect(await prisma.transaction.count()).toBe(0);
 
     // Inventory restored
-    const listing = await prisma.listing.findFirst({ where: { variantId: variant.id } });
-    expect(listing?.quantity).toBe(2);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(2);
 
-    // paymentStatus should be "voided" (payment was never captured)
+    // paymentStatus should be "voided"
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-7" } });
     expect(order?.paymentStatus).toBe("voided");
   });
@@ -1729,7 +1679,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 2);
+    await createListings(consignor.id, variant.id, 200, 2);
 
     await processOrder({
       admin,
@@ -1747,7 +1697,7 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 500, 3);
+    await createListings(consignor.id, variant.id, 500, 3);
 
     // Process multiple orders without payment
     await processOrder({
@@ -1771,9 +1721,9 @@ describe("orders.server — payment status", () => {
     const consignor = await createTestConsignor({ commissionRate: 0.85 });
     const { variant } = await setupVariant();
 
-    await createListing(consignor.id, variant.id, 200, 5);
+    await createListings(consignor.id, variant.id, 200, 5);
 
-    // Paid order: 200 * 2 * 0.85 = 340
+    // Paid order: 2 × 200 × 0.85 = 340
     await processOrder({
       admin,
       shopifyOrderId: "gid://shopify/Order/ps-10a",

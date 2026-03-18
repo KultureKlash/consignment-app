@@ -72,12 +72,12 @@ Purchase products through the Shopify storefront.
 
 ## Listing Engine
 
-[x] Listing creation
+[x] Per-item listing model (each DB row = 1 physical item, no quantity field)
+[x] Listing creation (count parameter creates N individual listings)
 [x] Listing price input
-[x] Listing quantity input
-[x] Listing activation timestamp
+[x] Lifecycle timestamps (createdAt, receivedAt, authenticatedAt, listedAt, soldAt, withdrawnAt)
 [x] Listing status (active / sold / cancelled)
-[x] Same consignor + same variant upserts quantity (pricing rule)
+[x] Composite index on [variantId, status, price, createdAt] for allocation queries
 
 ---
 
@@ -93,10 +93,10 @@ Purchase products through the Shopify storefront.
 
 ## Inventory Synchronization
 
-[x] Aggregate listing quantities per variant
+[x] Count active listings per variant at lowest price tier
 [x] Sync total inventory to Shopify variant
 [x] Trigger inventory sync when listing is created
-[x] Trigger inventory sync when listing quantity changes
+[x] Trigger inventory sync when listing is cancelled
 [x] Trigger inventory sync after order allocation
 [x] Delete Shopify variant when inventory reaches zero (unless last variant)
 
@@ -120,9 +120,9 @@ These features enable multi-seller marketplace functionality.
 
 [x] Shopify `orders/create` webhook
 [x] Variant detection from order
-[x] Listing allocation (FIFO lowest-price-first)
-[x] Quantity deduction from listing
-[x] Listing deactivation when quantity = 0
+[x] Per-item listing allocation (price ASC, createdAt ASC)
+[x] Listing marked sold with soldAt timestamp
+[x] Per-item OrderItem (1 OrderItem = 1 listing)
 [x] Prevent oversell with database transactions
 [x] Idempotent order processing (duplicate webhook protection)
 
@@ -134,8 +134,8 @@ These features enable multi-seller marketplace functionality.
 [x] Shopify `refunds/create` webhook
 [x] Full order cancellation (cancelOrder)
 [x] Full refund (refundOrder)
-[x] Partial refund support (per-line-item quantity)
-[x] Reverse-priority allocation (highest-price refunded first)
+[x] Partial refund support (per-item OrderItem selection)
+[x] Reverse-allocation refund priority (price DESC, createdAt DESC)
 [x] Void vs refund distinction (payment captured or not)
 [x] Restock handling (return / cancel / no_restock)
 [x] Inventory re-sync after refund

@@ -14,7 +14,7 @@ describe("shopify-products.server", () => {
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
-      const variant = await findOrCreateVariant({ productId: product.id, size: "9" });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "9", gtin: "TEST-GTIN-9" });
 
       await ensureShopifyProductAndVariant({ admin, product, variant });
 
@@ -50,6 +50,7 @@ describe("shopify-products.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           shopifyVariantId: "gid://shopify/ProductVariant/existing",
           inventoryItemId: "gid://shopify/InventoryItem/existing",
         },
@@ -73,7 +74,7 @@ describe("shopify-products.server", () => {
         },
       });
       const variant = await prisma.variant.create({
-        data: { productId: product.id, size: "10" },
+        data: { productId: product.id, size: "10", gtin: "TEST-GTIN-10" },
       });
 
       await ensureShopifyProductAndVariant({ admin, product, variant });

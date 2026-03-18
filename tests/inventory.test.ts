@@ -12,7 +12,7 @@ describe("inventory.server", () => {
         data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
-        data: { productId: product.id, size: "9", inventoryItemId: null },
+        data: { productId: product.id, size: "9", gtin: "TEST-GTIN-9", inventoryItemId: null },
       });
 
       await syncInventory({ admin, variant });
@@ -31,6 +31,7 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
         },
       });
@@ -58,17 +59,20 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
         },
       });
 
-      // Two consignors at different prices
+      // 1 listing at $340, 4 listings at $360
       await prisma.listing.create({
-        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 1, status: "active" },
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, status: "active" },
       });
-      await prisma.listing.create({
-        data: { consignorId: consignor2.id, variantId: variant.id, price: 360, quantity: 4, status: "active" },
-      });
+      for (let i = 0; i < 4; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor2.id, variantId: variant.id, price: 360, status: "active" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 
@@ -78,7 +82,7 @@ describe("inventory.server", () => {
       expect(quantities[0].quantity).toBe(1); // only the $340 tier
     });
 
-    it("aggregates quantity across consignors at the same lowest price", async () => {
+    it("aggregates count across consignors at the same lowest price", async () => {
       const { admin, findCalls } = createMockAdmin();
 
       const consignor1 = await createTestConsignor({ email: "a@test.com" });
@@ -91,27 +95,33 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
         },
       });
 
-      // Two consignors at the same price
-      await prisma.listing.create({
-        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 2, status: "active" },
-      });
-      await prisma.listing.create({
-        data: { consignorId: consignor2.id, variantId: variant.id, price: 340, quantity: 3, status: "active" },
-      });
+      // 2 listings from consignor1 at $340
+      for (let i = 0; i < 2; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor1.id, variantId: variant.id, price: 340, status: "active" },
+        });
+      }
+      // 3 listings from consignor2 at $340
+      for (let i = 0; i < 3; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor2.id, variantId: variant.id, price: 340, status: "active" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 
       const setCalls = findCalls("inventorySetQuantities");
       const quantities = (setCalls[0].variables as Record<string, Record<string, unknown>>).input
         .quantities as Array<Record<string, unknown>>;
-      expect(quantities[0].quantity).toBe(5); // both at same price, so 2 + 3
+      expect(quantities[0].quantity).toBe(5); // 2 + 3 at same price
     });
 
-    it("excludes non-active listings from aggregation", async () => {
+    it("excludes non-active listings from count", async () => {
       const { admin, findCalls } = createMockAdmin();
 
       const consignor = await createTestConsignor();
@@ -122,23 +132,30 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
         },
       });
 
-      await prisma.listing.create({
-        data: { consignorId: consignor.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
-      });
-      await prisma.listing.create({
-        data: { consignorId: consignor.id, variantId: variant.id, price: 350, quantity: 5, status: "sold" },
-      });
+      // 2 active listings
+      for (let i = 0; i < 2; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor.id, variantId: variant.id, price: 350, status: "active" },
+        });
+      }
+      // 5 sold listings (should not count)
+      for (let i = 0; i < 5; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor.id, variantId: variant.id, price: 350, status: "sold" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 
       const setCalls = findCalls("inventorySetQuantities");
       const quantities = (setCalls[0].variables as Record<string, Record<string, unknown>>).input
         .quantities as Array<Record<string, unknown>>;
-      expect(quantities[0].quantity).toBe(2); // only the active listing
+      expect(quantities[0].quantity).toBe(2); // only active listings
     });
 
     it("sends correct locationId and inventoryItemId", async () => {
@@ -151,6 +168,7 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/42",
         },
       });
@@ -177,16 +195,20 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
           shopifyVariantId: "gid://shopify/ProductVariant/1",
         },
       });
 
+      // 2 listings at $350, 1 listing at $340 (lowest)
+      for (let i = 0; i < 2; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor1.id, variantId: variant.id, price: 350, status: "active" },
+        });
+      }
       await prisma.listing.create({
-        data: { consignorId: consignor1.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
-      });
-      await prisma.listing.create({
-        data: { consignorId: consignor2.id, variantId: variant.id, price: 340, quantity: 1, status: "active" },
+        data: { consignorId: consignor2.id, variantId: variant.id, price: 340, status: "active" },
       });
 
       await syncInventory({ admin, variant });
@@ -210,6 +232,7 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
           shopifyVariantId: "gid://shopify/ProductVariant/1",
         },
@@ -218,6 +241,7 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "10",
+          gtin: "TEST-GTIN-10",
           inventoryItemId: "gid://shopify/InventoryItem/2",
           shopifyVariantId: "gid://shopify/ProductVariant/2",
         },
@@ -253,6 +277,7 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
           shopifyVariantId: "gid://shopify/ProductVariant/1",
         },
@@ -286,14 +311,18 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
           shopifyVariantId: null,
         },
       });
 
-      await prisma.listing.create({
-        data: { consignorId: consignor.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
-      });
+      // 2 active listings
+      for (let i = 0; i < 2; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor.id, variantId: variant.id, price: 350, status: "active" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 
@@ -314,17 +343,21 @@ describe("inventory.server", () => {
         data: {
           productId: product.id,
           size: "9",
+          gtin: "TEST-GTIN-9",
           inventoryItemId: "gid://shopify/InventoryItem/1",
           shopifyVariantId: "gid://shopify/ProductVariant/1",
         },
       });
 
       await prisma.listing.create({
-        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, quantity: 1, status: "cancelled" },
+        data: { consignorId: consignor1.id, variantId: variant.id, price: 340, status: "cancelled" },
       });
-      await prisma.listing.create({
-        data: { consignorId: consignor2.id, variantId: variant.id, price: 350, quantity: 2, status: "active" },
-      });
+      // 2 active listings at $350
+      for (let i = 0; i < 2; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor2.id, variantId: variant.id, price: 350, status: "active" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 
