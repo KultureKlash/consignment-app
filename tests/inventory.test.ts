@@ -149,6 +149,12 @@ describe("inventory.server", () => {
           data: { consignorId: consignor.id, variantId: variant.id, price: 350, status: "sold" },
         });
       }
+      // 3 pending_sale listings (should not count)
+      for (let i = 0; i < 3; i++) {
+        await prisma.listing.create({
+          data: { consignorId: consignor.id, variantId: variant.id, price: 350, status: "pending_sale" },
+        });
+      }
 
       await syncInventory({ admin, variant });
 

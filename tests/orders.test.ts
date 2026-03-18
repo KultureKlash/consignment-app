@@ -41,7 +41,7 @@ async function createListings(
 }
 
 describe("orders.server — processOrder", () => {
-  it("allocates individual listings and marks them sold", async () => {
+  it("allocates individual listings and marks them pending_sale", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
@@ -57,14 +57,14 @@ describe("orders.server — processOrder", () => {
     expect(order.total).toBe(700); // 350 * 2
     expect(order.status).toBe("open");
 
-    // 2 listings should be sold, 3 should remain active
-    const soldListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "sold" } });
+    // 2 listings should be pending_sale, 3 should remain active
+    const pendingListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "pending_sale" } });
     const activeListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "active" } });
-    expect(soldListings).toHaveLength(2);
+    expect(pendingListings).toHaveLength(2);
     expect(activeListings).toHaveLength(3);
 
-    // Each sold listing should have soldAt set
-    expect(soldListings.every((l) => l.soldAt !== null)).toBe(true);
+    // Each pending listing should have soldAt set
+    expect(pendingListings.every((l) => l.soldAt !== null)).toBe(true);
 
     // 2 order items (1 per listing)
     expect(order.items).toHaveLength(2);
@@ -90,18 +90,18 @@ describe("orders.server — processOrder", () => {
     expect(order.total).toBe(690); // 340 + 350
     expect(order.items).toHaveLength(2);
 
-    // Cheap listing should be sold
+    // Cheap listing should be pending_sale
     const updatedCheap = await prisma.listing.findUnique({ where: { id: cheapListing.id } });
-    expect(updatedCheap?.status).toBe("sold");
+    expect(updatedCheap?.status).toBe("pending_sale");
 
-    // One expensive listing sold, one still active
-    const soldExpensive = await prisma.listing.findMany({
-      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "sold" },
+    // One expensive listing pending_sale, one still active
+    const pendingExpensive = await prisma.listing.findMany({
+      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "pending_sale" },
     });
     const activeExpensive = await prisma.listing.findMany({
       where: { id: { in: expensiveListings.map((l) => l.id) }, status: "active" },
     });
-    expect(soldExpensive).toHaveLength(1);
+    expect(pendingExpensive).toHaveLength(1);
     expect(activeExpensive).toHaveLength(1);
   });
 
@@ -279,9 +279,9 @@ describe("orders.server — processOrder", () => {
 
     expect(order2.id).toBe(order1.id);
 
-    // Only 1 listing should be sold (not 2)
-    const soldCount = await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } });
-    expect(soldCount).toBe(1);
+    // Only 1 listing should be pending_sale (not 2)
+    const pendingCount = await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } });
+    expect(pendingCount).toBe(1);
   });
 });
 
@@ -299,11 +299,11 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // Both listings should be sold
+    // Both listings should be pending_sale (unpaid)
     for (const l of listings) {
-      const sold = await prisma.listing.findUnique({ where: { id: l.id } });
-      expect(sold?.status).toBe("sold");
-      expect(sold?.soldAt).not.toBeNull();
+      const pending = await prisma.listing.findUnique({ where: { id: l.id } });
+      expect(pending?.status).toBe("pending_sale");
+      expect(pending?.soldAt).not.toBeNull();
     }
 
     // Cancel the order
@@ -502,8 +502,8 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // listing1 ($340) should be sold, 1 of listings2 should be sold
-    expect((await prisma.listing.findUnique({ where: { id: listing1.id } }))?.status).toBe("sold");
+    // listing1 ($340) should be pending_sale, 1 of listings2 should be pending_sale
+    expect((await prisma.listing.findUnique({ where: { id: listing1.id } }))?.status).toBe("pending_sale");
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/17" });
 
@@ -1490,8 +1490,8 @@ describe("orders.server — payment status", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // 2 listings sold, 1 active
-    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
+    // 2 listings pending_sale, 1 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } })).toBe(2);
     expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
     // No transactions created
@@ -1548,8 +1548,9 @@ describe("orders.server — payment status", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // Verify pending state
+    // Verify pending state — listings should be pending_sale, not sold
     expect(await prisma.transaction.count()).toBe(0);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } })).toBe(2);
 
     // Credit the order (simulates orders/paid webhook)
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-3" });
@@ -1563,6 +1564,9 @@ describe("orders.server — payment status", () => {
     // Order is now paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-3" } });
     expect(order?.paymentStatus).toBe("paid");
+
+    // Listings should now be promoted to sold
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
   });
 
   it("creditOrder is idempotent: calling twice creates only one set of transactions", async () => {

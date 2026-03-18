@@ -73,10 +73,10 @@ export async function processOrder({
       }
 
       for (const listing of listings) {
-        // Mark listing as sold
+        // Mark listing as pending sale (not yet paid)
         await tx.listing.update({
           where: { id: listing.id },
-          data: { status: "sold", soldAt: new Date() },
+          data: { status: "pending_sale", soldAt: new Date() },
         });
 
         // Create order item (1 per listing)
@@ -167,6 +167,12 @@ export async function creditOrder({
           amount: commissionAmount,
           type: "sale",
         },
+      });
+
+      // Promote listing from pending_sale to sold
+      await tx.listing.update({
+        where: { id: item.listingId },
+        data: { status: "sold" },
       });
     }
 
@@ -325,7 +331,7 @@ export async function refundOrder({
       // Full refund — refund all non-refunded items
       // Reverse allocation: highest price first, newest listing first
       const refundableItems = order.items
-        .filter((item) => item.status === "sold")
+        .filter((item) => item.status === "sold" || item.status === "pending_sale")
         .sort((a, b) => b.price - a.price || b.listing.createdAt.getTime() - a.listing.createdAt.getTime());
 
       for (const item of refundableItems) {
@@ -339,7 +345,7 @@ export async function refundOrder({
         const matchingItems = order.items
           .filter(
             (item) =>
-              item.status === "sold" &&
+              (item.status === "sold" || item.status === "pending_sale") &&
               item.listing.variant.shopifyVariantId === refundLine.shopifyVariantId
           )
           .sort((a, b) => b.price - a.price || b.listing.createdAt.getTime() - a.listing.createdAt.getTime());
@@ -365,7 +371,7 @@ export async function refundOrder({
     });
     const allRefunded = updatedItems.every((item) => item.status === "refunded");
     const newTotal = updatedItems
-      .filter((item) => item.status === "sold")
+      .filter((item) => item.status === "sold" || item.status === "pending_sale")
       .reduce((sum, item) => sum + item.price, 0);
 
     await tx.order.update({
