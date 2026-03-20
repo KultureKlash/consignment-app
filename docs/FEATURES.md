@@ -88,6 +88,7 @@ Purchase products through the Shopify storefront.
 [x] Listing creation (count parameter creates N individual listings)
 [x] Listing price input
 [x] Listing cancellation with inventory re-sync
+[x] Bulk listing cancellation with batched DB updates and per-variant Shopify sync with retry
 [x] Lifecycle timestamps (createdAt, receivedAt, authenticatedAt, listedAt, soldAt, withdrawnAt)
 [x] Listing statuses: active, pending_sale, sold, cancelled
 [x] Composite index on [variantId, status, price, createdAt] for allocation queries
@@ -102,6 +103,7 @@ Purchase products through the Shopify storefront.
 [x] Store Shopify `productId` in database
 [x] Store Shopify `variantId` in database
 [x] Sync lowest listing price to Shopify
+[x] SKU sync to Shopify (footwear: styleId, non-footwear: barcode/GTIN)
 [x] Shopify taxonomy resolution for product categorization
 [x] Resilient sync (listing created even if Shopify call fails)
 
@@ -213,7 +215,10 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] New product creation (title, brand, category, size, GTIN)
 [x] Brand autocomplete from existing catalog
 [x] Category and subcategory selection
-[x] GTIN/barcode input per variant
+[x] GTIN/barcode input per variant (auto-generated for non-footwear)
+[x] Style ID optional (products matched by title+brand when no styleId)
+[x] Footwear size validation (1-99, .5 increments only)
+[x] Auto-fill O/S size for Accessories and Headwear categories
 [x] Price input with validation
 [x] Quantity selector (creates N individual listings)
 [x] 10 most recent listings table (flat view)
@@ -235,6 +240,8 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] Cancel listing action
 [x] Clear filters
 [x] Size-ordered child rows within product groups (numeric + clothing sizes)
+[x] Quick-add popover on product groups (add listings to existing products inline)
+[x] Bulk cancel with reliable Shopify sync (batched DB, per-variant retry)
 
 ---
 
@@ -368,7 +375,7 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 171 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors)
+[x] Vitest test suite — 197 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
 [x] Comprehensive seed data (6 consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)

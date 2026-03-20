@@ -157,7 +157,7 @@ app/
   services/
     catalog.server.ts       — Product/variant find-or-create
     dashboard.server.ts     — Dashboard stats and activity feed
-    listings.server.ts      — Listing creation, cancellation
+    listings.server.ts      — Listing creation, cancellation, bulk cancellation
     listing-queries.server.ts — Listing search, filter, pagination
     orders.server.ts        — Order processing, refunds, cancellations, balance
     inventory.server.ts     — Shopify inventory sync
@@ -168,6 +168,7 @@ app/
     CreateListingForm.tsx   — Full listing creation form
     ListingsTable.tsx       — Flat + grouped-by-product table with thumbnails
     ListingsFilter.tsx      — Search, status, category, consignor filters
+    QuickAddPopover.tsx     — Inline quick-add popover for existing products
     Pagination.tsx          — Page navigation
     CustomSelect.tsx        — Dropdown with label/value support
     Dropdown.tsx            — Portal-based dropdown (Shadow DOM compatible)
@@ -225,7 +226,7 @@ Current services:
 ```
 catalog.server.ts            — findOrCreateProduct, findOrCreateVariant
 dashboard.server.ts          — getDashboardData (stats, activity feed)
-listings.server.ts           — createListing, cancelListing
+listings.server.ts           — createListing, cancelListing, bulkCancelListings
 listing-queries.server.ts    — queryListings (search, filter, sort, paginate)
 consignors.server.ts         — getConsignorDetail, updateConsignor
 orders.server.ts             — processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance
@@ -248,7 +249,7 @@ findOrCreateProduct(styleId, title, brand, category)
 findOrCreateVariant(productId, size, gtin)
 ```
 
-Products are uniquely identified by **styleId** (optional — can also create without one).
+Products are uniquely identified by **styleId** (when provided) or by **title + brand** (non-footwear path).
 
 Variants are unique by **(productId, size)**.
 
@@ -265,11 +266,14 @@ Functions:
 ```
 createListing(admin, consignorId, variantId, price, count)
 cancelListing(admin, listingId)
+bulkCancelListings(admin, listingIds)
 ```
 
 **Per-item model**: each Listing row = 1 physical item. No quantity field. Creating 3 items at $200 creates 3 separate Listing rows.
 
 After creation, triggers Shopify product sync and inventory sync.
+
+`bulkCancelListings` batches DB updates in a single transaction, then syncs inventory once per affected variant with exponential backoff retry (3 attempts).
 
 ---
 
@@ -337,6 +341,8 @@ Creates and manages Shopify products and variants.
 ```
 ensureShopifyProductAndVariant(admin, variant)
 ```
+
+SKU derivation: footwear products use styleId as SKU, non-footwear use GTIN/barcode.
 
 Resilient — if Shopify sync fails, the listing is still created locally.
 

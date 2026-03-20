@@ -136,6 +136,87 @@ describe("shopify-products.server", () => {
       expect(updated?.inventoryItemId).toBeDefined();
     });
 
+    it("sets SKU to styleId for footwear product on create", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        category: "Footwear > Sneakers",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "9", gtin: "TEST-GTIN-9" });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      // After productCreate, a productVariantsBulkUpdate sets barcode + SKU
+      const updateCalls = findCalls("productVariantsBulkUpdate");
+      expect(updateCalls).toHaveLength(1);
+      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
+      expect(variants[0].sku).toBe("DD1391-100");
+    });
+
+    it("sets SKU to GTIN for non-footwear product on create", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "O/S", gtin: "AMI-HAT-OS-ABC123" });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      const updateCalls = findCalls("productVariantsBulkUpdate");
+      expect(updateCalls).toHaveLength(1);
+      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
+      expect(variants[0].sku).toBe("AMI-HAT-OS-ABC123");
+    });
+
+    it("falls back to GTIN for footwear without styleId", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        title: "Generic Sneaker",
+        brand: "Unknown",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "10", gtin: "FALLBACK-GTIN" });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      const updateCalls = findCalls("productVariantsBulkUpdate");
+      expect(updateCalls).toHaveLength(1);
+      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
+      // No styleId + no category = treated as footwear, falls back to gtin
+      expect(variants[0].sku).toBe("FALLBACK-GTIN");
+    });
+
+    it("sets SKU on new variant added to existing product", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      // Product already synced
+      const product = await prisma.product.create({
+        data: {
+          styleId: "DD1391-100",
+          title: "Nike Dunk Panda",
+          shopifyProductId: "gid://shopify/Product/existing",
+        },
+      });
+      const variant = await prisma.variant.create({
+        data: { productId: product.id, size: "10", gtin: "TEST-GTIN-10" },
+      });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      // productVariantsBulkCreate should include sku
+      const createCalls = findCalls("productVariantsBulkCreate");
+      expect(createCalls).toHaveLength(1);
+      const vars = createCalls[0].variables as Record<string, unknown>;
+      const variants = vars.variants as Array<Record<string, string>>;
+      expect(variants[0].sku).toBe("DD1391-100");
+    });
+
     it("creates product without taxonomy when category is null", async () => {
       const { admin, findCalls } = createMockAdmin();
 

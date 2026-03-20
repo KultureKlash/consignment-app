@@ -423,6 +423,96 @@ describe("listings.server", () => {
       expect(await prisma.listing.count()).toBe(2);
     });
 
+    it("creates listing without styleId using title+brand dedup", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      const listing = await createListing({
+        admin,
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+        size: "O/S",
+        price: 180,
+        consignorId: consignor.id,
+      });
+
+      expect(listing.price).toBe(180);
+      const product = await prisma.product.findFirst();
+      expect(product?.styleId).toBeNull();
+      expect(product?.title).toBe("Ami Paris Bucket Hat");
+    });
+
+    it("auto-generates barcode for non-footwear when GTIN not provided", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+        size: "O/S",
+        price: 180,
+        consignorId: consignor.id,
+      });
+
+      const variant = await prisma.variant.findFirst();
+      expect(variant?.gtin).toBeDefined();
+      expect(variant!.gtin).not.toBe("");
+      // Should follow pattern: BRAND-SUBCAT-SIZE-RANDOM
+      expect(variant!.gtin).toMatch(/^[A-Z]+-[A-Z]+-[A-Z0-9/]+-[A-Z0-9]+$/);
+    });
+
+    it("preserves user-provided GTIN for non-footwear", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        title: "Gallery Dept Tee",
+        brand: "Gallery Dept",
+        category: "Apparel > T-Shirts",
+        size: "L",
+        gtin: "MY-CUSTOM-BARCODE",
+        price: 250,
+        consignorId: consignor.id,
+      });
+
+      const variant = await prisma.variant.findFirst();
+      expect(variant?.gtin).toBe("MY-CUSTOM-BARCODE");
+    });
+
+    it("deduplicates non-footwear products by title+brand", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+        size: "O/S",
+        price: 180,
+        consignorId: consignor.id,
+      });
+
+      await createListing({
+        admin,
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+        size: "O/S",
+        price: 200,
+        consignorId: consignor.id,
+      });
+
+      // Same product, same variant, 2 listings
+      expect(await prisma.product.count()).toBe(1);
+      expect(await prisma.variant.count()).toBe(1);
+      expect(await prisma.listing.count()).toBe(2);
+    });
+
     it("still creates listing when Shopify sync fails (resilient)", async () => {
       // Shopify sync wrapped in try/catch — listing creation should NOT fail
       const { admin } = createMockAdmin({ failOn: ["productCreate"] });

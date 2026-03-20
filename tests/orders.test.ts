@@ -1773,9 +1773,9 @@ describe("order-queries.server — getOrderDetail", () => {
     expect(result.summary.refundedCount).toBe(0);
     expect(result.summary.totalFees).toBeCloseTo(60); // 2 × 200 × 0.15
     expect(result.summary.totalConsignorPayout).toBeCloseTo(340); // 2 × 200 × 0.85
-    expect(result.timeline.length).toBeGreaterThanOrEqual(2); // created + paid
-    expect(result.timeline[0].label).toBe("Order created");
-    expect(result.timeline[1].label).toBe("Payment received");
+    expect(result.timeline.length).toBeGreaterThanOrEqual(2); // created + paid (reverse-chronological)
+    expect(result.timeline[0].label).toBe("Payment received");
+    expect(result.timeline[1].label).toBe("Order created");
   });
 
   it("includes refund events in timeline", async () => {
