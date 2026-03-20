@@ -63,9 +63,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (!consignorId || !title || !size) {
           return { error: "Consignor, Title, and Size are required", intent };
         }
-        if (catIsFootwear && !styleId) {
-          return { error: "Style ID is required for footwear", intent };
-        }
         if (catIsFootwear && !gtin) {
           return { error: "GTIN (barcode) is required for footwear", intent };
         }

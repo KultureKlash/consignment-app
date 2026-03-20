@@ -203,6 +203,10 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
     if (suggestion.mainCategory && !mainCategory) {
       setMainCategory(suggestion.mainCategory);
       if (suggestion.subCategory) setSubCategory(suggestion.subCategory);
+      // Auto-fill O/S for Accessories & Headwear
+      if ((suggestion.mainCategory === "Accessories" || suggestion.mainCategory === "Headwear") && !formFields.size) {
+        setFormFields((prev) => ({ ...prev, size: "O/S" }));
+      }
     }
   }, [formFields.title]);
 
@@ -430,6 +434,65 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                 <span style={{ fontSize: "12px", color: "#9ca3af" }}>Product not in catalog — enter details manually</span>
               </div>
 
+              {/* Product fields — Row 1: Name / Brand */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                <div>
+                  <label style={fieldLabel}>Product Name</label>
+                  <input
+                    type="text"
+                    value={formFields.title}
+                    onChange={(e) => { setFormFields({ ...formFields, title: e.target.value }); clearError("title"); }}
+                    onFocus={handleFocus}
+                    onBlur={handleBlurStyle}
+                    placeholder="e.g. Nike Air Max 90"
+                    style={{ ...inputStyle, ...(fieldErrors.has("title") ? { borderColor: "#ef4444" } : {}) }}
+                  />
+                </div>
+                <div ref={brandInputRef}>
+                  <label style={fieldLabel}>Brand</label>
+                  <input
+                    type="text"
+                    value={formFields.brand}
+                    onChange={(e) => {
+                      setFormFields({ ...formFields, brand: e.target.value });
+                      setBrandSearch(e.target.value);
+                      setShowBrandResults(true);
+                    }}
+                    onFocus={(e) => {
+                      if (formFields.brand) {
+                        setBrandSearch(formFields.brand);
+                        setShowBrandResults(true);
+                      }
+                      handleFocus(e);
+                    }}
+                    onBlur={(e) => {
+                      setTimeout(() => setShowBrandResults(false), 200);
+                      handleBlurStyle(e);
+                    }}
+                    placeholder="e.g. Nike"
+                    style={inputStyle}
+                  />
+                  <Dropdown anchorRef={brandInputRef} open={showBrandResults && brandResults.length > 0}>
+                    {brandResults.map((b) => (
+                      <div
+                        key={b}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFormFields({ ...formFields, brand: b });
+                          setBrandSearch("");
+                          setShowBrandResults(false);
+                        }}
+                        style={dropdownItemStyle}
+                        onMouseEnter={(e) => handleItemHover(e, true)}
+                        onMouseLeave={(e) => handleItemHover(e, false)}
+                      >
+                        <span style={{ fontWeight: 500 }}>{b}</span>
+                      </div>
+                    ))}
+                  </Dropdown>
+                </div>
+              </div>
+
               {/* Category selects */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
                 <div>
@@ -441,6 +504,12 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                       setMainCategory(val);
                       setSubCategory("");
                       setCategoryManual(true);
+                      // Auto-fill O/S for Accessories & Headwear, clear for Footwear
+                      if (val === "Accessories" || val === "Headwear") {
+                        if (!formFields.size) setFormFields((f) => ({ ...f, size: "O/S" }));
+                      } else if (val === "Footwear") {
+                        if (formFields.size === "O/S") setFormFields((f) => ({ ...f, size: "" }));
+                      }
                     }}
                     placeholder="Select category..."
                   />
@@ -556,79 +625,23 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                 </div>
               )}
 
-              {/* Product fields — Row 1: Name / Brand */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-                <div>
-                  <label style={fieldLabel}>Product Name</label>
-                  <input
-                    type="text"
-                    value={formFields.title}
-                    onChange={(e) => { setFormFields({ ...formFields, title: e.target.value }); clearError("title"); }}
-                    onFocus={handleFocus}
-                    onBlur={handleBlurStyle}
-                    placeholder="e.g. Nike Air Max 90"
-                    style={{ ...inputStyle, ...(fieldErrors.has("title") ? { borderColor: "#ef4444" } : {}) }}
-                  />
-                </div>
-                <div ref={brandInputRef}>
-                  <label style={fieldLabel}>Brand</label>
-                  <input
-                    type="text"
-                    value={formFields.brand}
-                    onChange={(e) => {
-                      setFormFields({ ...formFields, brand: e.target.value });
-                      setBrandSearch(e.target.value);
-                      setShowBrandResults(true);
-                    }}
-                    onFocus={(e) => {
-                      if (formFields.brand) {
-                        setBrandSearch(formFields.brand);
-                        setShowBrandResults(true);
-                      }
-                      handleFocus(e);
-                    }}
-                    onBlur={(e) => {
-                      setTimeout(() => setShowBrandResults(false), 200);
-                      handleBlurStyle(e);
-                    }}
-                    placeholder="e.g. Nike"
-                    style={inputStyle}
-                  />
-                  <Dropdown anchorRef={brandInputRef} open={showBrandResults && brandResults.length > 0}>
-                    {brandResults.map((b) => (
-                      <div
-                        key={b}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setFormFields({ ...formFields, brand: b });
-                          setBrandSearch("");
-                          setShowBrandResults(false);
-                        }}
-                        style={dropdownItemStyle}
-                        onMouseEnter={(e) => handleItemHover(e, true)}
-                        onMouseLeave={(e) => handleItemHover(e, false)}
-                      >
-                        <span style={{ fontWeight: 500 }}>{b}</span>
-                      </div>
-                    ))}
-                  </Dropdown>
-                </div>
-              </div>
-
-              {/* Product fields — Row 2: Style ID / Photo */}
+              {/* Style ID / Photo */}
               <div style={{ display: "grid", gridTemplateColumns: isFootwearCat ? "1fr 1fr" : "1fr", gap: "16px" }}>
                 {isFootwearCat && (
                   <div>
-                    <label style={fieldLabel}>Style ID</label>
+                    <label style={fieldLabel}>Style ID <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span></label>
                     <input
                       type="text"
                       value={formFields.styleId}
-                      onChange={(e) => { setFormFields({ ...formFields, styleId: e.target.value }); clearError("styleId"); }}
+                      onChange={(e) => setFormFields({ ...formFields, styleId: e.target.value })}
                       onFocus={handleFocus}
                       onBlur={handleBlurStyle}
                       placeholder="e.g. DD1391-100"
-                      style={{ ...inputStyle, ...(fieldErrors.has("styleId") ? { borderColor: "#ef4444" } : {}) }}
+                      style={inputStyle}
                     />
+                    <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "4px" }}>
+                      Helps match products across listings
+                    </div>
                   </div>
                 )}
                 <div>
@@ -885,6 +898,19 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                     },
                   }}
                 />
+              ) : isFootwearCat ? (
+                <input
+                  type="number"
+                  value={formFields.size}
+                  onChange={(e) => { setFormFields({ ...formFields, size: e.target.value }); clearError("size"); }}
+                  onFocus={handleFocus}
+                  onBlur={handleBlurStyle}
+                  placeholder="e.g. 10"
+                  min="1"
+                  max="99"
+                  step="0.5"
+                  style={{ ...inputStyle, ...(fieldErrors.has("size") ? { borderColor: "#ef4444" } : {}) }}
+                />
               ) : (
                 <input
                   type="text"
@@ -892,7 +918,7 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                   onChange={(e) => { setFormFields({ ...formFields, size: e.target.value }); clearError("size"); }}
                   onFocus={handleFocus}
                   onBlur={handleBlurStyle}
-                  placeholder={isFootwearCat ? "e.g. 10 or M" : "e.g. M, L, XL"}
+                  placeholder="e.g. M, L, XL"
                   style={{ ...inputStyle, ...(fieldErrors.has("size") ? { borderColor: "#ef4444" } : {}) }}
                 />
               )}
@@ -992,7 +1018,12 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
           if (!selectedConsignor) errors.add("consignorId");
           if (!formFields.title.trim()) errors.add("title");
           if (!formFields.size.trim()) errors.add("size");
-          if (isFootwearCat && !formFields.styleId.trim()) errors.add("styleId");
+          if (isFootwearCat && formFields.size.trim()) {
+            const sizeNum = Number(formFields.size);
+            if (isNaN(sizeNum) || sizeNum < 1 || sizeNum > 99 || (sizeNum % 1 !== 0 && sizeNum % 1 !== 0.5)) {
+              errors.add("size");
+            }
+          }
           if (isFootwearCat && !formFields.gtin.trim()) errors.add("gtin");
           const price = Number(formFields.price);
           if (isNaN(price) || price <= 0) errors.add("price");

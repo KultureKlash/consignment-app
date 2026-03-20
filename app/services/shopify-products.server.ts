@@ -3,6 +3,12 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify-taxonomy.server";
 
+function deriveSku(product: Product, variant: Variant): string {
+  const isFootwear = !product.category || product.category.startsWith("Footwear");
+  if (isFootwear && product.styleId) return product.styleId;
+  return variant.gtin || "";
+}
+
 async function uploadImageToShopify(
   admin: AdminApiContext,
   base64DataUrl: string
@@ -202,22 +208,26 @@ export async function ensureShopifyProductAndVariant({
       ),
     ]);
 
-    // Set barcode (GTIN) on the auto-created variant (must run after product is fully committed)
-    if (variant.gtin) {
+    // Set barcode + SKU on the auto-created variant (must run after product is fully committed)
+    const sku = deriveSku(product, variant);
+    if (variant.gtin || sku) {
+      const variantUpdate: Record<string, string> = { id: shopifyVariant.id };
+      if (variant.gtin) variantUpdate.barcode = variant.gtin;
+      if (sku) variantUpdate.sku = sku;
       const barcodeRes = await admin.graphql(
         `#graphql
         mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
           productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-            productVariants { id barcode }
+            productVariants { id barcode sku }
             userErrors { field message }
           }
         }`,
-        { variables: { productId: shopifyProduct.id, variants: [{ id: shopifyVariant.id, barcode: variant.gtin }] } }
+        { variables: { productId: shopifyProduct.id, variants: [variantUpdate] } }
       );
       const barcodeData = await barcodeRes.json();
       const barcodeErrors = barcodeData.data.productVariantsBulkUpdate.userErrors;
       if (barcodeErrors.length > 0) {
-        console.error("Barcode sync error:", barcodeErrors);
+        console.error("Barcode/SKU sync error:", barcodeErrors);
       }
     }
 
@@ -248,6 +258,7 @@ export async function ensureShopifyProductAndVariant({
           {
             optionValues: [{ name: variant.size, optionName: "Size" }],
             barcode: variant.gtin || "",
+            sku: deriveSku(product, variant),
           },
         ],
       },
