@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Package, ChevronRight, Plus } from "lucide-react";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
 import { compareSizes } from "~/lib/size-order";
@@ -502,6 +502,13 @@ function GroupRows({
 }) {
   const groupActiveIds = group.listings.filter((l) => l.status === "active").map((l) => l.id);
   const allGroupSelected = hasSelection && groupActiveIds.length > 0 && groupActiveIds.every((id) => selectedIds?.has(id));
+
+  const scrollRef = useCallback((node: HTMLTableRowElement | null) => {
+    if (node) {
+      setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+    }
+  }, []);
+
   return (
     <>
       {/* Product header row */}
@@ -604,7 +611,7 @@ function GroupRows({
 
       {/* Column headers — only when expanded */}
       {isExpanded && (
-        <tr style={{ borderBottom: "1px solid #e8eaed", background: "#f9fafb" }}>
+        <tr ref={scrollRef} style={{ borderBottom: "1px solid #e8eaed", background: "#f9fafb" }}>
           {hasSelection && (
             <td style={checkboxThStyle} onClick={(e) => e.stopPropagation()}>
               {groupActiveIds.length > 0 && (

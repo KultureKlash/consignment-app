@@ -1444,9 +1444,9 @@ describe("orders.server — getConsignorBalance", () => {
 
     // Sale: 2 × 200 × 0.85 = 340
 
-    // Create a completed payout of $100
+    // Create a paid payout of $100
     await prisma.payout.create({
-      data: { consignorId: consignor.id, amount: 100, status: "completed" },
+      data: { consignorId: consignor.id, amount: 100, status: "paid" },
     });
 
     // Also create a pending payout — should NOT be subtracted
@@ -1856,5 +1856,266 @@ describe("order-queries.server — getOrderDetail", () => {
     expect(item.listing.variant.size).toBe(variant.size);
     expect(item.transactions).toHaveLength(1);
     expect(item.transactions[0].type).toBe("sale");
+  });
+});
+
+// ── Post-Payout Refund Tests ────────────────────────────────────────────
+
+describe("orders.server — post-payout refund handling", () => {
+  /** Helper: create a sale, credit it, create a payout, mark it paid */
+  async function setupPaidPayout(opts: {
+    category?: string;
+    feeRate?: number;
+  } = {}) {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: opts.feeRate ?? 0.15 });
+
+    const product = await prisma.product.create({
+      data: {
+        title: "Post-Payout Test Product",
+        styleId: `style-pp-${Date.now()}-${Math.random()}`,
+        category: opts.category ?? "Footwear > Sneakers",
+        shopifyProductId: `gid://shopify/Product/pp-${Date.now()}`,
+      },
+    });
+    const variant = await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "10",
+        shopifyVariantId: `gid://shopify/ProductVariant/pp-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/pp-${Date.now()}`,
+      },
+    });
+
+    await createListings(consignor.id, variant.id, 200, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/pp-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Find the sale transaction
+    const order = await prisma.order.findUnique({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: { include: { transactions: true } } },
+    });
+    const saleTx = order!.items[0].transactions.find((t) => t.type === "sale")!;
+
+    // Create payout + payoutItem, mark paid
+    const payout = await prisma.payout.create({
+      data: {
+        consignorId: consignor.id,
+        amount: saleTx.consignorAmount,
+        status: "paid",
+        items: { create: { transactionId: saleTx.id } },
+      },
+    });
+
+    return { admin, consignor, product, variant, order: order!, shopifyOrderId, saleTx, payout };
+  }
+
+  it("post-payout refund does NOT create negative transaction", async () => {
+    const { admin, consignor, shopifyOrderId } = await setupPaidPayout();
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const txs = await prisma.transaction.findMany({ where: { consignorId: consignor.id } });
+    expect(txs).toHaveLength(1); // only the original sale, no refund
+    expect(txs[0].type).toBe("sale");
+  });
+
+  it("post-payout refund creates new listing under shop consignor", async () => {
+    const { admin, consignor, variant, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Sneakers",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // New listing should exist under a shop consignor
+    const newListings = await prisma.listing.findMany({
+      where: {
+        variantId: variant.id,
+        status: "active",
+        reassignedFromConsignorId: consignor.id,
+      },
+    });
+    expect(newListings).toHaveLength(1);
+    expect(newListings[0].reassignedFromListingId).toBeTruthy();
+    expect(newListings[0].price).toBe(200);
+  });
+
+  it("footwear items are reassigned to Kulture Klash", async () => {
+    const { admin, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Boots",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const shopConsignor = await prisma.consignor.findFirst({
+      where: { name: "Kulture Klash" },
+    });
+    expect(shopConsignor).toBeTruthy();
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    const reassigned = await prisma.listing.findFirst({
+      where: { consignorId: shopConsignor!.id, status: "active" },
+    });
+    expect(reassigned).toBeTruthy();
+  });
+
+  it("non-footwear items are reassigned to Kulture Klothing", async () => {
+    const { admin, shopifyOrderId } = await setupPaidPayout({
+      category: "Apparel > Hoodies",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const shopConsignor = await prisma.consignor.findFirst({
+      where: { name: "Kulture Klothing" },
+    });
+    expect(shopConsignor).toBeTruthy();
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    const reassigned = await prisma.listing.findFirst({
+      where: { consignorId: shopConsignor!.id, status: "active" },
+    });
+    expect(reassigned).toBeTruthy();
+  });
+
+  it("creates ReassignmentLog entry with full audit details", async () => {
+    const { admin, consignor, order, shopifyOrderId } = await setupPaidPayout();
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].originalConsignorId).toBe(consignor.id);
+    expect(logs[0].reason).toBe("post_payout_refund");
+    expect(logs[0].orderId).toBe(order.id);
+    expect(logs[0].newListingId).toBeTruthy();
+    expect(logs[0].originalListingId).toBeTruthy();
+  });
+
+  it("original listing stays sold (not restored)", async () => {
+    const { admin, order, shopifyOrderId } = await setupPaidPayout();
+    const originalListingId = order.items[0].listingId;
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const originalListing = await prisma.listing.findUnique({ where: { id: originalListingId } });
+    expect(originalListing!.status).toBe("sold"); // NOT restored to active
+  });
+
+  it("consignor balance unchanged after post-payout refund", async () => {
+    const { admin, consignor, shopifyOrderId, payout } = await setupPaidPayout({ feeRate: 0.15 });
+
+    const balanceBefore = await getConsignorBalance(consignor.id);
+    // Balance = sale amount - paid payout = 170 - 170 = 0
+    expect(balanceBefore).toBe(0);
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const balanceAfter = await getConsignorBalance(consignor.id);
+    // No negative transaction created, so balance stays the same
+    expect(balanceAfter).toBe(0);
+  });
+
+  it("normal refund (no paid payout) still creates negative transaction", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+
+    const product = await prisma.product.create({
+      data: {
+        title: "Normal Refund Product",
+        styleId: `style-nr-${Date.now()}-${Math.random()}`,
+        category: "Footwear > Sneakers",
+        shopifyProductId: `gid://shopify/Product/nr-${Date.now()}`,
+      },
+    });
+    const variant = await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "9",
+        shopifyVariantId: `gid://shopify/ProductVariant/nr-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/nr-${Date.now()}`,
+      },
+    });
+
+    await createListings(consignor.id, variant.id, 200, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/nr-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Refund WITHOUT any payout — normal path
+    await refundOrder({ admin, shopifyOrderId });
+
+    const txs = await prisma.transaction.findMany({
+      where: { consignorId: consignor.id },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(txs).toHaveLength(2);
+    expect(txs[0].type).toBe("sale");
+    expect(txs[1].type).toBe("refund");
+    expect(txs[1].amount).toBe(-170); // -200 * 0.85
+
+    // Listing restored to active
+    const listings = await prisma.listing.findMany({ where: { variantId: variant.id } });
+    expect(listings[0].status).toBe("active");
+
+    // No reassignment
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(0);
+  });
+
+  it("shop consignor listing resale generates zero consignorAmount (100% fee)", async () => {
+    const { admin, variant, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Sneakers",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // Find the new listing under shop consignor
+    const newListing = await prisma.listing.findFirst({
+      where: { variantId: variant.id, status: "active" },
+    });
+    expect(newListing).toBeTruthy();
+
+    const shopConsignor = await prisma.consignor.findUnique({
+      where: { id: newListing!.consignorId },
+    });
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    // Simulate resale of the reassigned listing
+    const resalePrice = 200;
+    const grossAmount = resalePrice;
+    const feeAmount = grossAmount * shopConsignor!.feeRate; // 200 * 1.0 = 200
+    const consignorAmount = grossAmount - feeAmount; // 0
+
+    expect(consignorAmount).toBe(0);
+    expect(feeAmount).toBe(200); // marketplace keeps everything
+  });
+
+  it("cancelOrder with post-payout: reassigns instead of negative transaction", async () => {
+    const { admin, consignor, shopifyOrderId } = await setupPaidPayout();
+
+    await cancelOrder({ admin, shopifyOrderId });
+
+    // No refund transaction
+    const txs = await prisma.transaction.findMany({ where: { consignorId: consignor.id } });
+    expect(txs).toHaveLength(1);
+    expect(txs[0].type).toBe("sale");
+
+    // Reassignment log created
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].reason).toBe("post_payout_refund");
   });
 });

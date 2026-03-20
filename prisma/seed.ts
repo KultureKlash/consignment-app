@@ -25,6 +25,9 @@ async function main() {
     { name: "Diana Chen", email: "diana@test.com", feeRate: 0.15 },
     { name: "Emily Taylor", email: "emily@test.com", feeRate: 0.20 },
     { name: "Frank Morales", email: "frank@test.com", feeRate: 0.10 },
+    // Shop consignors (100% fee = marketplace keeps everything, no payouts generated)
+    { name: "Kulture Klash", email: "shop-footwear@kultureklash.com", feeRate: 1.0 },
+    { name: "Kulture Klothing", email: "shop-clothing@kultureklothing.com", feeRate: 1.0 },
   ];
 
   const consignors = [];

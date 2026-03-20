@@ -159,6 +159,9 @@ These features enable multi-seller marketplace functionality.
 [x] Restock handling (return / cancel / no_restock)
 [x] Inventory re-sync after refund
 [x] Idempotent refund processing
+[x] Post-payout refund handling (reassign to shop consignor instead of negative transaction)
+[x] Shop consignors: Kulture Klash (footwear) and Kulture Klothing (non-footwear) with 100% fee rate
+[x] ReassignmentLog audit trail for post-payout refund reassignments
 
 ---
 
@@ -177,10 +180,13 @@ These features enable multi-seller marketplace functionality.
 ## Payout System
 
 [x] Payout database model
+[x] PayoutItem join table (Payout ↔ Transaction, per-item tracking)
 [x] Balance calculation respects completed payouts
-[ ] Payout request system
-[ ] Admin payout approval
-[ ] Payout record creation
+[x] Create payout from selected transactions (validates ownership, prevents double-payout)
+[x] Mark payout as paid
+[x] Cancel pending payout (cascade-deletes items, frees transactions)
+[x] Payout page data loader (unpaid grouped by consignor, history, stats)
+[ ] Consignor invoice request flow (future consignor portal)
 
 ---
 
@@ -271,7 +277,7 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [ ] Order detail view
 [ ] Consignor account freeze / suspension
 [ ] Ledger inspection view
-[ ] Payout management UI
+[x] Payout management UI (select items per consignor, create/mark paid/cancel payouts)
 [ ] Fee rate configuration per consignor (UI)
 
 ---
@@ -375,10 +381,10 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 197 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products)
+[x] Vitest test suite — 221 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
-[x] Comprehensive seed data (6 consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)
+[x] Comprehensive seed data (8 consignors incl. 2 shop consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)
 
 ---
 

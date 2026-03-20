@@ -89,6 +89,10 @@ model Listing {
   soldAt          DateTime?
   withdrawnAt     DateTime?
 
+  // Reassignment tracking (populated only for post-payout refund reassignments)
+  reassignedFromConsignorId  String?
+  reassignedFromListingId    String?
+
   consignor       Consignor @relation(fields: [consignorId], references: [id])
   variant         Variant   @relation(fields: [variantId], references: [id])
 
@@ -144,6 +148,7 @@ model Transaction {
 
   consignor        Consignor  @relation(fields: [consignorId], references: [id])
   orderItem        OrderItem? @relation(fields: [orderItemId], references: [id])
+  payoutItems      PayoutItem[]
 
   createdAt        DateTime @default(now())
 }
@@ -163,9 +168,32 @@ model Payout {
   id           String   @id @default(cuid())
   consignorId  String
   amount       Float
-  status       String   @default("pending")
+  status       String   @default("pending") // "pending" | "invoiced" | "paid"
 
   consignor    Consignor @relation(fields: [consignorId], references: [id])
+  items        PayoutItem[]
 
   createdAt    DateTime @default(now())
+}
+
+model PayoutItem {
+  id            String      @id @default(cuid())
+  payoutId      String
+  transactionId String
+
+  payout        Payout      @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  @@unique([payoutId, transactionId])
+}
+
+model ReassignmentLog {
+  id                    String   @id @default(cuid())
+  originalListingId     String
+  newListingId          String
+  originalConsignorId   String
+  newConsignorId        String
+  orderId               String?
+  reason                String   // "post_payout_refund"
+  createdAt             DateTime @default(now())
 }

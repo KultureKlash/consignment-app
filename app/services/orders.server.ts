@@ -210,8 +210,8 @@ export async function cancelOrder({
     include: {
       items: {
         include: {
-          listing: { include: { consignor: true, variant: true } },
-          transactions: true,
+          listing: { include: { consignor: true, variant: { include: { product: true } } } },
+          transactions: { include: { payoutItems: { include: { payout: true } } } },
         },
       },
     },
@@ -231,48 +231,15 @@ export async function cancelOrder({
     return;
   }
 
-  const txType = order.paymentStatus === "paid" ? "refund" : "void";
+  const wasPaid = order.paymentStatus === "paid";
+  const txType = wasPaid ? "refund" : "void";
   const affectedVariantIds = new Set<string>();
 
   await prisma.$transaction(async (tx) => {
     for (const item of order.items) {
       if (item.status === "refunded") continue; // already refunded
 
-      affectedVariantIds.add(item.listing.variantId);
-
-      // Restore listing to active
-      await tx.listing.update({
-        where: { id: item.listingId },
-        data: { status: "active", soldAt: null },
-      });
-
-      // Mark order item as refunded
-      await tx.orderItem.update({
-        where: { id: item.id },
-        data: { status: "refunded" },
-      });
-
-      // Only create offsetting transactions if the order was actually paid
-      if (order.paymentStatus === "paid") {
-        const saleTx = item.transactions.find((t) => t.type === "sale");
-        const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
-        const refundGross = item.price;
-        const refundFee = refundGross * rate;
-        const refundConsignor = refundGross - refundFee;
-        await tx.transaction.create({
-          data: {
-            consignorId: item.listing.consignorId,
-            orderItemId: item.id,
-            salePrice: item.price,
-            feeRate: rate,
-            grossAmount: -refundGross,
-            feeAmount: -refundFee,
-            consignorAmount: -refundConsignor,
-            amount: -refundConsignor,
-            type: txType,
-          },
-        });
-      }
+      await refundItem(tx, { ...item, orderId: order.id }, affectedVariantIds, true, { wasPaid, txType });
     }
 
     // Update order status and paymentStatus
@@ -319,8 +286,8 @@ export async function refundOrder({
     include: {
       items: {
         include: {
-          listing: { include: { consignor: true, variant: true } },
-          transactions: true,
+          listing: { include: { consignor: true, variant: { include: { product: true } } } },
+          transactions: { include: { payoutItems: { include: { payout: true } } } },
         },
       },
     },
@@ -400,8 +367,47 @@ export async function refundOrder({
 }
 
 /**
+ * Check if any sale transaction for this item was included in a paid payout.
+ * If so, the consignor already received the money — we absorb the loss.
+ */
+function isPostPaidPayout(
+  transactions: Array<{ type: string; payoutItems: Array<{ payout: { status: string } }> }>,
+): boolean {
+  return transactions.some(
+    (t) => t.type === "sale" && t.payoutItems.some((pi) => pi.payout.status === "paid"),
+  );
+}
+
+/**
+ * Get or create the shop consignor for reassigned items.
+ * Footwear → "Kulture Klash", everything else → "Kulture Klothing".
+ * Shop consignors have 100% fee rate (marketplace keeps everything, no payouts).
+ */
+async function getShopConsignorId(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  category: string | null | undefined,
+): Promise<string> {
+  const isFootwear = !category || category.startsWith("Footwear");
+  const name = isFootwear ? "Kulture Klash" : "Kulture Klothing";
+  const email = isFootwear ? "shop-footwear@kultureklash.com" : "shop-clothing@kultureklothing.com";
+
+  const existing = await tx.consignor.findFirst({ where: { name } });
+  if (existing) return existing.id;
+
+  const created = await tx.consignor.create({
+    data: { name, email, feeRate: 1.0 },
+  });
+  return created.id;
+}
+
+/**
  * Refund a single order item. Sets OrderItem status to "refunded",
  * restores listing to "active" (if restocking), and creates refund transaction.
+ *
+ * Post-payout refund: if the sale was already paid out to the consignor,
+ * we do NOT create a negative transaction. Instead, we create a new listing
+ * under the shop consignor (Kulture Klash / Kulture Klothing) so the shop
+ * can resell and recover the cost.
  */
 async function refundItem(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
@@ -409,24 +415,22 @@ async function refundItem(
     id: string;
     price: number;
     listingId: string;
+    orderId?: string;
     listing: {
       consignorId: string;
       variantId: string;
       consignor: { feeRate: number };
+      variant: { shopifyVariantId?: string | null; product: { category: string | null } };
     };
-    transactions: Array<{ type: string; feeRate: number }>;
+    transactions: Array<{ type: string; feeRate: number; payoutItems: Array<{ payout: { status: string } }> }>;
   },
   affectedVariantIds: Set<string>,
   restoreInventory: boolean,
+  options?: { txType?: string; wasPaid?: boolean },
 ) {
-  // Restore listing to active (if restocking)
-  if (restoreInventory) {
-    affectedVariantIds.add(item.listing.variantId);
-    await tx.listing.update({
-      where: { id: item.listingId },
-      data: { status: "active", soldAt: null },
-    });
-  }
+  const wasPaid = options?.wasPaid ?? true;
+  const txType = options?.txType ?? "refund";
+  const postPayout = wasPaid && isPostPaidPayout(item.transactions);
 
   // Mark order item as refunded
   await tx.orderItem.update({
@@ -434,26 +438,70 @@ async function refundItem(
     data: { status: "refunded" },
   });
 
-  // Create refund transaction
-  const saleTx = item.transactions.find((t) => t.type === "sale");
-  const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
-  const refundGross = item.price;
-  const refundFee = refundGross * rate;
-  const refundConsignor = refundGross - refundFee;
+  if (postPayout) {
+    // Post-payout refund: don't create negative transaction, reassign to shop consignor
+    if (restoreInventory) {
+      affectedVariantIds.add(item.listing.variantId);
 
-  await tx.transaction.create({
-    data: {
-      consignorId: item.listing.consignorId,
-      orderItemId: item.id,
-      salePrice: item.price,
-      feeRate: rate,
-      grossAmount: -refundGross,
-      feeAmount: -refundFee,
-      consignorAmount: -refundConsignor,
-      amount: -refundConsignor,
-      type: "refund",
-    },
-  });
+      const shopConsignorId = await getShopConsignorId(tx, item.listing.variant.product.category);
+
+      // Create new listing under shop consignor (original stays "sold" for history)
+      const newListing = await tx.listing.create({
+        data: {
+          consignorId: shopConsignorId,
+          variantId: item.listing.variantId,
+          price: item.price,
+          status: "active",
+          reassignedFromConsignorId: item.listing.consignorId,
+          reassignedFromListingId: item.listingId,
+        },
+      });
+
+      // Create audit log
+      await tx.reassignmentLog.create({
+        data: {
+          originalListingId: item.listingId,
+          newListingId: newListing.id,
+          originalConsignorId: item.listing.consignorId,
+          newConsignorId: shopConsignorId,
+          orderId: item.orderId,
+          reason: "post_payout_refund",
+        },
+      });
+    }
+    // No refund transaction — consignor already got paid
+  } else {
+    // Normal path: restore listing + create negative transaction (only if order was paid)
+    if (restoreInventory) {
+      affectedVariantIds.add(item.listing.variantId);
+      await tx.listing.update({
+        where: { id: item.listingId },
+        data: { status: "active", soldAt: null },
+      });
+    }
+
+    if (wasPaid) {
+      const saleTx = item.transactions.find((t) => t.type === "sale");
+      const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
+      const refundGross = item.price;
+      const refundFee = refundGross * rate;
+      const refundConsignor = refundGross - refundFee;
+
+      await tx.transaction.create({
+        data: {
+          consignorId: item.listing.consignorId,
+          orderItemId: item.id,
+          salePrice: item.price,
+          feeRate: rate,
+          grossAmount: -refundGross,
+          feeAmount: -refundFee,
+          consignorAmount: -refundConsignor,
+          amount: -refundConsignor,
+          type: txType,
+        },
+      });
+    }
+  }
 }
 
 /**
@@ -468,7 +516,7 @@ export async function getConsignorBalance(consignorId: string): Promise<number> 
       _sum: { amount: true },
     }),
     prisma.payout.aggregate({
-      where: { consignorId, status: "completed" },
+      where: { consignorId, status: "paid" },
       _sum: { amount: true },
     }),
   ]);

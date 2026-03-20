@@ -6,13 +6,15 @@ export const prisma = new PrismaClient();
 // Before each test, clean all marketplace data (order matters for FK constraints)
 beforeEach(async () => {
   await prisma.webhookEvent.deleteMany();
+  await prisma.reassignmentLog.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.payoutItem.deleteMany();
+  await prisma.payout.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.listing.deleteMany();
   await prisma.variant.deleteMany();
   await prisma.product.deleteMany();
-  await prisma.payout.deleteMany();
   await prisma.consignor.deleteMany();
 });
 

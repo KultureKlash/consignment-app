@@ -153,6 +153,8 @@ app/
     app.api.products.tsx    — Product search API
     app.api.brands.tsx      — Brand autocomplete API
     app.api.taxonomy.tsx    — Shopify taxonomy API
+    app.payouts.tsx         — Payout management page
+    app.activity.tsx        — Full activity feed page
     app.tsx                 — App shell with nav
   services/
     catalog.server.ts       — Product/variant find-or-create
@@ -160,6 +162,7 @@ app/
     listings.server.ts      — Listing creation, cancellation, bulk cancellation
     listing-queries.server.ts — Listing search, filter, pagination
     orders.server.ts        — Order processing, refunds, cancellations, balance
+    payouts.server.ts       — Payout creation, mark paid, cancel, page data
     inventory.server.ts     — Shopify inventory sync
     shopify-products.server.ts — Shopify product/variant creation, image upload, backfill
     shopify-taxonomy.server.ts — Shopify taxonomy resolution
@@ -182,7 +185,7 @@ app/
     categories/             — Category taxonomy data and helpers
 
 prisma/
-  schema.prisma             — 10 models
+  schema.prisma             — 12 models
 
 docs/
   architecture.md
@@ -315,8 +318,15 @@ processOrder()    — allocate listings, create order items
 creditOrder()     — create sale transactions when payment captured
 cancelOrder()     — restore listings, create void/refund transactions
 refundOrder()     — partial or full refund with restock options
-getConsignorBalance() — sum transactions minus completed payouts
+getConsignorBalance() — sum transactions minus paid payouts
 ```
+
+Post-payout refund handling:
+
+When a refund occurs after the consignor's payout has been marked "paid" (money already sent),
+the system does NOT create a negative transaction. Instead it reassigns the item to a shop
+consignor (Kulture Klash for footwear, Kulture Klothing for non-footwear) with 100% fee rate
+so the marketplace can resell and recover the cost. A ReassignmentLog audit entry is created.
 
 Allocation rule:
 
@@ -363,17 +373,20 @@ Validates email uniqueness and restricts fee rate to 10%, 15%, or 20%.
 
 ---
 
-## Payouts Service (planned)
+## Payouts Service
 
-Will handle consignor balances and payouts.
+Handles per-item payout management. Admin selects specific sold-item transactions per consignor and bundles them into a payout.
 
-Planned functions:
+Functions:
 
 ```
-requestPayout()
-approvePayout()
-markPayoutPaid()
+getPayoutsPageData()     — unpaid transactions grouped by consignor, recent payouts, summary stats
+createPayout(consignorId, transactionIds) — validate ownership, prevent double-payout, create Payout + PayoutItems
+markPaid(payoutId)       — update status to "paid"
+cancelPayout(payoutId)   — delete payout + items (cascade), reject if paid
 ```
+
+Payout lifecycle: `pending` → `invoiced` (future consignor portal) → `paid`
 
 ---
 
@@ -400,12 +413,14 @@ Session          — Shopify OAuth sessions
 Consignor        — Seller accounts with fee rate
 Product          — Catalog items (styleId, brand, category, imageUrl)
 Variant          — Sizes with optional GTIN barcode
-Listing          — Per-item inventory (1 row = 1 physical item)
+Listing          — Per-item inventory (1 row = 1 physical item, optional reassignment tracking)
 Order            — Shopify orders with payment status tracking
 OrderItem        — 1:1 mapping to allocated listings
 Transaction      — Audit-grade financial records (sale/refund)
 WebhookEvent     — Idempotent webhook processing
-Payout           — Consignor payout records
+Payout           — Consignor payout records (pending → invoiced → paid)
+PayoutItem       — Join table linking payouts to specific transactions
+ReassignmentLog  — Audit trail for post-payout refund reassignments
 ```
 
 Data flow:
