@@ -98,9 +98,15 @@ export default function QuickAddPopover({
     const update = () => {
       const rect = anchorEl.getBoundingClientRect();
       const popoverWidth = 320;
+      const popoverHeight = 380; // approximate max height
       let left = rect.right - popoverWidth;
       if (left < 8) left = 8;
-      setPos({ top: rect.bottom + 6, left });
+      // If not enough space below, position above the button
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < popoverHeight
+        ? rect.top - popoverHeight - 6
+        : rect.bottom + 6;
+      setPos({ top, left });
     };
     update();
     window.addEventListener("scroll", update, true);

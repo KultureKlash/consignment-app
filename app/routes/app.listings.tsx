@@ -185,6 +185,11 @@ export default function Listings() {
   };
 
   const handleQuickAdd = (productId: string, anchorEl: HTMLElement) => {
+    // Toggle: close if already open for this product
+    if (quickAdd?.productId === productId) {
+      setQuickAdd(null);
+      return;
+    }
     setQuickAdd({ productId, anchorEl });
   };
 
