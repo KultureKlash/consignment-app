@@ -109,6 +109,7 @@ export default function ListingsFilter({
               }
             }}
             placeholder="Subcategory"
+            searchable
           />
         </div>
       )}
@@ -126,6 +127,7 @@ export default function ListingsFilter({
             });
           }}
           placeholder="Consignor"
+          searchable
         />
       </div>
 

@@ -24,10 +24,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   );
 
   const financialStatus = payload.financial_status as string | undefined;
+  const orderNumber = payload.name as string | undefined;
 
   try {
     await withWebhookDedup(webhookId, topic, shopifyOrderId, () =>
-      processOrder({ admin, shopifyOrderId, lineItems, financialStatus })
+      processOrder({ admin, shopifyOrderId, orderNumber, lineItems, financialStatus })
     );
     console.log(`Order ${payload.id} processed successfully`);
   } catch (error) {

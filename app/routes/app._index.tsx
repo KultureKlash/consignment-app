@@ -5,7 +5,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getDashboardData } from "~/services/dashboard.server";
 import { motion } from "framer-motion";
-import { Package, ShoppingBag, Clock, DollarSign, History } from "lucide-react";
+import { Package, ShoppingBag, TrendingUp, DollarSign, History } from "lucide-react";
 import StatsCard from "~/components/StatsCard";
 import ActionItem from "~/components/ActionItem";
 import ActivityItem from "~/components/ActivityItem";
@@ -51,16 +51,18 @@ const sectionTitle: React.CSSProperties = {
 };
 
 export default function Dashboard() {
-  const { activeListings, soldToday, pendingPayouts, revenueToday, updatedAt, activityFeed } =
+  const { totalSales, totalOrders, totalCommission, inventoryValue, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
   const [showAllActivity, setShowAllActivity] = useState(false);
   const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
 
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   const stats = [
-    { label: "Active Listings", value: String(activeListings), icon: Package, trend: undefined },
-    { label: "Items Sold Today", value: String(soldToday), icon: ShoppingBag, trend: undefined },
-    { label: "Pending Payouts", value: `$${Number(pendingPayouts).toFixed(2)}`, icon: Clock, trend: undefined },
-    { label: "Revenue Today", value: `$${Number(revenueToday).toFixed(2)}`, icon: DollarSign, trend: undefined },
+    { label: "Total Sales", value: `$${fmt(Number(totalSales))}`, icon: DollarSign, color: "green" },
+    { label: "Total Orders", value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "blue" },
+    { label: "Total Commission", value: `$${fmt(Number(totalCommission))}`, icon: TrendingUp, color: "purple" },
+    { label: "Inventory Value", value: `$${fmt(Number(inventoryValue))}`, icon: Package, color: "amber" },
   ];
 
   return (

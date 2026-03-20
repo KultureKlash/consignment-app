@@ -56,6 +56,7 @@ export default function Dropdown({ anchorRef, open, children, maxHeight }: Dropd
 
   const content = (
     <div
+      data-portal-dropdown
       style={{
         ...containerStyle,
         top: pos.top,

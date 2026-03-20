@@ -148,7 +148,8 @@ app/
     app.inventory.tsx       — Create Listing page
     app.listings.tsx        — All Listings (filtered, paginated, grouped)
     app.orders.tsx          — Orders page
-    app.consignors.tsx      — Consignors page
+    app.consignors.tsx      — Consignors list page
+    app.consignors.$id.tsx  — Consignor detail/edit page
     app.api.products.tsx    — Product search API
     app.api.brands.tsx      — Brand autocomplete API
     app.api.taxonomy.tsx    — Shopify taxonomy API
@@ -226,6 +227,7 @@ catalog.server.ts            — findOrCreateProduct, findOrCreateVariant
 dashboard.server.ts          — getDashboardData (stats, activity feed)
 listings.server.ts           — createListing, cancelListing
 listing-queries.server.ts    — queryListings (search, filter, sort, paginate)
+consignors.server.ts         — getConsignorDetail, updateConsignor
 orders.server.ts             — processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance
 inventory.server.ts          — syncVariantInventory
 shopify-products.server.ts   — ensureShopifyProductAndVariant, backfillProductImages
@@ -337,6 +339,21 @@ ensureShopifyProductAndVariant(admin, variant)
 ```
 
 Resilient — if Shopify sync fails, the listing is still created locally.
+
+---
+
+## Consignors Service
+
+Handles consignor profile management.
+
+Functions:
+
+```
+getConsignorDetail(id)     — consignor profile + balance + listing status counts
+updateConsignor(id, data)  — update name, email, feeRate with validation
+```
+
+Validates email uniqueness and restricts fee rate to 10%, 15%, or 20%.
 
 ---
 

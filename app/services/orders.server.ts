@@ -14,11 +14,13 @@ import { syncInventory } from "~/services/inventory.server";
 export async function processOrder({
   admin,
   shopifyOrderId,
+  orderNumber,
   lineItems,
   financialStatus,
 }: {
   admin: AdminApiContext;
   shopifyOrderId: string;
+  orderNumber?: string;
   lineItems: Array<{
     shopifyVariantId: string;
     quantity: number;
@@ -38,7 +40,7 @@ export async function processOrder({
 
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
-      data: { shopifyId: shopifyOrderId, total: 0, status: "open", paymentStatus: "pending" },
+      data: { shopifyId: shopifyOrderId, orderNumber: orderNumber ?? null, total: 0, status: "open", paymentStatus: "pending" },
     });
 
     let orderTotal = 0;

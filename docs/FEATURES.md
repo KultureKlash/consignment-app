@@ -242,6 +242,11 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 
 [x] Consignor list with name, email, fee rate, balance
 [x] Balance calculation per consignor
+[x] Clickable rows → navigate to consignor detail page
+[x] Consignor detail page (view/edit name, email, fee rate)
+[x] Copy consignor ID to clipboard
+[x] Listing status counts (active, pending sale, sold, cancelled)
+[x] Link to payouts tab from consignor detail
 
 ---
 
@@ -363,7 +368,7 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 159 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy)
+[x] Vitest test suite — 171 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
 [x] Comprehensive seed data (6 consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)

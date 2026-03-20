@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Dropdown, { dropdownItemStyle, handleItemHover } from "./Dropdown";
 
 type OptionItem = { label: string; value: string };
@@ -10,6 +10,7 @@ type CustomSelectProps = {
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
+  searchable?: boolean;
   actionItem?: { label: string; onSelect: () => void };
 };
 
@@ -56,6 +57,7 @@ export default function CustomSelect({
   placeholder = "Select...",
   disabled = false,
   hasError = false,
+  searchable = false,
   actionItem,
 }: CustomSelectProps) {
   // Normalize options to { label, value } pairs
@@ -65,7 +67,37 @@ export default function CustomSelect({
   const selectedLabel = normalizedOptions.find((o) => o.value === value)?.label ?? value;
 
   const anchorRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (open && searchable) {
+      setTimeout(() => searchRef.current?.focus(), 0);
+    }
+    if (!open) setSearchQuery("");
+  }, [open, searchable]);
+
+  // Click-outside to close for searchable dropdowns
+  useEffect(() => {
+    if (!searchable || !open) return;
+    function handler(e: MouseEvent) {
+      const target = e.target as Node;
+      const inAnchor = anchorRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inAnchor && !inDropdown) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [searchable, open]);
+
+  const filteredOptions = searchable && searchQuery
+    ? normalizedOptions.filter((o) => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : normalizedOptions;
 
   const handleTriggerClick = () => {
     if (disabled) return;
@@ -103,6 +135,8 @@ export default function CustomSelect({
     focusRef.current = false;
     e.currentTarget.style.borderColor = hasError ? "#ef4444" : "#c4c9d1";
     e.currentTarget.style.boxShadow = "none";
+    // Searchable uses click-outside handler instead of blur
+    if (searchable) return;
     handleBlur();
   };
 
@@ -126,26 +160,58 @@ export default function CustomSelect({
       </div>
 
       <Dropdown anchorRef={anchorRef} open={open}>
-        {normalizedOptions.map((opt) => (
-          <div
-            key={opt.value}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onChange(opt.value);
-              setOpen(false);
-            }}
-            style={{
-              ...dropdownItemStyle,
-              ...(opt.value === value ? { background: "#f0f4ff", fontWeight: 500 } : {}),
-            }}
-            onMouseEnter={(e) => handleItemHover(e, true)}
-            onMouseLeave={(e) => handleItemHover(e, false)}
-            role="option"
-            aria-selected={opt.value === value}
-          >
-            {opt.label}
+        <div ref={dropdownRef}>
+        {searchable && (
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid #f0f0f0" }}>
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              placeholder="Type to search..."
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                fontSize: "13px",
+                border: "1px solid #e3e3e3",
+                borderRadius: "6px",
+                outline: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "#111827"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(17,24,39,0.08)"; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "#e3e3e3"; e.currentTarget.style.boxShadow = "none"; }}
+            />
           </div>
-        ))}
+        )}
+        <div style={searchable ? { maxHeight: "200px", overflowY: "auto" } : undefined}>
+          {filteredOptions.map((opt) => (
+            <div
+              key={opt.value}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              style={{
+                ...dropdownItemStyle,
+                ...(opt.value === value ? { background: "#f0f4ff", fontWeight: 500 } : {}),
+              }}
+              onMouseEnter={(e) => handleItemHover(e, true)}
+              onMouseLeave={(e) => handleItemHover(e, false)}
+              role="option"
+              aria-selected={opt.value === value}
+            >
+              {opt.label}
+            </div>
+          ))}
+          {filteredOptions.length === 0 && (
+            <div style={{ padding: "10px 14px", color: "#9ca3af", fontSize: "13px", textAlign: "center" }}>
+              No matches
+            </div>
+          )}
+        </div>
         {actionItem && (
           <div
             onMouseDown={(e) => {
@@ -169,11 +235,7 @@ export default function CustomSelect({
             {actionItem.label}
           </div>
         )}
-        {normalizedOptions.length === 0 && !actionItem && (
-          <div style={{ padding: "10px 14px", color: "#9ca3af", fontSize: "13px", textAlign: "center" }}>
-            No options
-          </div>
-        )}
+        </div>
       </Dropdown>
     </div>
   );

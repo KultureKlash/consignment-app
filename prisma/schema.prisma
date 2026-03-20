@@ -101,6 +101,7 @@ model Listing {
 model Order {
   id            String      @id @default(cuid())
   shopifyId     String?     @unique
+  orderNumber   String?     // Shopify order name e.g. "#KK1042"
   total         Float
   status        String      @default("open")
   paymentStatus String      @default("pending") // "pending" | "paid"

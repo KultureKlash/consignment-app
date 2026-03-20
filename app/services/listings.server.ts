@@ -109,3 +109,69 @@ export async function cancelListing({
 
   return updated;
 }
+
+/**
+ * Bulk cancel listings: updates DB in one transaction, then syncs each
+ * affected variant to Shopify once (not per listing) with retries.
+ */
+export async function bulkCancelListings({
+  admin,
+  listingIds,
+}: {
+  admin: AdminApiContext;
+  listingIds: string[];
+}): Promise<{ cancelled: number; failed: number; errors: string[] }> {
+  // 1. Fetch all requested listings with their variants
+  const listings = await prisma.listing.findMany({
+    where: { id: { in: listingIds } },
+    include: { variant: true },
+  });
+
+  // Filter to only active ones
+  const cancellable = listings.filter((l) => l.status === "active");
+  const skipped = listings.length - cancellable.length;
+
+  if (cancellable.length === 0) {
+    return { cancelled: 0, failed: skipped, errors: skipped > 0 ? ["No active listings to cancel"] : [] };
+  }
+
+  // 2. Batch update all statuses in a single transaction
+  const cancellableIds = cancellable.map((l) => l.id);
+  await prisma.listing.updateMany({
+    where: { id: { in: cancellableIds } },
+    data: { status: "cancelled" },
+  });
+
+  // 3. Collect unique variants that need Shopify sync
+  const variantMap = new Map<string, typeof cancellable[0]["variant"]>();
+  for (const listing of cancellable) {
+    if (!variantMap.has(listing.variantId)) {
+      variantMap.set(listing.variantId, listing.variant);
+    }
+  }
+
+  // 4. Sync inventory once per variant with retry
+  const errors: string[] = [];
+  for (const [variantId, variant] of variantMap) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await syncInventory({ admin, variant });
+        break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt < 3) {
+          // Wait before retry (exponential backoff: 500ms, 1500ms)
+          await new Promise((r) => setTimeout(r, attempt * 500));
+        } else {
+          errors.push(`Shopify sync failed for variant ${variantId}: ${msg}`);
+        }
+      }
+    }
+  }
+
+  return {
+    cancelled: cancellable.length,
+    failed: skipped + (errors.length > 0 ? 0 : 0), // DB cancel succeeded even if sync failed
+    errors,
+  };
+}

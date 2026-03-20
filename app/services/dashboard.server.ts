@@ -22,18 +22,16 @@ export async function getDashboardData() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [activeListings, soldToday, revenueToday, txSum, payoutSum] = await Promise.all([
-    prisma.listing.count({ where: { status: "active" } }),
-    prisma.listing.count({ where: { status: "sold", soldAt: { gte: startOfToday } } }),
-    prisma.listing.aggregate({
-      _sum: { price: true },
-      where: { status: "sold", soldAt: { gte: startOfToday } },
-    }),
-    prisma.transaction.aggregate({ _sum: { amount: true } }),
-    prisma.payout.aggregate({ _sum: { amount: true }, where: { status: "completed" } }),
+  const [salesAgg, totalOrders, commissionAgg, inventoryAgg] = await Promise.all([
+    prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { grossAmount: true } }),
+    prisma.order.count(),
+    prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { feeAmount: true } }),
+    prisma.listing.aggregate({ where: { status: "active" }, _sum: { price: true } }),
   ]);
 
-  const pendingPayouts = (txSum._sum.amount ?? 0) - (payoutSum._sum.amount ?? 0);
+  const totalSales = salesAgg._sum.grossAmount ?? 0;
+  const totalCommission = commissionAgg._sum.feeAmount ?? 0;
+  const inventoryValue = inventoryAgg._sum.price ?? 0;
 
   // Activity feed: recent events from listings + refund transactions
   const [recentListings, refundTxs] = await Promise.all([
@@ -112,10 +110,10 @@ export async function getDashboardData() {
   const activityFeed: FeedEvent[] = events.slice(0, 15).map(({ event, time, type }) => ({ event, time, type }));
 
   return {
-    activeListings,
-    soldToday,
-    pendingPayouts,
-    revenueToday: revenueToday._sum.price ?? 0,
+    totalSales,
+    totalOrders,
+    totalCommission,
+    inventoryValue,
     updatedAt: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
     activityFeed,
   };

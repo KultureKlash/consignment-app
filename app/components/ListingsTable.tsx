@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, ChevronRight } from "lucide-react";
+import { Package, ChevronRight, Plus } from "lucide-react";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
 import { compareSizes } from "~/lib/size-order";
 
@@ -12,18 +12,25 @@ type Listing = {
   variant: {
     size: string;
     gtin: string | null;
-    product: { id: string; title: string; styleId: string | null; brand: string | null; imageUrl?: string | null };
+    product: { id: string; title: string; styleId: string | null; brand: string | null; category?: string | null; imageUrl?: string | null };
   };
 };
 
 type SortKey = "date" | "price" | "status";
+
+type VariantInfo = {
+  size: string;
+  gtin: string | null;
+};
 
 type ProductGroup = {
   productId: string;
   title: string;
   styleId: string | null;
   brand: string | null;
+  category: string | null;
   imageUrl: string | null;
+  variants: VariantInfo[];
   listings: Listing[];
 };
 
@@ -31,11 +38,14 @@ type Props = {
   listings: Listing[];
   grouped?: boolean;
   onCancel?: (listingId: string) => void;
+  onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   isNavigating?: boolean;
   sortBy?: SortKey;
   sortDir?: "asc" | "desc";
   onSortChange?: (sortBy: SortKey) => void;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
 };
 
 // ── Shared styles ──
@@ -106,6 +116,25 @@ const childIndentTd: React.CSSProperties = {
   paddingLeft: "42px",
 };
 
+const checkboxStyle: React.CSSProperties = {
+  width: "16px",
+  height: "16px",
+  cursor: "pointer",
+  accentColor: "#111827",
+};
+
+const checkboxThStyle: React.CSSProperties = {
+  ...thStyle,
+  width: "36px",
+  paddingRight: "0",
+};
+
+const checkboxTdStyle: React.CSSProperties = {
+  ...tdStyle,
+  width: "36px",
+  paddingRight: "0",
+};
+
 // ── Helpers ──
 
 function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
@@ -124,16 +153,25 @@ function groupByProduct(listings: Listing[]): ProductGroup[] {
         title: l.variant.product.title,
         styleId: l.variant.product.styleId,
         brand: l.variant.product.brand,
+        category: l.variant.product.category ?? null,
         imageUrl: l.variant.product.imageUrl ?? null,
+        variants: [],
         listings: [],
       };
       map.set(pid, group);
     }
     group.listings.push(l);
   }
-  // Sort child listings by size within each group
+  // Sort child listings by size and deduplicate variants
   for (const group of map.values()) {
     group.listings.sort((a, b) => compareSizes(a.variant.size, b.variant.size));
+    const variantMap = new Map<string, VariantInfo>();
+    for (const l of group.listings) {
+      if (!variantMap.has(l.variant.size)) {
+        variantMap.set(l.variant.size, { size: l.variant.size, gtin: l.variant.gtin });
+      }
+    }
+    group.variants = Array.from(variantMap.values());
   }
   return Array.from(map.values());
 }
@@ -154,13 +192,17 @@ export default function ListingsTable({
   listings,
   grouped,
   onCancel,
+  onQuickAdd,
   isLoading,
   isNavigating,
   sortBy,
   sortDir = "desc",
   onSortChange,
+  selectedIds,
+  onSelectionChange,
 }: Props) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const hasSelection = !!selectedIds && !!onSelectionChange;
 
   if (listings.length === 0 && !isNavigating) {
     return (
@@ -192,7 +234,39 @@ export default function ListingsTable({
     });
   };
 
-  const colCount = onCancel ? 7 : 6;
+  const colCount = (onCancel ? 7 : 6) + (hasSelection ? 1 : 0);
+
+  const toggleId = (id: string) => {
+    if (!selectedIds || !onSelectionChange) return;
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onSelectionChange(next);
+  };
+
+  const activeListings = listings.filter((l) => l.status === "active");
+  const allActiveSelected = activeListings.length > 0 && activeListings.every((l) => selectedIds?.has(l.id));
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (allActiveSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(activeListings.map((l) => l.id)));
+    }
+  };
+
+  const toggleGroupSelection = (ids: string[]) => {
+    if (!selectedIds || !onSelectionChange) return;
+    const allSelected = ids.every((id) => selectedIds.has(id));
+    const next = new Set(selectedIds);
+    if (allSelected) {
+      for (const id of ids) next.delete(id);
+    } else {
+      for (const id of ids) next.add(id);
+    }
+    onSelectionChange(next);
+  };
 
   // ── Grouped view ──
   if (grouped) {
@@ -201,29 +275,6 @@ export default function ListingsTable({
     return (
       <div style={wrapperStyle}>
         <table style={tableStyle}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid #e2e5ea" }}>
-              <th
-                style={onSortChange ? { ...sortableThStyle, paddingLeft: "42px" } : { ...thStyle, paddingLeft: "42px" }}
-                onClick={() => onSortChange?.("date")}
-              >
-                Size
-                {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
-              </th>
-              <th style={thStyle}>Barcode</th>
-              <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("price")}>
-                Price
-                {onSortChange && <SortIndicator active={sortBy === "price"} dir={sortDir} />}
-              </th>
-              <th style={thStyle}>Consignor</th>
-              <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("status")}>
-                Status
-                {onSortChange && <SortIndicator active={sortBy === "status"} dir={sortDir} />}
-              </th>
-              <th style={thStyle}>Created</th>
-              {onCancel && <th style={thStyle}>Actions</th>}
-            </tr>
-          </thead>
           <tbody>
             {groups.map((group) => {
               const isExpanded = expandedGroups.has(group.productId);
@@ -234,8 +285,16 @@ export default function ListingsTable({
                   isExpanded={isExpanded}
                   onToggle={() => toggleGroup(group.productId)}
                   onCancel={onCancel}
+                  onQuickAdd={onQuickAdd}
                   isLoading={isLoading}
                   colCount={colCount}
+                  sortBy={sortBy}
+                  sortDir={sortDir}
+                  onSortChange={onSortChange}
+                  hasSelection={hasSelection}
+                  selectedIds={selectedIds}
+                  onToggleId={toggleId}
+                  onToggleGroup={toggleGroupSelection}
                 />
               );
             })}
@@ -251,10 +310,17 @@ export default function ListingsTable({
       <table style={tableStyle}>
         <thead>
           <tr style={{ borderBottom: "2px solid #e2e5ea" }}>
-            <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("date")}>
-              Product
-              {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
-            </th>
+            {hasSelection && (
+              <th style={checkboxThStyle}>
+                <input
+                  type="checkbox"
+                  checked={allActiveSelected}
+                  onChange={toggleAll}
+                  style={checkboxStyle}
+                />
+              </th>
+            )}
+            <th style={thStyle}>Product</th>
             <th style={thStyle}>Size</th>
             <th style={thStyle}>Barcode</th>
             <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("price")}>
@@ -266,13 +332,24 @@ export default function ListingsTable({
               Status
               {onSortChange && <SortIndicator active={sortBy === "status"} dir={sortDir} />}
             </th>
-            <th style={thStyle}>Created</th>
+            <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("date")}>
+              Created
+              {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
+            </th>
             {onCancel && <th style={thStyle}>Actions</th>}
           </tr>
         </thead>
         <tbody>
           {listings.map((l) => (
-            <FlatRow key={l.id} listing={l} onCancel={onCancel} isLoading={isLoading} />
+            <FlatRow
+              key={l.id}
+              listing={l}
+              onCancel={onCancel}
+              isLoading={isLoading}
+              hasSelection={hasSelection}
+              isSelected={selectedIds?.has(l.id) ?? false}
+              onToggle={() => toggleId(l.id)}
+            />
           ))}
         </tbody>
       </table>
@@ -282,13 +359,42 @@ export default function ListingsTable({
 
 // ── Sub-components ──
 
-function FlatRow({ listing: l, onCancel, isLoading }: { listing: Listing; onCancel?: (id: string) => void; isLoading?: boolean }) {
+function FlatRow({
+  listing: l,
+  onCancel,
+  isLoading,
+  hasSelection,
+  isSelected,
+  onToggle,
+}: {
+  listing: Listing;
+  onCancel?: (id: string) => void;
+  isLoading?: boolean;
+  hasSelection: boolean;
+  isSelected: boolean;
+  onToggle: () => void;
+}) {
+  const isActive = l.status === "active";
   return (
     <tr
       style={flatRowStyle}
       onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
+      {hasSelection && (
+        <td style={checkboxTdStyle}>
+          {isActive ? (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onToggle}
+              style={checkboxStyle}
+            />
+          ) : (
+            <span style={{ display: "inline-block", width: "16px" }} />
+          )}
+        </td>
+      )}
       <td style={tdStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {l.variant.product.imageUrl ? (
@@ -368,16 +474,34 @@ function GroupRows({
   isExpanded,
   onToggle,
   onCancel,
+  onQuickAdd,
   isLoading,
   colCount,
+  sortBy,
+  sortDir = "desc",
+  onSortChange,
+  hasSelection,
+  selectedIds,
+  onToggleId,
+  onToggleGroup,
 }: {
   group: ProductGroup;
   isExpanded: boolean;
   onToggle: () => void;
   onCancel?: (id: string) => void;
+  onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   colCount: number;
+  sortBy?: SortKey;
+  sortDir?: "asc" | "desc";
+  onSortChange?: (sortBy: SortKey) => void;
+  hasSelection: boolean;
+  selectedIds?: Set<string>;
+  onToggleId: (id: string) => void;
+  onToggleGroup: (ids: string[]) => void;
 }) {
+  const groupActiveIds = group.listings.filter((l) => l.status === "active").map((l) => l.id);
+  const allGroupSelected = hasSelection && groupActiveIds.length > 0 && groupActiveIds.every((id) => selectedIds?.has(id));
   return (
     <>
       {/* Product header row */}
@@ -437,67 +561,146 @@ function GroupRows({
               <span style={{ fontSize: "12px", color: "#9ca3af" }}>
                 {group.styleId && <><strong style={{ fontWeight: 500 }}>Style:</strong> {group.styleId}</>}
                 {group.brand && ` / ${group.brand}`}
-                {" · "}Qty: {group.listings.length}
+                {" · "}Qty: {group.listings.filter((l) => l.status === "active").length}
               </span>
             </div>
 
-            <div style={{ marginLeft: "auto" }}>
-              <span style={qtyBadgeStyle}>
-                {group.listings.length}
-              </span>
+            <div style={{ marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
+              {onQuickAdd ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickAdd(group.productId, e.currentTarget as HTMLElement);
+                  }}
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e5ea",
+                    background: "white",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6d7175",
+                    transition: "all 0.15s ease",
+                    padding: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.borderColor = "#c4c9d1"; e.currentTarget.style.color = "#1a1a1a"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#e2e5ea"; e.currentTarget.style.color = "#6d7175"; }}
+                  title="Quick add listing"
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                </button>
+              ) : (
+                <span style={qtyBadgeStyle}>
+                  {group.listings.filter((l) => l.status === "active").length}
+                </span>
+              )}
             </div>
           </div>
         </td>
       </tr>
 
-      {/* Child listing rows */}
-      {isExpanded && group.listings.map((l, i) => (
-        <tr
-          key={l.id}
-          style={{
-            ...childRowStyle,
-            ...(i === group.listings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f6f7f8")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#fcfcfd")}
-        >
-          <td style={childIndentTd}>
-            <span style={{ fontWeight: 500 }}>{l.variant.size}</span>
-          </td>
-          <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#6d7175" }}>
-            {l.variant.gtin || "—"}
-          </td>
-          <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-            ${Number(l.price).toFixed(2)}
-          </td>
-          <td style={tdStyle}>
-            <div>{l.consignor.name}</div>
-            <div style={{ fontSize: "11px", color: "#6d7175", marginTop: "1px" }}>{l.consignor.email}</div>
-          </td>
-          <td style={tdStyle}>
-            <span style={statusBadge(l.status)}>{statusLabel(l.status)}</span>
-          </td>
-          <td style={{ ...tdStyle, fontSize: "12px", color: "#6d7175" }}>
-            {relativeTime(l.createdAt)}
-          </td>
-          {onCancel && (
-            <td style={tdStyle}>
-              {l.status === "active" ? (
-                <s-button
-                  tone="critical"
-                  variant="tertiary"
-                  onClick={() => onCancel(l.id)}
-                  {...(isLoading ? { disabled: true } : {})}
-                >
-                  Cancel
-                </s-button>
-              ) : (
-                <span style={{ color: "#d1d5db" }}>—</span>
+      {/* Column headers — only when expanded */}
+      {isExpanded && (
+        <tr style={{ borderBottom: "1px solid #e8eaed", background: "#f9fafb" }}>
+          {hasSelection && (
+            <td style={checkboxThStyle} onClick={(e) => e.stopPropagation()}>
+              {groupActiveIds.length > 0 && (
+                <input
+                  type="checkbox"
+                  checked={allGroupSelected}
+                  onChange={() => onToggleGroup(groupActiveIds)}
+                  style={checkboxStyle}
+                />
               )}
             </td>
           )}
+          <td style={{ ...thStyle, paddingLeft: "42px" }}>Size</td>
+          <td style={thStyle}>Barcode</td>
+          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("price")}>
+            Price
+            {onSortChange && <SortIndicator active={sortBy === "price"} dir={sortDir} />}
+          </td>
+          <td style={thStyle}>Consignor</td>
+          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("status")}>
+            Status
+            {onSortChange && <SortIndicator active={sortBy === "status"} dir={sortDir} />}
+          </td>
+          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("date")}>
+            Created
+            {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
+          </td>
+          {onCancel && <td style={thStyle}>Actions</td>}
         </tr>
-      ))}
+      )}
+
+      {/* Child listing rows */}
+      {isExpanded && group.listings.map((l, i) => {
+        const isActive = l.status === "active";
+        return (
+          <tr
+            key={l.id}
+            style={{
+              ...childRowStyle,
+              ...(i === group.listings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f6f7f8")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#fcfcfd")}
+          >
+            {hasSelection && (
+              <td style={checkboxTdStyle} onClick={(e) => e.stopPropagation()}>
+                {isActive ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds?.has(l.id) ?? false}
+                    onChange={() => onToggleId(l.id)}
+                    style={checkboxStyle}
+                  />
+                ) : (
+                  <span style={{ display: "inline-block", width: "16px" }} />
+                )}
+              </td>
+            )}
+            <td style={childIndentTd}>
+              <span style={{ fontWeight: 500 }}>{l.variant.size}</span>
+            </td>
+            <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#6d7175" }}>
+              {l.variant.gtin || "—"}
+            </td>
+            <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+              ${Number(l.price).toFixed(2)}
+            </td>
+            <td style={tdStyle}>
+              <div>{l.consignor.name}</div>
+              <div style={{ fontSize: "11px", color: "#6d7175", marginTop: "1px" }}>{l.consignor.email}</div>
+            </td>
+            <td style={tdStyle}>
+              <span style={statusBadge(l.status)}>{statusLabel(l.status)}</span>
+            </td>
+            <td style={{ ...tdStyle, fontSize: "12px", color: "#6d7175" }}>
+              {relativeTime(l.createdAt)}
+            </td>
+            {onCancel && (
+              <td style={tdStyle}>
+                {l.status === "active" ? (
+                  <s-button
+                    tone="critical"
+                    variant="tertiary"
+                    onClick={() => onCancel(l.id)}
+                    {...(isLoading ? { disabled: true } : {})}
+                  >
+                    Cancel
+                  </s-button>
+                ) : (
+                  <span style={{ color: "#d1d5db" }}>—</span>
+                )}
+              </td>
+            )}
+          </tr>
+        );
+      })}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders.server";
+import { getOrderDetail } from "~/services/order-queries.server";
 
 async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100") {
   const product = await prisma.product.create({
@@ -1746,5 +1747,114 @@ describe("orders.server — payment status", () => {
 
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(340); // only the paid order
+  });
+});
+
+describe("order-queries.server — getOrderDetail", () => {
+  it("returns order with items, summary, and timeline", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-1",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-1" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.order.items).toHaveLength(2);
+    expect(result.summary.itemCount).toBe(2);
+    expect(result.summary.refundedCount).toBe(0);
+    expect(result.summary.totalFees).toBeCloseTo(60); // 2 × 200 × 0.15
+    expect(result.summary.totalConsignorPayout).toBeCloseTo(340); // 2 × 200 × 0.85
+    expect(result.timeline.length).toBeGreaterThanOrEqual(2); // created + paid
+    expect(result.timeline[0].label).toBe("Order created");
+    expect(result.timeline[1].label).toBe("Payment received");
+  });
+
+  it("includes refund events in timeline", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-2",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    await refundOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-2",
+      refundLineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1 }],
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-2" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.summary.refundedCount).toBe(1);
+    expect(result.summary.totalFees).toBeCloseTo(30); // 1 sale fee (60) + 1 refund fee (-30) = 30
+    const refundEvents = result.timeline.filter((e) => e.type === "refund");
+    expect(refundEvents.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("throws for non-existent order", async () => {
+    await expect(getOrderDetail("nonexistent-id")).rejects.toThrow("Order not found");
+  });
+
+  it("returns correct data for unpaid order", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-3",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-3" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.order.paymentStatus).toBe("pending");
+    expect(result.summary.totalFees).toBe(0); // no transactions yet
+    expect(result.summary.totalConsignorPayout).toBe(0);
+    expect(result.timeline).toHaveLength(1); // only "Order created"
+  });
+
+  it("returns items with consignor and product info", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant, product } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-4",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-4" } });
+    const result = await getOrderDetail(order!.id);
+
+    const item = result.order.items[0];
+    expect(item.listing.consignor.name).toBe(consignor.name);
+    expect(item.listing.variant.product.title).toBe(product.title);
+    expect(item.listing.variant.size).toBe(variant.size);
+    expect(item.transactions).toHaveLength(1);
+    expect(item.transactions[0].type).toBe("sale");
   });
 });

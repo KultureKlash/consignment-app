@@ -210,6 +210,7 @@ async function main() {
     const order = await prisma.order.create({
       data: {
         shopifyId: `gid://shopify/Order/seed-${String(orderNum).padStart(4, "0")}`,
+        orderNumber: `#KK${1000 + orderNum}`,
         total,
         status: "open",
         paymentStatus: orderSpec.paymentStatus,

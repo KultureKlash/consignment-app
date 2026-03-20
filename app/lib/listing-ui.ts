@@ -121,8 +121,8 @@ export function statusLabel(status: string): string {
 }
 
 export function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
-  e.currentTarget.style.borderColor = "#4f46e5";
-  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(79,70,229,0.12)";
+  e.currentTarget.style.borderColor = "#111827";
+  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,24,39,0.08)";
 }
 
 export function handleBlurStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
