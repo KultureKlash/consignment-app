@@ -1,8 +1,9 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
+import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import prisma from "~/db.server";
+import { getDashboardData } from "~/services/dashboard.server";
 import { motion } from "framer-motion";
 import { Package, ShoppingBag, Clock, DollarSign, History } from "lucide-react";
 import StatsCard from "~/components/StatsCard";
@@ -11,30 +12,7 @@ import ActivityItem from "~/components/ActivityItem";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const [activeListings, soldToday, revenueToday, txSum, payoutSum] = await Promise.all([
-    prisma.listing.count({ where: { status: "active" } }),
-    prisma.listing.count({ where: { status: "sold", soldAt: { gte: startOfToday } } }),
-    prisma.listing.aggregate({
-      _sum: { price: true },
-      where: { status: "sold", soldAt: { gte: startOfToday } },
-    }),
-    prisma.transaction.aggregate({ _sum: { amount: true } }),
-    prisma.payout.aggregate({ _sum: { amount: true }, where: { status: "completed" } }),
-  ]);
-
-  const pendingPayouts = (txSum._sum.amount ?? 0) - (payoutSum._sum.amount ?? 0);
-
-  return {
-    activeListings,
-    soldToday,
-    pendingPayouts,
-    revenueToday: revenueToday._sum.price ?? 0,
-    updatedAt: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-  };
+  return getDashboardData();
 };
 
 const containerVariants = {
@@ -73,8 +51,10 @@ const sectionTitle: React.CSSProperties = {
 };
 
 export default function Dashboard() {
-  const { activeListings, soldToday, pendingPayouts, revenueToday, updatedAt } =
+  const { activeListings, soldToday, pendingPayouts, revenueToday, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
+  const [showAllActivity, setShowAllActivity] = useState(false);
+  const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
 
   const stats = [
     { label: "Active Listings", value: String(activeListings), icon: Package, trend: undefined },
@@ -151,35 +131,44 @@ export default function Dashboard() {
                   <h2 style={sectionTitle}>Activity Feed</h2>
                 </div>
                 <div style={{ padding: "12px 24px 24px" }}>
-                  <div style={{ color: "#6d7175", fontSize: "14px", padding: "24px 0", textAlign: "center" }}>
-                    No activity yet. Create your first listing to get started.
-                  </div>
-                  <button
-                    style={{
-                      width: "100%",
-                      marginTop: "12px",
-                      padding: "8px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#6d7175",
-                      border: "1px solid rgba(227,227,227,0.5)",
-                      borderRadius: "8px",
-                      background: "transparent",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      fontFamily: "inherit",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#f6f6f7";
-                      e.currentTarget.style.color = "#1a1a1a";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#6d7175";
-                    }}
-                  >
-                    View full audit log
-                  </button>
+                  {activityFeed.length === 0 ? (
+                    <div style={{ color: "#6d7175", fontSize: "14px", padding: "24px 0", textAlign: "center" }}>
+                      No activity yet. Create your first listing to get started.
+                    </div>
+                  ) : (
+                    visibleFeed.map((item, i) => (
+                      <ActivityItem key={i} event={item.event} time={item.time} type={item.type} />
+                    ))
+                  )}
+                  {activityFeed.length > 5 && (
+                    <button
+                      onClick={() => setShowAllActivity(!showAllActivity)}
+                      style={{
+                        width: "100%",
+                        marginTop: "12px",
+                        padding: "8px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "#6d7175",
+                        border: "1px solid rgba(227,227,227,0.5)",
+                        borderRadius: "8px",
+                        background: "transparent",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        fontFamily: "inherit",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#f6f6f7";
+                        e.currentTarget.style.color = "#1a1a1a";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#6d7175";
+                      }}
+                    >
+                      {showAllActivity ? "Show less" : `View all activity (${activityFeed.length})`}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.section>

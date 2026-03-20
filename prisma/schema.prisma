@@ -31,7 +31,7 @@ model Consignor {
   id             String   @id @default(cuid())
   name           String
   email          String   @unique
-  commissionRate Float    @default(0.85)
+  feeRate        Float    @default(0.15)  // consignment fee — e.g. 0.15 = 15% fee, consignor keeps 85%
 
   listings       Listing[]
   payouts        Payout[]
@@ -44,8 +44,10 @@ model Product {
   id                String   @id @default(cuid())
   title             String
   brand             String?
-  styleId           String   @unique
+  category          String?
+  styleId           String?  @unique
   description       String?
+  imageUrl          String?   // Shopify-hosted product image URL
 
   shopifyProductId  String?  @unique
 
@@ -58,7 +60,7 @@ model Variant {
   id                 String   @id @default(cuid())
   productId          String
   size               String
-  gtin               String   @default("")
+  gtin               String?  @unique
 
   shopifyVariantId   String?  @unique
   inventoryItemId    String?
@@ -93,6 +95,7 @@ model Listing {
   orderItems      OrderItem[]
 
   @@index([variantId, status, price, createdAt])
+  @@index([consignorId, status, createdAt])
 }
 
 model Order {
@@ -129,12 +132,13 @@ model Transaction {
 
   // Audit-grade breakdown (immutable snapshot at creation time)
   salePrice        Float    @default(0) // unit price at time of sale
-  commissionRate   Float    @default(0) // consignor's rate snapshot
+  feeRate          Float    @default(0) // fee rate snapshot — e.g. 0.15 = 15%
   grossAmount      Float    @default(0) // salePrice (per-item, always 1 unit)
-  commissionAmount Float    @default(0) // grossAmount × commissionRate
+  feeAmount        Float    @default(0) // grossAmount × feeRate
+  consignorAmount  Float    @default(0) // grossAmount × (1 - feeRate)
 
   // Net amount for balance calculations
-  // Sales: +commissionAmount. Refunds: -commissionAmount
+  // Sales: +consignorAmount. Refunds: -consignorAmount
   amount           Float
 
   consignor        Consignor  @relation(fields: [consignorId], references: [id])

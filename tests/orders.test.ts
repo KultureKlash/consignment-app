@@ -154,7 +154,7 @@ describe("orders.server — processOrder", () => {
 
   it("creates per-item transactions with correct commission", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -171,12 +171,13 @@ describe("orders.server — processOrder", () => {
     expect(transactions).toHaveLength(2);
     expect(transactions.every((t) => t.type === "sale")).toBe(true);
 
-    // Each transaction: 200 * 0.85 = 170
+    // Each transaction: 200 - (200 * 0.15) = 170
     expect(transactions.every((t) => t.amount === 170)).toBe(true);
     expect(transactions.every((t) => t.salePrice === 200)).toBe(true);
-    expect(transactions.every((t) => t.commissionRate === 0.85)).toBe(true);
+    expect(transactions.every((t) => t.feeRate === 0.15)).toBe(true);
     expect(transactions.every((t) => t.grossAmount === 200)).toBe(true);
-    expect(transactions.every((t) => t.commissionAmount === 170)).toBe(true);
+    expect(transactions.every((t) => t.feeAmount === 30)).toBe(true);
+    expect(transactions.every((t) => t.consignorAmount === 170)).toBe(true);
   });
 
   it("handles multiple line items (different variants)", async () => {
@@ -232,7 +233,7 @@ describe("orders.server — processOrder", () => {
 
   it("transaction captures commission rate snapshot (rate change after sale)", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 300, 2);
@@ -244,17 +245,18 @@ describe("orders.server — processOrder", () => {
       financialStatus: "paid",
     });
 
-    // Change the consignor's rate AFTER the sale
+    // Change the consignor's fee rate AFTER the sale
     await prisma.consignor.update({
       where: { id: consignor.id },
-      data: { commissionRate: 0.70 },
+      data: { feeRate: 0.30 },
     });
 
-    // The transaction should still reflect the ORIGINAL rate (0.85)
+    // The transaction should still reflect the ORIGINAL rate (0.15)
     const txs = await prisma.transaction.findMany({ where: { type: "sale" } });
     expect(txs).toHaveLength(1);
-    expect(txs[0].commissionRate).toBe(0.85);
-    expect(txs[0].commissionAmount).toBe(255); // 300 * 0.85
+    expect(txs[0].feeRate).toBe(0.15);
+    expect(txs[0].feeAmount).toBe(45); // 300 * 0.15
+    expect(txs[0].consignorAmount).toBe(255); // 300 - 45
     expect(txs[0].amount).toBe(255);
   });
 
@@ -319,7 +321,7 @@ describe("orders.server — cancelOrder", () => {
 
   it("cancel unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -345,7 +347,7 @@ describe("orders.server — cancelOrder", () => {
 
   it("creates refund transactions when payment was captured", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -652,8 +654,8 @@ describe("orders.server — refundOrder", () => {
 
   it("creates correct refund transactions per item", async () => {
     const { admin } = createMockAdmin();
-    const consignor1 = await createTestConsignor({ email: "c1@test.com", commissionRate: 0.85 });
-    const consignor2 = await createTestConsignor({ email: "c2@test.com", commissionRate: 0.80 });
+    const consignor1 = await createTestConsignor({ email: "c1@test.com", feeRate: 0.15 });
+    const consignor2 = await createTestConsignor({ email: "c2@test.com", feeRate: 0.20 });
     const { variant } = await setupVariant();
 
     await createListings(consignor1.id, variant.id, 340, 1);
@@ -674,8 +676,8 @@ describe("orders.server — refundOrder", () => {
     });
     expect(refundTxs).toHaveLength(2);
 
-    // consignor1: -(340 * 0.85) = -289
-    // consignor2: -(350 * 0.80) = -280
+    // consignor1: -(340 * (1 - 0.15)) = -289
+    // consignor2: -(350 * (1 - 0.20)) = -280
     const amounts = refundTxs.map((t) => t.amount).sort((a, b) => a - b);
     expect(amounts[0]).toBe(-289); // consignor1
     expect(amounts[1]).toBe(-280); // consignor2
@@ -730,7 +732,7 @@ describe("orders.server — refundOrder", () => {
 
   it("refund 1 of 3 items: correct item refunded, others remain sold", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 350, 5);
@@ -854,7 +856,7 @@ describe("orders.server — refundOrder", () => {
 
   it("chained partial refunds: refund 1 → 1 → 1 from 3 items", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1033,7 +1035,7 @@ describe("orders.server — refundOrder", () => {
 
   it("chained partial refunds with balance tracking", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1082,7 +1084,7 @@ describe("orders.server — refundOrder", () => {
 
   it("cancel partially-refunded order: restores only remaining items", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1129,7 +1131,7 @@ describe("orders.server — refundOrder", () => {
 describe("orders.server — refundOrder restock handling", () => {
   it("no_restock refund skips inventory restore but creates transaction", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1359,7 +1361,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns sale amount after order", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1378,7 +1380,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns 0 after order + full refund", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1398,7 +1400,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns partial amount after order + partial refund", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1427,7 +1429,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("subtracts completed payouts from balance", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1457,7 +1459,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns 0 after order + cancel (not just refund)", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1479,7 +1481,7 @@ describe("orders.server — getConsignorBalance", () => {
 describe("orders.server — payment status", () => {
   it("processOrder without financialStatus: no transactions, paymentStatus pending", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1508,7 +1510,7 @@ describe("orders.server — payment status", () => {
 
   it("processOrder with financialStatus paid: creates transactions immediately", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1537,7 +1539,7 @@ describe("orders.server — payment status", () => {
 
   it("creditOrder on pending order creates transactions and sets paymentStatus paid", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1571,7 +1573,7 @@ describe("orders.server — payment status", () => {
 
   it("creditOrder is idempotent: calling twice creates only one set of transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1618,7 +1620,7 @@ describe("orders.server — payment status", () => {
 
   it("cancelOrder on paid order creates offsetting refund transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1654,7 +1656,7 @@ describe("orders.server — payment status", () => {
 
   it("cancelOrder on unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1698,7 +1700,7 @@ describe("orders.server — payment status", () => {
 
   it("balance is $0 for unpaid orders", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 500, 3);
@@ -1722,7 +1724,7 @@ describe("orders.server — payment status", () => {
 
   it("balance reflects only paid orders in mixed scenario", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);

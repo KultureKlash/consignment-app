@@ -35,6 +35,50 @@ describe("shopify-products.server", () => {
       expect(updatedVariant?.inventoryItemId).toMatch(/gid:\/\/shopify\/InventoryItem\//);
     });
 
+    it("passes explicit taxonomy ID to productCreate", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        styleId: "TAX-TEST-001",
+        title: "Nike Air Max 90",
+        brand: "Nike",
+        category: "Footwear > Sneakers",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "10", gtin: "TAX-GTIN-10" });
+
+      const explicitId = "gid://shopify/TaxonomyCategory/aa-1-2-3";
+      await ensureShopifyProductAndVariant({ admin, product, variant, taxonomyId: explicitId });
+
+      const createCalls = findCalls("productCreate");
+      expect(createCalls).toHaveLength(1);
+      const vars = createCalls[0].variables as Record<string, Record<string, unknown>>;
+      expect(vars.product.category).toBe(explicitId);
+    });
+
+    it("auto-resolves taxonomy ID from category when no explicit ID", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        styleId: "TAX-AUTO-001",
+        title: "Gallery Dept Tee",
+        brand: "Gallery Dept",
+        category: "Apparel > T-Shirts",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "M", gtin: "TAX-AUTO-M" });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      // Should have queried taxonomy for "t-shirts"
+      const taxonomyCalls = findCalls("taxonomy");
+      expect(taxonomyCalls.length).toBeGreaterThan(0);
+
+      // productCreate should include category field
+      const createCalls = findCalls("productCreate");
+      expect(createCalls).toHaveLength(1);
+      const vars = createCalls[0].variables as Record<string, Record<string, unknown>>;
+      expect(vars.product.category).toMatch(/gid:\/\/shopify\/TaxonomyCategory\//);
+    });
+
     it("skips Shopify calls when product + variant already synced", async () => {
       const { admin, graphql } = createMockAdmin();
 
@@ -90,6 +134,30 @@ describe("shopify-products.server", () => {
       const updated = await prisma.variant.findUnique({ where: { id: variant.id } });
       expect(updated?.shopifyVariantId).toBeDefined();
       expect(updated?.inventoryItemId).toBeDefined();
+    });
+
+    it("creates product without taxonomy when category is null", async () => {
+      const { admin, findCalls } = createMockAdmin();
+
+      const product = await findOrCreateProduct({
+        styleId: "NO-CAT-TAX-001",
+        title: "Unknown Item",
+      });
+      const variant = await findOrCreateVariant({ productId: product.id, size: "OS", gtin: "NO-CAT-GTIN" });
+
+      await ensureShopifyProductAndVariant({ admin, product, variant });
+
+      // Product created successfully
+      const createCalls = findCalls("productCreate");
+      expect(createCalls).toHaveLength(1);
+
+      // No taxonomy query should have been made (category is null)
+      const taxonomyCalls = findCalls("taxonomy");
+      expect(taxonomyCalls).toHaveLength(0);
+
+      // Verify no category field in mutation variables
+      const vars = createCalls[0].variables as Record<string, Record<string, unknown>>;
+      expect(vars.product.category).toBeUndefined();
     });
   });
 });

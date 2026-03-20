@@ -32,7 +32,7 @@ export default function Consignors() {
               <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
                 <th style={{ padding: "6px" }}>Name</th>
                 <th style={{ padding: "6px" }}>Email</th>
-                <th style={{ padding: "6px" }}>Commission Rate</th>
+                <th style={{ padding: "6px" }}>Fee Rate</th>
                 <th style={{ padding: "6px" }}>Balance</th>
               </tr>
             </thead>
@@ -41,7 +41,7 @@ export default function Consignors() {
                 <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
                   <td style={{ padding: "6px" }}>{c.name}</td>
                   <td style={{ padding: "6px" }}>{c.email}</td>
-                  <td style={{ padding: "6px" }}>{(c.commissionRate * 100).toFixed(0)}%</td>
+                  <td style={{ padding: "6px" }}>{(c.feeRate * 100).toFixed(0)}%</td>
                   <td
                     style={{
                       padding: "6px",

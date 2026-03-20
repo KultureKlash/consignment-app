@@ -1,0 +1,122 @@
+import prisma from "~/db.server";
+
+type FeedEvent = {
+  event: string;
+  time: string;
+  type: "sale" | "listing" | "request" | "approval";
+};
+
+function relativeTime(now: Date, then: Date): string {
+  const diffMs = now.getTime() - then.getTime();
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+export async function getDashboardData() {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [activeListings, soldToday, revenueToday, txSum, payoutSum] = await Promise.all([
+    prisma.listing.count({ where: { status: "active" } }),
+    prisma.listing.count({ where: { status: "sold", soldAt: { gte: startOfToday } } }),
+    prisma.listing.aggregate({
+      _sum: { price: true },
+      where: { status: "sold", soldAt: { gte: startOfToday } },
+    }),
+    prisma.transaction.aggregate({ _sum: { amount: true } }),
+    prisma.payout.aggregate({ _sum: { amount: true }, where: { status: "completed" } }),
+  ]);
+
+  const pendingPayouts = (txSum._sum.amount ?? 0) - (payoutSum._sum.amount ?? 0);
+
+  // Activity feed: recent events from listings + refund transactions
+  const [recentListings, refundTxs] = await Promise.all([
+    prisma.listing.findMany({
+      take: 30,
+      orderBy: { createdAt: "desc" },
+      include: {
+        consignor: true,
+        variant: { include: { product: true } },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: { type: "refund" },
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      include: {
+        orderItem: {
+          include: {
+            listing: {
+              include: {
+                variant: { include: { product: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const now = new Date();
+  type SortableFeedEvent = FeedEvent & { sortTime: number };
+  const events: SortableFeedEvent[] = [];
+
+  for (const listing of recentListings) {
+    const desc = `${listing.variant.product.title} Size ${listing.variant.size}`;
+
+    if (listing.status === "sold" && listing.soldAt) {
+      events.push({
+        event: `Item sold: ${desc} — $${listing.price.toFixed(2)}`,
+        time: relativeTime(now, listing.soldAt),
+        type: "sale",
+        sortTime: listing.soldAt.getTime(),
+      });
+    }
+
+    if (listing.status === "pending_sale" && listing.soldAt) {
+      events.push({
+        event: `Order placed: ${desc} — awaiting payment`,
+        time: relativeTime(now, listing.soldAt),
+        type: "request",
+        sortTime: listing.soldAt.getTime(),
+      });
+    }
+
+    events.push({
+      event: `New listing: ${desc} — $${listing.price.toFixed(2)} by ${listing.consignor.name}`,
+      time: relativeTime(now, listing.createdAt),
+      type: "listing",
+      sortTime: listing.createdAt.getTime(),
+    });
+  }
+
+  for (const tx of refundTxs) {
+    if (!tx.orderItem) continue;
+    const listing = tx.orderItem.listing;
+    const desc = `${listing.variant.product.title} Size ${listing.variant.size}`;
+    events.push({
+      event: `Refund processed: ${desc} — $${Math.abs(tx.grossAmount).toFixed(2)}`,
+      time: relativeTime(now, tx.createdAt),
+      type: "request",
+      sortTime: tx.createdAt.getTime(),
+    });
+  }
+
+  events.sort((a, b) => b.sortTime - a.sortTime);
+  const activityFeed: FeedEvent[] = events.slice(0, 15).map(({ event, time, type }) => ({ event, time, type }));
+
+  return {
+    activeListings,
+    soldToday,
+    pendingPayouts,
+    revenueToday: revenueToday._sum.price ?? 0,
+    updatedAt: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+    activityFeed,
+  };
+}

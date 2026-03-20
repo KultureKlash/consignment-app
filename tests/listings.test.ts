@@ -422,5 +422,35 @@ describe("listings.server", () => {
       expect(variant?.gtin).toBe("194956806653");
       expect(await prisma.listing.count()).toBe(2);
     });
+
+    it("still creates listing when Shopify sync fails (resilient)", async () => {
+      // Shopify sync wrapped in try/catch — listing creation should NOT fail
+      const { admin } = createMockAdmin({ failOn: ["productCreate"] });
+      const consignor = await createTestConsignor();
+
+      const listing = await createListing({
+        admin,
+        styleId: "SYNC-FAIL-001",
+        title: "Test Product Sync Fail",
+        brand: "TestBrand",
+        size: "9",
+        gtin: "SYNC-FAIL-GTIN",
+        price: 200,
+        consignorId: consignor.id,
+      });
+
+      // Listing was created in DB despite Shopify failure
+      expect(listing).toBeDefined();
+      expect(listing.price).toBe(200);
+      expect(await prisma.listing.count()).toBe(1);
+
+      // Product and variant exist in local DB
+      expect(await prisma.product.count()).toBe(1);
+      expect(await prisma.variant.count()).toBe(1);
+
+      // But Shopify IDs were NOT set (sync failed)
+      const product = await prisma.product.findFirst();
+      expect(product?.shopifyProductId).toBeNull();
+    });
   });
 });

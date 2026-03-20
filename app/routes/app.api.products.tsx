@@ -9,11 +9,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   if (!q) return { products: [] };
 
+  // SQLite doesn't support Prisma's mode: "insensitive", so we search
+  // with both original and lowercased queries to cover common cases
+  const qLower = q.toLowerCase();
   const products = await prisma.product.findMany({
     where: {
       OR: [
         { title: { contains: q } },
+        { title: { contains: qLower } },
         { styleId: { contains: q } },
+        { styleId: { contains: q.toUpperCase() } },
       ],
     },
     include: { variants: { orderBy: { size: "asc" } } },

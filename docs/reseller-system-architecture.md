@@ -4,16 +4,16 @@
 
 This project is a custom **multi-seller consignment marketplace** built on top of Shopify.
 
-Shopify is used as the **customer storefront**, while the marketplace logic runs inside a **custom application**.
+Shopify is used as the **customer storefront**, while the marketplace logic runs inside a **custom embedded application**.
 
 The application manages:
 
-• product catalog
-• consignor accounts
-• listings
-• order allocation
-• financial ledger
-• payouts
+- product catalog (with categories, GTIN barcodes)
+- consignor accounts (with configurable fee rates)
+- per-item listings (1 row = 1 physical item)
+- order allocation (lowest price, FIFO tiebreak)
+- financial ledger (audit-grade transaction snapshots)
+- payouts
 
 The system behaves similarly to **StockX-style marketplaces** where multiple sellers can sell the same product variant.
 
@@ -33,15 +33,15 @@ They browse products, add items to cart, and complete checkout through Shopify.
 
 ## Consignors (Resellers)
 
-Consignors log into the **marketplace application dashboard**.
+Consignors log into the **marketplace application dashboard** (future phase).
 
 They can:
 
-• search products
-• create listings
-• manage inventory
-• view sales
-• request payouts
+- search products
+- create listings
+- manage inventory
+- view sales
+- request payouts
 
 Consignors **do not access Shopify admin**.
 
@@ -53,12 +53,12 @@ Admins access the marketplace through an **embedded Shopify app** inside Shopify
 
 They can:
 
-• manage consignors
-• monitor listings
-• inspect inventory
-• review orders
-• approve payouts
-• manage catalog data
+- create listings (with product search, barcode/GTIN support)
+- manage all listings (search, filter, sort, paginate, grouped-by-product view)
+- monitor orders
+- manage consignors (fee rates, balances)
+- review financial ledger
+- approve payouts
 
 ---
 
@@ -66,57 +66,62 @@ They can:
 
 ## Backend
 
-• Node.js
-• Remix framework
-• Shopify Admin GraphQL API
-• Prisma ORM
-• PostgreSQL database (SQLite used in development)
+- Node.js
+- TypeScript
+- React Router (Remix)
+- Shopify Admin GraphQL API
+- Prisma ORM
+- PostgreSQL database (SQLite used in development)
 
 ## Frontend
 
-• React
-• Shopify Polaris
-• Shopify App Bridge
+- React with inline CSSProperties (no Tailwind, no CSS files)
+- Shopify Shadow DOM components (`s-page`, `s-section`, `s-button`, `s-app-nav`)
+- Shopify App Bridge
+- Portal-based dropdowns (for Shadow DOM compatibility)
 
 ## Integrations
 
-• Shopify Storefront
-• StockX Product Catalog API
-• Barcode scanning (GTIN)
+- Shopify Storefront (product/inventory mirror)
+- Shopify Webhooks (orders/create, orders/cancelled, refunds/create)
+- Shopify Taxonomy API (product categorization)
+- Barcode / GTIN support
 
 ---
 
 # System Architecture
 
 ```
-StockX API
+Admin Input (product search / barcode / GTIN)
      ↓
-Catalog Import Service
+Catalog Service (findOrCreate Product + Variant)
      ↓
 Database (Source of Truth)
      ↓
-Shopify Sync Service
+Shopify Sync Service (product, variant, price, inventory)
      ↓
 Shopify Storefront
      ↓
 Customers
      ↓
-Shopify Webhooks
+Shopify Webhooks (orders/create, orders/cancelled, refunds/create)
      ↓
-Order Allocation Engine
+Order Allocation Engine (lowest price, FIFO)
      ↓
-Ledger & Payout System
+Financial Ledger (fee rate snapshots, audit trail)
+     ↓
+Payout System
 ```
 
 The **database is the source of truth** for products, listings, inventory, and financial records.
 
-Shopify mirrors catalog data and inventory for storefront display.
+Shopify mirrors catalog data, lowest-tier pricing, and inventory counts for storefront display.
 
 ---
 
 # Admin Interface
 
-Admins manage the marketplace inside Shopify.
+Admins manage the marketplace inside Shopify Admin.
 
 ```
 Shopify Admin
@@ -125,14 +130,19 @@ Apps
      ↓
 Consignment App
      ↓
-Admin Dashboard
+Admin Panel
+  ├── Home (dashboard with stats, activity, actions)
+  ├── Create Listing (form with product search + barcode)
+  ├── Listings (search, filters, sort, pagination, grouped view)
+  ├── Orders (monitoring)
+  └── Consignors (fee rates + balances)
 ```
 
 ---
 
 # Consignor Interface
 
-Consignors log into the **marketplace dashboard**.
+Consignors will log into the **marketplace dashboard** (future phase).
 
 ```
 Marketplace Login
@@ -146,26 +156,26 @@ Listings / Inventory / Sales / Payouts
 
 # Product Catalog
 
-Products originate from StockX.
+Products are created through admin input (search or manual entry).
 
 ```
-StockX API → Catalog Import → Database → Shopify Product
+Admin Search / Manual Entry → Catalog Service → Database → Shopify Product
 ```
 
 Products include:
 
-• style_id
-• brand
-• product name
-• images
-• release date
-• sizes
+- title
+- styleId (optional, unique when present)
+- brand
+- category / subcategory
+- variants (sizes)
+- GTIN barcodes per variant
 
 ---
 
 # Product Identification
 
-Products are uniquely identified by **Style ID**.
+Products are uniquely identified by **Style ID** (when available).
 
 Example:
 
@@ -184,7 +194,9 @@ Size 9
 Size 10
 ```
 
-Variants may include a **GTIN barcode**.
+Variants may include a **GTIN barcode** for scanner identification.
+
+Unique constraint: `(productId, size)`
 
 ---
 
@@ -194,34 +206,43 @@ Each catalog item maps to Shopify:
 
 Products
 
-• shopify_product_id
+- shopifyProductId
 
 Variants
 
-• shopify_variant_id
+- shopifyVariantId
+- inventoryItemId
+
+Sync is resilient — if Shopify API fails, local data is still created.
 
 ---
 
 # Listing System
 
-Multiple consignors may create listings for the **same variant**.
+**Per-item model**: each database row = 1 physical item. No quantity field.
+
+Multiple consignors may create listings for the **same variant** at different prices.
 
 Example:
 
+```
 Jordan 1 Chicago Size 10
 
-Seller A → $430
-Seller B → $450
-Seller C → $470
+Seller A → $430 (1 listing row)
+Seller A → $430 (1 listing row)
+Seller B → $450 (1 listing row)
+Seller C → $470 (1 listing row)
+```
+
+Listing statuses: `active`, `pending_sale`, `sold`, `cancelled`
 
 Listings include:
 
-• consignor_id
-• variant_id
-• price
-• quantity
-• status
-• activated_at
+- consignorId
+- variantId
+- price
+- status
+- lifecycle timestamps (createdAt, receivedAt, authenticatedAt, listedAt, soldAt, withdrawnAt)
 
 ---
 
@@ -233,15 +254,12 @@ Shopify variant price equals:
 
 Example:
 
-Listings
+```
+Listings: $430, $430, $450, $470
 
-430
-450
-470
-
-Shopify storefront shows:
-
-430
+Shopify storefront shows: $430
+Shopify inventory: 2 (count at lowest price tier)
+```
 
 ---
 
@@ -249,10 +267,10 @@ Shopify storefront shows:
 
 Inventory exists in the **database**.
 
-Shopify inventory mirrors the aggregated quantity.
+Shopify inventory mirrors the count of active listings at the lowest price tier.
 
 ```
-Shopify Inventory = SUM(listings.quantity)
+Shopify Inventory = COUNT(active listings at lowest price)
 ```
 
 ---
@@ -262,37 +280,136 @@ Shopify Inventory = SUM(listings.quantity)
 Customer purchase flow:
 
 ```
-Customer → Shopify Storefront → Order Created
+Customer → Shopify Storefront → Order Created → Webhook
 ```
 
-Shopify sends a webhook.
+Shopify sends an `orders/create` webhook.
 
 The application:
 
-1. identifies variant
-2. selects listing
-3. deducts quantity
-4. records ledger entry
-5. syncs inventory
+1. identifies variant from line items
+2. finds active listings (price ASC, createdAt ASC)
+3. allocates 1 listing per order item
+4. marks listings as pending_sale
+5. creates OrderItem records (1:1 with listings)
+6. syncs inventory back to Shopify
+
+When payment is captured (`creditOrder`):
+
+1. creates sale Transaction per OrderItem
+2. snapshots fee rate, sale price, amounts
+3. marks listings as sold
+
+---
+
+# Fee Rate System
+
+Consignors have a configurable **fee rate** (e.g. 10%, 15%, 20%).
+
+The fee rate is the **marketplace's cut**. The consignor keeps the remainder.
+
+Example:
+
+```
+Fee rate: 15%
+Sale price: $200
+
+Fee amount: $30 (200 × 0.15)
+Consignor payout: $170 (200 - 30)
+```
+
+Default fee rate: 15%
 
 ---
 
 # Ledger System
 
-Every financial event is recorded.
+Every financial event is recorded with audit-grade detail.
 
-Entries include:
+Transaction fields (immutable snapshots):
 
-• Sale
-• Commission
-• Payout
+- salePrice — unit price at time of sale
+- feeRate — consignor's fee rate at time of sale
+- grossAmount — sale price (per item)
+- feeAmount — marketplace's fee (grossAmount × feeRate)
+- consignorAmount — consignor's share (grossAmount - feeAmount)
+- amount — net amount for balance (positive for sales, negative for refunds)
 
-This provides a full financial audit trail.
+Entry types:
+
+- Sale — created when payment captured
+- Refund — created when order refunded or cancelled
+
+This provides a full financial audit trail. Fee rate changes after a sale do not affect existing transactions.
+
+---
+
+# Refund & Cancellation
+
+The system supports:
+
+- **Full order cancellation** — restores all listings to active
+- **Full refund** — restores all items with refund transactions
+- **Partial refund** — per-item selection, reverse priority (highest price first)
+- **Restock options** — return (restore inventory), cancel, no_restock
+
+Refund transactions mirror sale transactions with negative amounts.
+
+---
+
+# Future: StockX Integration (planned)
+
+Products will be importable from StockX via Style ID.
+
+```
+StockX API → Catalog Import Service → Database → Shopify Product
+```
+
+StockX data includes:
+
+- style_id
+- brand
+- product name
+- images
+- release date
+- sizes
+- market prices
+
+---
+
+# Future: Barcode Scanning (planned)
+
+Consignors and admins will be able to scan barcodes to identify products.
+
+```
+Barcode Scan (camera / USB) → GTIN Lookup → Variant Auto-Detection → Listing Creation
+```
+
+---
+
+# Future: Analytics & Pricing Intelligence (planned)
+
+- Market price tracking
+- Price suggestions based on market data
+- Automatic repricing
+- Sales analytics per product / seller
+- Product performance metrics
+
+---
+
+# Future: Notifications (planned)
+
+- Listing sold notification
+- Payout processed notification
+- Low inventory alerts
+- Approval / rejection notifications for consignors
 
 ---
 
 # Deployment
 
-Dev Store → Development
+```
+Dev Store → Development (SQLite)
 Testing Store → Staging
-Production Store → Live Marketplace
+Production Store → Live Marketplace (PostgreSQL)
+```

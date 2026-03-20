@@ -155,16 +155,19 @@ export async function creditOrder({
       if (item.transactions.some((t) => t.type === "sale")) continue;
 
       const grossAmount = item.price;
-      const commissionAmount = grossAmount * item.listing.consignor.commissionRate;
+      const feeRate = item.listing.consignor.feeRate;
+      const feeAmount = grossAmount * feeRate;
+      const consignorAmount = grossAmount - feeAmount;
       await tx.transaction.create({
         data: {
           consignorId: item.listing.consignorId,
           orderItemId: item.id,
           salePrice: item.price,
-          commissionRate: item.listing.consignor.commissionRate,
+          feeRate,
           grossAmount,
-          commissionAmount,
-          amount: commissionAmount,
+          feeAmount,
+          consignorAmount,
+          amount: consignorAmount,
           type: "sale",
         },
       });
@@ -250,18 +253,20 @@ export async function cancelOrder({
       // Only create offsetting transactions if the order was actually paid
       if (order.paymentStatus === "paid") {
         const saleTx = item.transactions.find((t) => t.type === "sale");
-        const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
+        const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
         const refundGross = item.price;
-        const refundCommission = refundGross * rate;
+        const refundFee = refundGross * rate;
+        const refundConsignor = refundGross - refundFee;
         await tx.transaction.create({
           data: {
             consignorId: item.listing.consignorId,
             orderItemId: item.id,
             salePrice: item.price,
-            commissionRate: rate,
+            feeRate: rate,
             grossAmount: -refundGross,
-            commissionAmount: -refundCommission,
-            amount: -refundCommission,
+            feeAmount: -refundFee,
+            consignorAmount: -refundConsignor,
+            amount: -refundConsignor,
             type: txType,
           },
         });
@@ -405,9 +410,9 @@ async function refundItem(
     listing: {
       consignorId: string;
       variantId: string;
-      consignor: { commissionRate: number };
+      consignor: { feeRate: number };
     };
-    transactions: Array<{ type: string; commissionRate: number }>;
+    transactions: Array<{ type: string; feeRate: number }>;
   },
   affectedVariantIds: Set<string>,
   restoreInventory: boolean,
@@ -429,19 +434,21 @@ async function refundItem(
 
   // Create refund transaction
   const saleTx = item.transactions.find((t) => t.type === "sale");
-  const rate = saleTx?.commissionRate ?? item.listing.consignor.commissionRate;
+  const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
   const refundGross = item.price;
-  const refundCommission = refundGross * rate;
+  const refundFee = refundGross * rate;
+  const refundConsignor = refundGross - refundFee;
 
   await tx.transaction.create({
     data: {
       consignorId: item.listing.consignorId,
       orderItemId: item.id,
       salePrice: item.price,
-      commissionRate: rate,
+      feeRate: rate,
       grossAmount: -refundGross,
-      commissionAmount: -refundCommission,
-      amount: -refundCommission,
+      feeAmount: -refundFee,
+      consignorAmount: -refundConsignor,
+      amount: -refundConsignor,
       type: "refund",
     },
   });
