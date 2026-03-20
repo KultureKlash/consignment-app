@@ -61,53 +61,7 @@ export async function getDashboardData() {
     }),
   ]);
 
-  const now = new Date();
-  type SortableFeedEvent = FeedEvent & { sortTime: number };
-  const events: SortableFeedEvent[] = [];
-
-  for (const listing of recentListings) {
-    const desc = `${listing.variant.product.title} Size ${listing.variant.size}`;
-
-    if (listing.status === "sold" && listing.soldAt) {
-      events.push({
-        event: `Item sold: ${desc} — $${listing.price.toFixed(2)}`,
-        time: relativeTime(now, listing.soldAt),
-        type: "sale",
-        sortTime: listing.soldAt.getTime(),
-      });
-    }
-
-    if (listing.status === "pending_sale" && listing.soldAt) {
-      events.push({
-        event: `Order placed: ${desc} — awaiting payment`,
-        time: relativeTime(now, listing.soldAt),
-        type: "request",
-        sortTime: listing.soldAt.getTime(),
-      });
-    }
-
-    events.push({
-      event: `New listing: ${desc} — $${listing.price.toFixed(2)} by ${listing.consignor.name}`,
-      time: relativeTime(now, listing.createdAt),
-      type: "listing",
-      sortTime: listing.createdAt.getTime(),
-    });
-  }
-
-  for (const tx of refundTxs) {
-    if (!tx.orderItem) continue;
-    const listing = tx.orderItem.listing;
-    const desc = `${listing.variant.product.title} Size ${listing.variant.size}`;
-    events.push({
-      event: `Refund processed: ${desc} — $${Math.abs(tx.grossAmount).toFixed(2)}`,
-      time: relativeTime(now, tx.createdAt),
-      type: "request",
-      sortTime: tx.createdAt.getTime(),
-    });
-  }
-
-  events.sort((a, b) => b.sortTime - a.sortTime);
-  const activityFeed: FeedEvent[] = events.slice(0, 15).map(({ event, time, type }) => ({ event, time, type }));
+  const activityFeed = await getActivityFeed(15);
 
   return {
     totalSales,
@@ -117,4 +71,89 @@ export async function getDashboardData() {
     updatedAt: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
     activityFeed,
   };
+}
+
+/**
+ * Build activity feed from recent listings + refund transactions.
+ * @param limit Max events to return. Pass 0 for unlimited.
+ */
+export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
+  const take = limit === 0 ? 500 : limit * 3;
+  const [recentListings, refundTxs] = await Promise.all([
+    prisma.listing.findMany({
+      take,
+      orderBy: { createdAt: "desc" },
+      include: {
+        consignor: true,
+        variant: { include: { product: true } },
+      },
+    }),
+    prisma.transaction.findMany({
+      where: { type: "refund" },
+      take: Math.max(Math.floor(take / 3), 10),
+      orderBy: { createdAt: "desc" },
+      include: {
+        orderItem: {
+          include: {
+            listing: {
+              include: {
+                variant: { include: { product: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const now = new Date();
+  type SortableFeedEvent = FeedEvent & { sortTime: number };
+  const events: SortableFeedEvent[] = [];
+
+  for (const listing of recentListings) {
+    const product = listing.variant.product.title;
+    const size = listing.variant.size;
+
+    if (listing.status === "sold" && listing.soldAt) {
+      events.push({
+        event: `${product} (${size}) sold for $${listing.price.toFixed(2)}`,
+        time: relativeTime(now, listing.soldAt),
+        type: "sale",
+        sortTime: listing.soldAt.getTime(),
+      });
+    }
+
+    if (listing.status === "pending_sale" && listing.soldAt) {
+      events.push({
+        event: `${product} (${size}) ordered, awaiting payment`,
+        time: relativeTime(now, listing.soldAt),
+        type: "request",
+        sortTime: listing.soldAt.getTime(),
+      });
+    }
+
+    events.push({
+      event: `${listing.consignor.name} listed ${product} (${size}) at $${listing.price.toFixed(2)}`,
+      time: relativeTime(now, listing.createdAt),
+      type: "listing",
+      sortTime: listing.createdAt.getTime(),
+    });
+  }
+
+  for (const tx of refundTxs) {
+    if (!tx.orderItem) continue;
+    const listing = tx.orderItem.listing;
+    const product = listing.variant.product.title;
+    const size = listing.variant.size;
+    events.push({
+      event: `${product} (${size}) refunded $${Math.abs(tx.grossAmount).toFixed(2)}`,
+      time: relativeTime(now, tx.createdAt),
+      type: "request",
+      sortTime: tx.createdAt.getTime(),
+    });
+  }
+
+  events.sort((a, b) => b.sortTime - a.sortTime);
+  if (limit === 0) return events.map(({ event, time, type }) => ({ event, time, type }));
+  return events.slice(0, limit).map(({ event, time, type }) => ({ event, time, type }));
 }

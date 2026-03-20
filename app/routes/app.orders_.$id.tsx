@@ -113,19 +113,20 @@ const timelineDotColors: Record<string, string> = {
 
 // ── Stats card ──
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
+function StatCard({ label, value, icon: Icon, accentColor }: { label: string; value: string; icon: React.ElementType; accentColor?: string }) {
   return (
     <div style={{
       background: "#fff",
       border: "1px solid rgba(227,227,227,0.6)",
       borderRadius: "10px",
       padding: "16px 20px",
+      ...(accentColor ? { borderLeft: `3px solid ${accentColor}` } : {}),
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-        <Icon size={14} color="#6d7175" />
+        <Icon size={14} color={accentColor ?? "#6d7175"} />
         <span style={{ fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</span>
       </div>
-      <div style={{ fontSize: "20px", fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+      <div style={{ fontSize: "20px", fontWeight: 700, color: accentColor ?? "#1a1a1a", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
         {value}
       </div>
     </div>
@@ -198,7 +199,7 @@ export default function OrderDetail() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
           <StatCard label="Total" value={`$${fmt(order.total)}`} icon={DollarSign} />
           <StatCard label="Items" value={String(summary.itemCount)} icon={ShoppingBag} />
-          <StatCard label="Commission" value={`$${fmt(summary.totalFees)}`} icon={TrendingUp} />
+          <StatCard label="Our Cut" value={`$${fmt(summary.totalFees)}`} icon={TrendingUp} accentColor="#059669" />
           <StatCard label="Consignor Payouts" value={`$${fmt(summary.totalConsignorPayout)}`} icon={Users} />
         </div>
 
@@ -259,9 +260,9 @@ export default function OrderDetail() {
                     </div>
                     {saleTx && (
                       <div style={{ fontSize: "12px", color: "#6d7175" }}>
-                        Fee <span style={{ fontWeight: 600, color: "#1a1a1a" }}>${fmt(saleTx.feeAmount)}</span>
+                        Fee <span style={{ fontWeight: 600, color: "#059669" }}>${fmt(saleTx.feeAmount)}</span>
                         <span style={{ color: "#d1d5db" }}> · </span>
-                        Payout <span style={{ fontWeight: 600, color: "#059669" }}>${fmt(saleTx.consignorAmount)}</span>
+                        Payout <span style={{ fontWeight: 600, color: "#6d7175" }}>${fmt(saleTx.consignorAmount)}</span>
                       </div>
                     )}
                   </td>
@@ -340,10 +341,10 @@ export default function OrderDetail() {
                             <td style={{ padding: "10px 12px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 500, color: tx.grossAmount < 0 ? "#dc2626" : "#1a1a1a" }}>
                               {tx.grossAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.grossAmount))}
                             </td>
-                            <td style={{ padding: "10px 12px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#6d7175" }}>
+                            <td style={{ padding: "10px 12px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: tx.feeAmount < 0 ? "#dc2626" : "#059669" }}>
                               {tx.feeAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.feeAmount))}
                             </td>
-                            <td style={{ padding: "10px 20px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#6d7175" }}>
+                            <td style={{ padding: "10px 20px", textAlign: "right", fontVariantNumeric: "tabular-nums", color: tx.consignorAmount < 0 ? "#dc2626" : "#6d7175" }}>
                               {tx.consignorAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.consignorAmount))}
                             </td>
                           </tr>

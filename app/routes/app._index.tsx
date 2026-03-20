@@ -1,5 +1,5 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -59,9 +59,9 @@ export default function Dashboard() {
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const stats = [
-    { label: "Total Sales", value: `$${fmt(Number(totalSales))}`, icon: DollarSign, color: "green" },
-    { label: "Total Orders", value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "blue" },
-    { label: "Total Commission", value: `$${fmt(Number(totalCommission))}`, icon: TrendingUp, color: "purple" },
+    { label: "Total Sales", value: `$${fmt(Number(totalSales))}`, icon: DollarSign, color: "blue" },
+    { label: "Total Orders", value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "purple" },
+    { label: "Total Commission", value: `$${fmt(Number(totalCommission))}`, icon: TrendingUp, color: "green" },
     { label: "Inventory Value", value: `$${fmt(Number(inventoryValue))}`, icon: Package, color: "amber" },
   ];
 
@@ -143,34 +143,43 @@ export default function Dashboard() {
                     ))
                   )}
                   {activityFeed.length > 5 && (
-                    <button
-                      onClick={() => setShowAllActivity(!showAllActivity)}
-                      style={{
-                        width: "100%",
-                        marginTop: "12px",
-                        padding: "8px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "#6d7175",
-                        border: "1px solid rgba(227,227,227,0.5)",
-                        borderRadius: "8px",
-                        background: "transparent",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#f6f6f7";
-                        e.currentTarget.style.color = "#1a1a1a";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#6d7175";
-                      }}
-                    >
-                      {showAllActivity ? "Show less" : `View all activity (${activityFeed.length})`}
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                      <button
+                        onClick={() => setShowAllActivity(!showAllActivity)}
+                        style={{
+                          flex: 1,
+                          padding: "8px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: "#6d7175",
+                          border: "1px solid rgba(227,227,227,0.5)",
+                          borderRadius: "8px",
+                          background: "transparent",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          fontFamily: "inherit",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#f6f6f7";
+                          e.currentTarget.style.color = "#1a1a1a";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "#6d7175";
+                        }}
+                      >
+                        {showAllActivity ? "Show less" : "Show more"}
+                      </button>
+                    </div>
                   )}
+                  <div style={{ textAlign: "center", marginTop: "8px" }}>
+                    <Link
+                      to="/app/activity"
+                      style={{ fontSize: "12px", fontWeight: 600, color: "#6d7175", textDecoration: "none" }}
+                    >
+                      View all activity →
+                    </Link>
+                  </div>
                 </div>
               </div>
             </motion.section>
