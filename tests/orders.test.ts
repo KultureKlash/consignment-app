@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders.server";
+import { getOrderDetail } from "~/services/order-queries.server";
 
 async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100") {
   const product = await prisma.product.create({
@@ -41,7 +42,7 @@ async function createListings(
 }
 
 describe("orders.server — processOrder", () => {
-  it("allocates individual listings and marks them sold", async () => {
+  it("allocates individual listings and marks them pending_sale", async () => {
     const { admin } = createMockAdmin();
     const consignor = await createTestConsignor();
     const { variant } = await setupVariant();
@@ -57,14 +58,14 @@ describe("orders.server — processOrder", () => {
     expect(order.total).toBe(700); // 350 * 2
     expect(order.status).toBe("open");
 
-    // 2 listings should be sold, 3 should remain active
-    const soldListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "sold" } });
+    // 2 listings should be pending_sale, 3 should remain active
+    const pendingListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "pending_sale" } });
     const activeListings = await prisma.listing.findMany({ where: { variantId: variant.id, status: "active" } });
-    expect(soldListings).toHaveLength(2);
+    expect(pendingListings).toHaveLength(2);
     expect(activeListings).toHaveLength(3);
 
-    // Each sold listing should have soldAt set
-    expect(soldListings.every((l) => l.soldAt !== null)).toBe(true);
+    // Each pending listing should have soldAt set
+    expect(pendingListings.every((l) => l.soldAt !== null)).toBe(true);
 
     // 2 order items (1 per listing)
     expect(order.items).toHaveLength(2);
@@ -90,18 +91,18 @@ describe("orders.server — processOrder", () => {
     expect(order.total).toBe(690); // 340 + 350
     expect(order.items).toHaveLength(2);
 
-    // Cheap listing should be sold
+    // Cheap listing should be pending_sale
     const updatedCheap = await prisma.listing.findUnique({ where: { id: cheapListing.id } });
-    expect(updatedCheap?.status).toBe("sold");
+    expect(updatedCheap?.status).toBe("pending_sale");
 
-    // One expensive listing sold, one still active
-    const soldExpensive = await prisma.listing.findMany({
-      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "sold" },
+    // One expensive listing pending_sale, one still active
+    const pendingExpensive = await prisma.listing.findMany({
+      where: { id: { in: expensiveListings.map((l) => l.id) }, status: "pending_sale" },
     });
     const activeExpensive = await prisma.listing.findMany({
       where: { id: { in: expensiveListings.map((l) => l.id) }, status: "active" },
     });
-    expect(soldExpensive).toHaveLength(1);
+    expect(pendingExpensive).toHaveLength(1);
     expect(activeExpensive).toHaveLength(1);
   });
 
@@ -154,7 +155,7 @@ describe("orders.server — processOrder", () => {
 
   it("creates per-item transactions with correct commission", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -171,12 +172,13 @@ describe("orders.server — processOrder", () => {
     expect(transactions).toHaveLength(2);
     expect(transactions.every((t) => t.type === "sale")).toBe(true);
 
-    // Each transaction: 200 * 0.85 = 170
+    // Each transaction: 200 - (200 * 0.15) = 170
     expect(transactions.every((t) => t.amount === 170)).toBe(true);
     expect(transactions.every((t) => t.salePrice === 200)).toBe(true);
-    expect(transactions.every((t) => t.commissionRate === 0.85)).toBe(true);
+    expect(transactions.every((t) => t.feeRate === 0.15)).toBe(true);
     expect(transactions.every((t) => t.grossAmount === 200)).toBe(true);
-    expect(transactions.every((t) => t.commissionAmount === 170)).toBe(true);
+    expect(transactions.every((t) => t.feeAmount === 30)).toBe(true);
+    expect(transactions.every((t) => t.consignorAmount === 170)).toBe(true);
   });
 
   it("handles multiple line items (different variants)", async () => {
@@ -232,7 +234,7 @@ describe("orders.server — processOrder", () => {
 
   it("transaction captures commission rate snapshot (rate change after sale)", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 300, 2);
@@ -244,17 +246,18 @@ describe("orders.server — processOrder", () => {
       financialStatus: "paid",
     });
 
-    // Change the consignor's rate AFTER the sale
+    // Change the consignor's fee rate AFTER the sale
     await prisma.consignor.update({
       where: { id: consignor.id },
-      data: { commissionRate: 0.70 },
+      data: { feeRate: 0.30 },
     });
 
-    // The transaction should still reflect the ORIGINAL rate (0.85)
+    // The transaction should still reflect the ORIGINAL rate (0.15)
     const txs = await prisma.transaction.findMany({ where: { type: "sale" } });
     expect(txs).toHaveLength(1);
-    expect(txs[0].commissionRate).toBe(0.85);
-    expect(txs[0].commissionAmount).toBe(255); // 300 * 0.85
+    expect(txs[0].feeRate).toBe(0.15);
+    expect(txs[0].feeAmount).toBe(45); // 300 * 0.15
+    expect(txs[0].consignorAmount).toBe(255); // 300 - 45
     expect(txs[0].amount).toBe(255);
   });
 
@@ -279,9 +282,9 @@ describe("orders.server — processOrder", () => {
 
     expect(order2.id).toBe(order1.id);
 
-    // Only 1 listing should be sold (not 2)
-    const soldCount = await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } });
-    expect(soldCount).toBe(1);
+    // Only 1 listing should be pending_sale (not 2)
+    const pendingCount = await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } });
+    expect(pendingCount).toBe(1);
   });
 });
 
@@ -299,11 +302,11 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // Both listings should be sold
+    // Both listings should be pending_sale (unpaid)
     for (const l of listings) {
-      const sold = await prisma.listing.findUnique({ where: { id: l.id } });
-      expect(sold?.status).toBe("sold");
-      expect(sold?.soldAt).not.toBeNull();
+      const pending = await prisma.listing.findUnique({ where: { id: l.id } });
+      expect(pending?.status).toBe("pending_sale");
+      expect(pending?.soldAt).not.toBeNull();
     }
 
     // Cancel the order
@@ -319,7 +322,7 @@ describe("orders.server — cancelOrder", () => {
 
   it("cancel unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -345,7 +348,7 @@ describe("orders.server — cancelOrder", () => {
 
   it("creates refund transactions when payment was captured", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -502,8 +505,8 @@ describe("orders.server — cancelOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    // listing1 ($340) should be sold, 1 of listings2 should be sold
-    expect((await prisma.listing.findUnique({ where: { id: listing1.id } }))?.status).toBe("sold");
+    // listing1 ($340) should be pending_sale, 1 of listings2 should be pending_sale
+    expect((await prisma.listing.findUnique({ where: { id: listing1.id } }))?.status).toBe("pending_sale");
 
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/17" });
 
@@ -652,8 +655,8 @@ describe("orders.server — refundOrder", () => {
 
   it("creates correct refund transactions per item", async () => {
     const { admin } = createMockAdmin();
-    const consignor1 = await createTestConsignor({ email: "c1@test.com", commissionRate: 0.85 });
-    const consignor2 = await createTestConsignor({ email: "c2@test.com", commissionRate: 0.80 });
+    const consignor1 = await createTestConsignor({ email: "c1@test.com", feeRate: 0.15 });
+    const consignor2 = await createTestConsignor({ email: "c2@test.com", feeRate: 0.20 });
     const { variant } = await setupVariant();
 
     await createListings(consignor1.id, variant.id, 340, 1);
@@ -674,8 +677,8 @@ describe("orders.server — refundOrder", () => {
     });
     expect(refundTxs).toHaveLength(2);
 
-    // consignor1: -(340 * 0.85) = -289
-    // consignor2: -(350 * 0.80) = -280
+    // consignor1: -(340 * (1 - 0.15)) = -289
+    // consignor2: -(350 * (1 - 0.20)) = -280
     const amounts = refundTxs.map((t) => t.amount).sort((a, b) => a - b);
     expect(amounts[0]).toBe(-289); // consignor1
     expect(amounts[1]).toBe(-280); // consignor2
@@ -730,7 +733,7 @@ describe("orders.server — refundOrder", () => {
 
   it("refund 1 of 3 items: correct item refunded, others remain sold", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 350, 5);
@@ -854,7 +857,7 @@ describe("orders.server — refundOrder", () => {
 
   it("chained partial refunds: refund 1 → 1 → 1 from 3 items", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1033,7 +1036,7 @@ describe("orders.server — refundOrder", () => {
 
   it("chained partial refunds with balance tracking", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1082,7 +1085,7 @@ describe("orders.server — refundOrder", () => {
 
   it("cancel partially-refunded order: restores only remaining items", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1129,7 +1132,7 @@ describe("orders.server — refundOrder", () => {
 describe("orders.server — refundOrder restock handling", () => {
   it("no_restock refund skips inventory restore but creates transaction", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1359,7 +1362,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns sale amount after order", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1378,7 +1381,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns 0 after order + full refund", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1398,7 +1401,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns partial amount after order + partial refund", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1427,7 +1430,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("subtracts completed payouts from balance", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1441,9 +1444,9 @@ describe("orders.server — getConsignorBalance", () => {
 
     // Sale: 2 × 200 × 0.85 = 340
 
-    // Create a completed payout of $100
+    // Create a paid payout of $100
     await prisma.payout.create({
-      data: { consignorId: consignor.id, amount: 100, status: "completed" },
+      data: { consignorId: consignor.id, amount: 100, status: "paid" },
     });
 
     // Also create a pending payout — should NOT be subtracted
@@ -1457,7 +1460,7 @@ describe("orders.server — getConsignorBalance", () => {
 
   it("returns 0 after order + cancel (not just refund)", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1479,7 +1482,7 @@ describe("orders.server — getConsignorBalance", () => {
 describe("orders.server — payment status", () => {
   it("processOrder without financialStatus: no transactions, paymentStatus pending", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1490,8 +1493,8 @@ describe("orders.server — payment status", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // 2 listings sold, 1 active
-    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
+    // 2 listings pending_sale, 1 active
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } })).toBe(2);
     expect(await prisma.listing.count({ where: { variantId: variant.id, status: "active" } })).toBe(1);
 
     // No transactions created
@@ -1508,7 +1511,7 @@ describe("orders.server — payment status", () => {
 
   it("processOrder with financialStatus paid: creates transactions immediately", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1537,7 +1540,7 @@ describe("orders.server — payment status", () => {
 
   it("creditOrder on pending order creates transactions and sets paymentStatus paid", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1548,8 +1551,9 @@ describe("orders.server — payment status", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
     });
 
-    // Verify pending state
+    // Verify pending state — listings should be pending_sale, not sold
     expect(await prisma.transaction.count()).toBe(0);
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "pending_sale" } })).toBe(2);
 
     // Credit the order (simulates orders/paid webhook)
     await creditOrder({ shopifyOrderId: "gid://shopify/Order/ps-3" });
@@ -1563,11 +1567,14 @@ describe("orders.server — payment status", () => {
     // Order is now paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-3" } });
     expect(order?.paymentStatus).toBe("paid");
+
+    // Listings should now be promoted to sold
+    expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(2);
   });
 
   it("creditOrder is idempotent: calling twice creates only one set of transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 3);
@@ -1614,7 +1621,7 @@ describe("orders.server — payment status", () => {
 
   it("cancelOrder on paid order creates offsetting refund transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1650,7 +1657,7 @@ describe("orders.server — payment status", () => {
 
   it("cancelOrder on unpaid order creates no transactions", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 2);
@@ -1694,7 +1701,7 @@ describe("orders.server — payment status", () => {
 
   it("balance is $0 for unpaid orders", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 500, 3);
@@ -1718,7 +1725,7 @@ describe("orders.server — payment status", () => {
 
   it("balance reflects only paid orders in mixed scenario", async () => {
     const { admin } = createMockAdmin();
-    const consignor = await createTestConsignor({ commissionRate: 0.85 });
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
     const { variant } = await setupVariant();
 
     await createListings(consignor.id, variant.id, 200, 5);
@@ -1740,5 +1747,375 @@ describe("orders.server — payment status", () => {
 
     const balance = await getConsignorBalance(consignor.id);
     expect(balance).toBe(340); // only the paid order
+  });
+});
+
+describe("order-queries.server — getOrderDetail", () => {
+  it("returns order with items, summary, and timeline", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-1",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-1" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.order.items).toHaveLength(2);
+    expect(result.summary.itemCount).toBe(2);
+    expect(result.summary.refundedCount).toBe(0);
+    expect(result.summary.totalFees).toBeCloseTo(60); // 2 × 200 × 0.15
+    expect(result.summary.totalConsignorPayout).toBeCloseTo(340); // 2 × 200 × 0.85
+    expect(result.timeline.length).toBeGreaterThanOrEqual(2); // created + paid (reverse-chronological)
+    expect(result.timeline[0].label).toBe("Payment received");
+    expect(result.timeline[1].label).toBe("Order created");
+  });
+
+  it("includes refund events in timeline", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 3);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-2",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    await refundOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-2",
+      refundLineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1 }],
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-2" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.summary.refundedCount).toBe(1);
+    expect(result.summary.totalFees).toBeCloseTo(30); // 1 sale fee (60) + 1 refund fee (-30) = 30
+    const refundEvents = result.timeline.filter((e) => e.type === "refund");
+    expect(refundEvents.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("throws for non-existent order", async () => {
+    await expect(getOrderDetail("nonexistent-id")).rejects.toThrow("Order not found");
+  });
+
+  it("returns correct data for unpaid order", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-3",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-3" } });
+    const result = await getOrderDetail(order!.id);
+
+    expect(result.order.paymentStatus).toBe("pending");
+    expect(result.summary.totalFees).toBe(0); // no transactions yet
+    expect(result.summary.totalConsignorPayout).toBe(0);
+    expect(result.timeline).toHaveLength(1); // only "Order created"
+  });
+
+  it("returns items with consignor and product info", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variant, product } = await setupVariant();
+
+    await createListings(consignor.id, variant.id, 200, 2);
+
+    await processOrder({
+      admin,
+      shopifyOrderId: "gid://shopify/Order/detail-4",
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/detail-4" } });
+    const result = await getOrderDetail(order!.id);
+
+    const item = result.order.items[0];
+    expect(item.listing.consignor.name).toBe(consignor.name);
+    expect(item.listing.variant.product.title).toBe(product.title);
+    expect(item.listing.variant.size).toBe(variant.size);
+    expect(item.transactions).toHaveLength(1);
+    expect(item.transactions[0].type).toBe("sale");
+  });
+});
+
+// ── Post-Payout Refund Tests ────────────────────────────────────────────
+
+describe("orders.server — post-payout refund handling", () => {
+  /** Helper: create a sale, credit it, create a payout, mark it paid */
+  async function setupPaidPayout(opts: {
+    category?: string;
+    feeRate?: number;
+  } = {}) {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: opts.feeRate ?? 0.15 });
+
+    const product = await prisma.product.create({
+      data: {
+        title: "Post-Payout Test Product",
+        styleId: `style-pp-${Date.now()}-${Math.random()}`,
+        category: opts.category ?? "Footwear > Sneakers",
+        shopifyProductId: `gid://shopify/Product/pp-${Date.now()}`,
+      },
+    });
+    const variant = await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "10",
+        shopifyVariantId: `gid://shopify/ProductVariant/pp-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/pp-${Date.now()}`,
+      },
+    });
+
+    await createListings(consignor.id, variant.id, 200, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/pp-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Find the sale transaction
+    const order = await prisma.order.findUnique({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: { include: { transactions: true } } },
+    });
+    const saleTx = order!.items[0].transactions.find((t) => t.type === "sale")!;
+
+    // Create payout + payoutItem, mark paid
+    const payout = await prisma.payout.create({
+      data: {
+        consignorId: consignor.id,
+        amount: saleTx.consignorAmount,
+        status: "paid",
+        items: { create: { transactionId: saleTx.id } },
+      },
+    });
+
+    return { admin, consignor, product, variant, order: order!, shopifyOrderId, saleTx, payout };
+  }
+
+  it("post-payout refund does NOT create negative transaction", async () => {
+    const { admin, consignor, shopifyOrderId } = await setupPaidPayout();
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const txs = await prisma.transaction.findMany({ where: { consignorId: consignor.id } });
+    expect(txs).toHaveLength(1); // only the original sale, no refund
+    expect(txs[0].type).toBe("sale");
+  });
+
+  it("post-payout refund creates new listing under shop consignor", async () => {
+    const { admin, consignor, variant, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Sneakers",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // New listing should exist under a shop consignor
+    const newListings = await prisma.listing.findMany({
+      where: {
+        variantId: variant.id,
+        status: "active",
+        reassignedFromConsignorId: consignor.id,
+      },
+    });
+    expect(newListings).toHaveLength(1);
+    expect(newListings[0].reassignedFromListingId).toBeTruthy();
+    expect(newListings[0].price).toBe(200);
+  });
+
+  it("footwear items are reassigned to Kulture Klash", async () => {
+    const { admin, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Boots",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const shopConsignor = await prisma.consignor.findFirst({
+      where: { name: "Kulture Klash" },
+    });
+    expect(shopConsignor).toBeTruthy();
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    const reassigned = await prisma.listing.findFirst({
+      where: { consignorId: shopConsignor!.id, status: "active" },
+    });
+    expect(reassigned).toBeTruthy();
+  });
+
+  it("non-footwear items are reassigned to Kulture Klothing", async () => {
+    const { admin, shopifyOrderId } = await setupPaidPayout({
+      category: "Apparel > Hoodies",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const shopConsignor = await prisma.consignor.findFirst({
+      where: { name: "Kulture Klothing" },
+    });
+    expect(shopConsignor).toBeTruthy();
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    const reassigned = await prisma.listing.findFirst({
+      where: { consignorId: shopConsignor!.id, status: "active" },
+    });
+    expect(reassigned).toBeTruthy();
+  });
+
+  it("creates ReassignmentLog entry with full audit details", async () => {
+    const { admin, consignor, order, shopifyOrderId } = await setupPaidPayout();
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].originalConsignorId).toBe(consignor.id);
+    expect(logs[0].reason).toBe("post_payout_refund");
+    expect(logs[0].orderId).toBe(order.id);
+    expect(logs[0].newListingId).toBeTruthy();
+    expect(logs[0].originalListingId).toBeTruthy();
+  });
+
+  it("original listing stays sold (not restored)", async () => {
+    const { admin, order, shopifyOrderId } = await setupPaidPayout();
+    const originalListingId = order.items[0].listingId;
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const originalListing = await prisma.listing.findUnique({ where: { id: originalListingId } });
+    expect(originalListing!.status).toBe("sold"); // NOT restored to active
+  });
+
+  it("consignor balance unchanged after post-payout refund", async () => {
+    const { admin, consignor, shopifyOrderId, payout } = await setupPaidPayout({ feeRate: 0.15 });
+
+    const balanceBefore = await getConsignorBalance(consignor.id);
+    // Balance = sale amount - paid payout = 170 - 170 = 0
+    expect(balanceBefore).toBe(0);
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    const balanceAfter = await getConsignorBalance(consignor.id);
+    // No negative transaction created, so balance stays the same
+    expect(balanceAfter).toBe(0);
+  });
+
+  it("normal refund (no paid payout) still creates negative transaction", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+
+    const product = await prisma.product.create({
+      data: {
+        title: "Normal Refund Product",
+        styleId: `style-nr-${Date.now()}-${Math.random()}`,
+        category: "Footwear > Sneakers",
+        shopifyProductId: `gid://shopify/Product/nr-${Date.now()}`,
+      },
+    });
+    const variant = await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "9",
+        shopifyVariantId: `gid://shopify/ProductVariant/nr-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/nr-${Date.now()}`,
+      },
+    });
+
+    await createListings(consignor.id, variant.id, 200, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/nr-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Refund WITHOUT any payout — normal path
+    await refundOrder({ admin, shopifyOrderId });
+
+    const txs = await prisma.transaction.findMany({
+      where: { consignorId: consignor.id },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(txs).toHaveLength(2);
+    expect(txs[0].type).toBe("sale");
+    expect(txs[1].type).toBe("refund");
+    expect(txs[1].amount).toBe(-170); // -200 * 0.85
+
+    // Listing restored to active
+    const listings = await prisma.listing.findMany({ where: { variantId: variant.id } });
+    expect(listings[0].status).toBe("active");
+
+    // No reassignment
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(0);
+  });
+
+  it("shop consignor listing resale generates zero consignorAmount (100% fee)", async () => {
+    const { admin, variant, shopifyOrderId } = await setupPaidPayout({
+      category: "Footwear > Sneakers",
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // Find the new listing under shop consignor
+    const newListing = await prisma.listing.findFirst({
+      where: { variantId: variant.id, status: "active" },
+    });
+    expect(newListing).toBeTruthy();
+
+    const shopConsignor = await prisma.consignor.findUnique({
+      where: { id: newListing!.consignorId },
+    });
+    expect(shopConsignor!.feeRate).toBe(1.0);
+
+    // Simulate resale of the reassigned listing
+    const resalePrice = 200;
+    const grossAmount = resalePrice;
+    const feeAmount = grossAmount * shopConsignor!.feeRate; // 200 * 1.0 = 200
+    const consignorAmount = grossAmount - feeAmount; // 0
+
+    expect(consignorAmount).toBe(0);
+    expect(feeAmount).toBe(200); // marketplace keeps everything
+  });
+
+  it("cancelOrder with post-payout: reassigns instead of negative transaction", async () => {
+    const { admin, consignor, shopifyOrderId } = await setupPaidPayout();
+
+    await cancelOrder({ admin, shopifyOrderId });
+
+    // No refund transaction
+    const txs = await prisma.transaction.findMany({ where: { consignorId: consignor.id } });
+    expect(txs).toHaveLength(1);
+    expect(txs[0].type).toBe("sale");
+
+    // Reassignment log created
+    const logs = await prisma.reassignmentLog.findMany();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].reason).toBe("post_payout_refund");
   });
 });

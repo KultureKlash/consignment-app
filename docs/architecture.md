@@ -12,19 +12,19 @@ This document must be read before modifying the codebase.
 
 Backend
 
-• Node.js
-• TypeScript
-• React Router
-• Shopify Admin GraphQL API
-• Prisma ORM
-• SQLite (development)
-• PostgreSQL (production)
+- Node.js
+- TypeScript
+- React Router (Remix)
+- Shopify Admin GraphQL API
+- Prisma ORM
+- SQLite (development)
+- PostgreSQL (production)
 
 Frontend
 
-• React
-• Shopify Polaris
-• Shopify App Bridge
+- React (inline CSSProperties, no Tailwind)
+- Shopify Shadow DOM components (`s-page`, `s-section`, `s-button`, `s-app-nav`)
+- Shopify App Bridge
 
 ---
 
@@ -34,19 +34,20 @@ This project is a **Shopify embedded app**.
 
 Shopify provides:
 
-• storefront
-• checkout
-• order creation
-• admin authentication
+- storefront
+- checkout
+- order creation
+- admin authentication
+- webhooks (orders/create, orders/cancelled, refunds/create)
 
 The application provides:
 
-• product catalog
-• consignor accounts
-• listing engine
-• order allocation
-• financial ledger
-• payouts
+- product catalog
+- consignor accounts with configurable fee rates
+- per-item listing engine
+- order allocation (lowest price, FIFO tiebreak)
+- financial ledger with audit-grade transaction snapshots
+- payouts
 
 ---
 
@@ -68,11 +69,11 @@ Consignors log into the **marketplace dashboard inside the application**.
 
 Capabilities:
 
-• search products
-• create listings
-• manage inventory
-• view sales
-• request payouts
+- search products
+- create listings
+- manage inventory
+- view sales
+- request payouts
 
 Consignors **do not access Shopify Admin**.
 
@@ -89,16 +90,16 @@ Apps
 ↓
 Consignment App
 ↓
-Admin Dashboard
+Admin Panel (Home, Create Listing, Listings, Orders, Consignors)
 ```
 
-Admins manage:
+Admin pages:
 
-• consignors
-• listings
-• catalog
-• orders
-• payouts
+- **Home** — dashboard overview with stats and recent activity
+- **Create Listing** — form to create listings with product search, barcode/GTIN support, and 10 most recent listings
+- **Listings** — full listing management with search, filters (status, category, subcategory, consignor), sorting, pagination, and grouped-by-product view
+- **Orders** — order monitoring
+- **Consignors** — consignor management with fee rates and balances
 
 ---
 
@@ -107,32 +108,34 @@ Admins manage:
 The marketplace logic runs inside the application while Shopify acts only as the storefront.
 
 ```
-StockX API
+Product Search (admin input / barcode / GTIN)
      ↓
-Catalog Import Service
+Catalog Service (findOrCreate Product + Variant)
      ↓
 Database (Source of Truth)
      ↓
-Shopify Sync Service
+Shopify Sync Service (product, variant, price, inventory)
      ↓
 Shopify Storefront
      ↓
 Customers
      ↓
-Shopify Webhooks
+Shopify Webhooks (orders/create, orders/cancelled, refunds/create)
      ↓
-Order Allocation Engine
+Order Allocation Engine (lowest price, FIFO)
      ↓
-Ledger & Payout System
+Financial Ledger (fee rate snapshots, audit trail)
+     ↓
+Payout System
 ```
 
 The **database is the source of truth**.
 
 Shopify mirrors:
 
-• product data
-• price
-• inventory
+- product data
+- lowest-tier price
+- inventory count (active listings per variant at lowest price tier)
 
 ---
 
@@ -141,17 +144,54 @@ Shopify mirrors:
 ```
 app/
   routes/
+    app._index.tsx          — Home dashboard
+    app.inventory.tsx       — Create Listing page
+    app.listings.tsx        — All Listings (filtered, paginated, grouped)
+    app.orders.tsx          — Orders page
+    app.consignors.tsx      — Consignors list page
+    app.consignors.$id.tsx  — Consignor detail/edit page
+    app.api.products.tsx    — Product search API
+    app.api.brands.tsx      — Brand autocomplete API
+    app.api.taxonomy.tsx    — Shopify taxonomy API
+    app.payouts.tsx         — Payout management page
+    app.activity.tsx        — Full activity feed page
+    app.tsx                 — App shell with nav
   services/
-  db.server.ts
-  shopify.server.ts
+    catalog.server.ts       — Product/variant find-or-create
+    dashboard.server.ts     — Dashboard stats and activity feed
+    listings.server.ts      — Listing creation, cancellation, bulk cancellation
+    listing-queries.server.ts — Listing search, filter, pagination
+    orders.server.ts        — Order processing, refunds, cancellations, balance
+    payouts.server.ts       — Payout creation, mark paid, cancel, page data
+    inventory.server.ts     — Shopify inventory sync
+    shopify-products.server.ts — Shopify product/variant creation, image upload, backfill
+    shopify-taxonomy.server.ts — Shopify taxonomy resolution
+    webhooks.server.ts      — Webhook dedup and dispatch
+  components/
+    CreateListingForm.tsx   — Full listing creation form
+    ListingsTable.tsx       — Flat + grouped-by-product table with thumbnails
+    ListingsFilter.tsx      — Search, status, category, consignor filters
+    QuickAddPopover.tsx     — Inline quick-add popover for existing products
+    Pagination.tsx          — Page navigation
+    CustomSelect.tsx        — Dropdown with label/value support
+    Dropdown.tsx            — Portal-based dropdown (Shadow DOM compatible)
+    StatsCard.tsx           — Dashboard stat card
+    ActionItem.tsx          — Dashboard action item
+    ActivityItem.tsx        — Dashboard activity item
+  lib/
+    listing-ui.ts           — Shared styles and helpers
+    image-processing.ts     — Product image resize and white-square padding
+    size-order.ts           — Size sorting (numeric + clothing sizes)
+    categories/             — Category taxonomy data and helpers
 
 prisma/
-  schema.prisma
+  schema.prisma             — 12 models
 
 docs/
   architecture.md
-  features.md
-  system_diagram.md
+  FEATURES.md
+  system-diagram.md
+  reseller-system-architecture.md
 ```
 
 ---
@@ -168,11 +208,11 @@ Routes must **never contain business logic**.
 
 Routes only:
 
-• validate requests
-• call services
-• return responses
+- authenticate requests
+- call services
+- return responses
 
-All marketplace logic lives inside **services**.
+Route files should stay under ~200 lines. Business logic lives in **services**.
 
 ---
 
@@ -184,14 +224,19 @@ Services contain the core marketplace logic.
 app/services/
 ```
 
-Current services will include:
+Current services:
 
 ```
-catalog.server.ts
-listings.server.ts
-inventory.server.ts
-orders.server.ts
-payouts.server.ts
+catalog.server.ts            — findOrCreateProduct, findOrCreateVariant
+dashboard.server.ts          — getDashboardData (stats, activity feed)
+listings.server.ts           — createListing, cancelListing, bulkCancelListings
+listing-queries.server.ts    — queryListings (search, filter, sort, paginate)
+consignors.server.ts         — getConsignorDetail, updateConsignor
+orders.server.ts             — processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance
+inventory.server.ts          — syncVariantInventory
+shopify-products.server.ts   — ensureShopifyProductAndVariant, backfillProductImages
+shopify-taxonomy.server.ts   — resolveShopifyTaxonomyId
+webhooks.server.ts           — withWebhookDedup
 ```
 
 ---
@@ -200,22 +245,18 @@ payouts.server.ts
 
 Handles product catalog operations.
 
-Example responsibilities:
+Functions:
 
 ```
-findProductByStyleId()
-createProduct()
-createVariant()
-importStockXProduct()
+findOrCreateProduct(styleId, title, brand, category)
+findOrCreateVariant(productId, size, gtin)
 ```
 
-Products are uniquely identified by **styleId**.
+Products are uniquely identified by **styleId** (when provided) or by **title + brand** (non-footwear path).
 
-Example:
+Variants are unique by **(productId, size)**.
 
-```
-DD1391-100
-```
+Variants may include a **GTIN barcode** for scanner identification.
 
 ---
 
@@ -223,107 +264,177 @@ DD1391-100
 
 Handles consignor listings.
 
-Example functions:
+Functions:
 
 ```
-createListing()
-updateListing()
-deleteListing()
-getListingsByVariant()
-getListingsByConsignor()
+createListing(admin, consignorId, variantId, price, count)
+cancelListing(admin, listingId)
+bulkCancelListings(admin, listingIds)
 ```
 
-Listings represent **actual marketplace inventory**.
+**Per-item model**: each Listing row = 1 physical item. No quantity field. Creating 3 items at $200 creates 3 separate Listing rows.
+
+After creation, triggers Shopify product sync and inventory sync.
+
+`bulkCancelListings` batches DB updates in a single transaction, then syncs inventory once per affected variant with exponential backoff retry (3 attempts).
+
+---
+
+## Listing Queries Service
+
+Server-side search, filter, sort, and pagination for the listings admin page.
+
+```
+queryListings({ search, status, category, consignorId, sortBy, sortDir, page, limit })
+```
+
+SQLite-compatible text search across product title, styleId, brand, consignor name/email.
 
 ---
 
 ## Inventory Service
 
-Responsible for synchronizing Shopify inventory.
+Synchronizes Shopify inventory to reflect marketplace state.
 
 Rule:
 
 ```
-Shopify inventory = SUM(listings.quantity)
+Shopify inventory = COUNT(active listings at lowest price tier for variant)
+Shopify price = lowest active listing price for variant
 ```
 
-Example:
-
-Seller A → qty 2
-Seller B → qty 1
-Seller C → qty 3
-
-Shopify inventory:
-
-```
-6
-```
+Deletes Shopify variant when inventory reaches zero (unless last variant).
 
 ---
 
 ## Orders Service
 
-Handles Shopify webhooks and listing allocation.
+Handles the full order lifecycle via Shopify webhooks.
 
-Example:
+Functions:
 
 ```
-processOrderWebhook()
-allocateListing()
-deductListingQuantity()
+processOrder()    — allocate listings, create order items
+creditOrder()     — create sale transactions when payment captured
+cancelOrder()     — restore listings, create void/refund transactions
+refundOrder()     — partial or full refund with restock options
+getConsignorBalance() — sum transactions minus paid payouts
 ```
+
+Post-payout refund handling:
+
+When a refund occurs after the consignor's payout has been marked "paid" (money already sent),
+the system does NOT create a negative transaction. Instead it reassigns the item to a shop
+consignor (Kulture Klash for footwear, Kulture Klothing for non-footwear) with 100% fee rate
+so the marketplace can resell and recover the cost. A ReassignmentLog audit entry is created.
 
 Allocation rule:
 
 ```
-1. Lowest price
-2. FIFO tie breaker
+1. Lowest price first
+2. FIFO tiebreak (oldest createdAt)
 ```
+
+Refund priority (reverse allocation):
+
+```
+1. Highest price first
+2. Newest first
+```
+
+---
+
+## Shopify Products Service
+
+Creates and manages Shopify products and variants.
+
+```
+ensureShopifyProductAndVariant(admin, variant)
+```
+
+SKU derivation: footwear products use styleId as SKU, non-footwear use GTIN/barcode.
+
+Resilient — if Shopify sync fails, the listing is still created locally.
+
+---
+
+## Consignors Service
+
+Handles consignor profile management.
+
+Functions:
+
+```
+getConsignorDetail(id)     — consignor profile + balance + listing status counts
+updateConsignor(id, data)  — update name, email, feeRate with validation
+```
+
+Validates email uniqueness and restricts fee rate to 10%, 15%, or 20%.
 
 ---
 
 ## Payouts Service
 
-Handles consignor balances and payouts.
+Handles per-item payout management. Admin selects specific sold-item transactions per consignor and bundles them into a payout.
 
 Functions:
 
 ```
-calculateBalance()
-createPayout()
-markPayoutPaid()
+getPayoutsPageData()     — unpaid transactions grouped by consignor, recent payouts, summary stats
+createPayout(consignorId, transactionIds) — validate ownership, prevent double-payout, create Payout + PayoutItems
+markPaid(payoutId)       — update status to "paid"
+cancelPayout(payoutId)   — delete payout + items (cascade), reject if paid
+```
+
+Payout lifecycle: `pending` → `invoiced` (future consignor portal) → `paid`
+
+---
+
+## StockX Integration Service (planned)
+
+Will handle product catalog import from StockX.
+
+Planned functions:
+
+```
+importStockXProduct(styleId)
+fetchProductImages(styleId)
+fetchMarketPrice(styleId)
 ```
 
 ---
 
 # Database Models
 
-The system uses the following Prisma models.
+The system uses the following Prisma models:
 
 ```
-Session
-Consignor
+Session          — Shopify OAuth sessions
+Consignor        — Seller accounts with fee rate
+Product          — Catalog items (styleId, brand, category, imageUrl)
+Variant          — Sizes with optional GTIN barcode
+Listing          — Per-item inventory (1 row = 1 physical item, optional reassignment tracking)
+Order            — Shopify orders with payment status tracking
+OrderItem        — 1:1 mapping to allocated listings
+Transaction      — Audit-grade financial records (sale/refund)
+WebhookEvent     — Idempotent webhook processing
+Payout           — Consignor payout records (pending → invoiced → paid)
+PayoutItem       — Join table linking payouts to specific transactions
+ReassignmentLog  — Audit trail for post-payout refund reassignments
+```
+
+Data flow:
+
+```
 Product
-Variant
-Listing
-Order
-OrderItem
-Transaction
-Payout
-```
-
-Marketplace data structure:
-
-```
-Product
 ↓
-Variant (size)
+Variant (size + GTIN)
 ↓
-Listing (consignor inventory)
+Listing (per-item, 1 row = 1 physical item)
 ↓
-OrderItem
+OrderItem (1:1 with listing)
 ↓
-Transaction
+Transaction (immutable audit snapshot)
 ↓
 Payout
 ```
@@ -334,12 +445,16 @@ Payout
 
 ## Product Rule
 
-Products are unique by `styleId`.
+Products are unique by `styleId` (when provided).
 
 Example:
 
+```
 Nike Dunk Panda
 styleId: DD1391-100
+```
+
+Products without a styleId are identified by title + brand.
 
 ---
 
@@ -355,76 +470,61 @@ Size 9
 Size 10
 ```
 
-Unique constraint:
+Unique constraint: `(productId, size)`
 
-```
-(productId, size)
-```
+Optional GTIN barcode per variant.
 
 ---
 
 ## Listing Rule
 
-Multiple consignors may list the same variant.
+**Per-item model**: each Listing row = 1 physical item. No quantity field.
+
+Multiple consignors may list the same variant at different prices.
 
 Example:
 
+```
 Product: Nike Dunk Panda
 Variant: Size 9
 
-Listings:
+Consignor A → $430 (1 listing row)
+Consignor A → $430 (1 listing row)
+Consignor B → $450 (1 listing row)
+Consignor C → $470 (1 listing row)
+```
 
-Consignor A → qty 2
-Consignor B → qty 1
-Consignor C → qty 3
+Statuses: `active`, `pending_sale`, `sold`, `cancelled`
 
 ---
 
 ## Inventory Rule
 
-Shopify inventory must equal:
+Shopify inventory reflects the count of active listings at the lowest price tier.
 
 ```
-SUM(listings.quantity)
+Shopify price = MIN(active listing prices)
+Shopify inventory = COUNT(active listings at that price)
 ```
+
+---
+
+## Fee Rate Rule
+
+Consignors have a configurable **fee rate** (e.g. 10%, 15%, 20%).
+
+The fee rate is the marketplace's cut. The consignor keeps the remainder.
 
 Example:
 
 ```
-2 + 1 + 3 = 6
+Fee rate: 15%
+Sale price: $200
+Fee: $30 (200 × 0.15)
+Consignor payout: $170 (200 - 30)
 ```
 
----
-
-# Current Development Goal
-
-Before adding new features, the system must be stabilized.
-
-### Step 1
-
-Fix the test route:
-
-```
-/app/test-listing
-```
-
-This route must reliably trigger backend logic.
-
----
-
-### Step 2
-
-Confirm the `createListing()` service correctly:
-
-• finds or creates Product
-• finds or creates Variant
-• creates Listing
-
----
-
-### Step 3
-
-Verify records appear correctly in **Prisma Studio**.
+Transaction records snapshot the fee rate at creation time (immutable audit trail).
 
 ---
 
@@ -437,18 +537,3 @@ Never move marketplace logic into routes.
 ```
 routes → services → prisma → database
 ```
-
----
-
-# Next Phase
-
-Once the listing engine works correctly, the next system to build is:
-
-**Shopify Product Synchronization**
-
-This will:
-
-• create Shopify products from catalog
-• create Shopify variants
-• synchronize price
-• synchronize inventory

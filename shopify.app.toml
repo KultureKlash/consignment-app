@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "7c2f4d19614a13373674cf4e5c71751a"
-name = "consignment-app"
+name = "Kulture Konsign"
 application_url = "https://example.com"
 embedded = true
 

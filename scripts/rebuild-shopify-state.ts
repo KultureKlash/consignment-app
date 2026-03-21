@@ -9,6 +9,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { compareSizes } from "../app/lib/size-order";
 
 const prisma = new PrismaClient();
 const API_VERSION = "2025-10";
@@ -19,6 +20,8 @@ function logDiscrepancy(message: string) {
   discrepancyCount++;
   console.log(`  ⚠ DISCREPANCY: ${message}`);
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type GraphqlFn = (query: string, variables?: Record<string, unknown>) => Promise<{ data: any; errors?: any[] }>;
 
@@ -235,8 +238,14 @@ async function main() {
     console.log("  No missing variants to recreate");
   }
 
+  // Sort by product then by size so Shopify variants appear in logical order
+  variantsWithListings.sort((a, b) =>
+    a.productId.localeCompare(b.productId) || compareSizes(a.size, b.size)
+  );
+
   for (const variant of variantsWithListings) {
-    const product = variant.product;
+    // Re-read product from DB — it may have been updated by a previous iteration
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: variant.productId } });
 
     if (!product.shopifyProductId) {
       // Create product + first variant
@@ -314,6 +323,7 @@ async function main() {
       logDiscrepancy(
         `Product "${product.title}" recreated as ${shopifyProduct.id}`
       );
+      await sleep(500); // Rate limit protection
     } else {
       // Product exists, add variant
       console.log(`  Adding variant: ${product.title} sz ${variant.size}...`);
@@ -359,6 +369,7 @@ async function main() {
       logDiscrepancy(
         `Variant "${product.title} sz ${variant.size}" recreated as ${shopifyVariant.id}`
       );
+      await sleep(300); // Rate limit protection
     }
   }
 

@@ -109,6 +109,8 @@ async function main() {
         } else {
           console.log(`  ✓ Deleted "${product.title}"`);
         }
+        // Small delay to avoid Shopify rate limits
+        await new Promise((r) => setTimeout(r, 300));
       }
       console.log();
     }
@@ -144,15 +146,15 @@ async function main() {
   const alice = await prisma.consignor.upsert({
     where: { email: "alice@test.com" },
     update: {},
-    create: { name: "Alice Johnson", email: "alice@test.com", commissionRate: 0.85 },
+    create: { name: "Alice Johnson", email: "alice@test.com", feeRate: 0.15 },
   });
   const bob = await prisma.consignor.upsert({
     where: { email: "bob@test.com" },
     update: {},
-    create: { name: "Bob Smith", email: "bob@test.com", commissionRate: 0.80 },
+    create: { name: "Bob Smith", email: "bob@test.com", feeRate: 0.20 },
   });
-  console.log(`  Alice: ${alice.id} (85%)`);
-  console.log(`  Bob:   ${bob.id} (80%)`);
+  console.log(`  Alice: ${alice.id} (15% fee)`);
+  console.log(`  Bob:   ${bob.id} (20% fee)`);
 
   console.log("\n=== RESET COMPLETE ===");
   console.log(`Shopify: ${shopifyProductCount} product(s) deleted`);

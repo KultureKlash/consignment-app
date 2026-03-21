@@ -53,6 +53,81 @@ describe("catalog.server", () => {
       const count = await prisma.product.count();
       expect(count).toBe(2);
     });
+
+    it("creates product without styleId (non-footwear path)", async () => {
+      const product = await findOrCreateProduct({
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+      });
+
+      expect(product.styleId).toBeNull();
+      expect(product.title).toBe("Ami Paris Bucket Hat");
+      expect(product.brand).toBe("Ami Paris");
+    });
+
+    it("deduplicates by title+brand when no styleId", async () => {
+      const first = await findOrCreateProduct({
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+      });
+
+      const second = await findOrCreateProduct({
+        title: "Ami Paris Bucket Hat",
+        brand: "Ami Paris",
+        category: "Headwear > Bucket Hats",
+      });
+
+      expect(second.id).toBe(first.id);
+      expect(await prisma.product.count()).toBe(1);
+    });
+
+    it("creates separate products for same title but different brands", async () => {
+      await findOrCreateProduct({
+        title: "Bucket Hat",
+        brand: "Ami Paris",
+      });
+
+      await findOrCreateProduct({
+        title: "Bucket Hat",
+        brand: "Stussy",
+      });
+
+      expect(await prisma.product.count()).toBe(2);
+    });
+
+    it("creates separate products for same brand but different titles", async () => {
+      await findOrCreateProduct({
+        title: "Bucket Hat",
+        brand: "Ami Paris",
+      });
+
+      await findOrCreateProduct({
+        title: "Beanie",
+        brand: "Ami Paris",
+      });
+
+      expect(await prisma.product.count()).toBe(2);
+    });
+
+    it("title+brand path finds existing product even if it has a styleId", async () => {
+      // Create via styleId path
+      const footwear = await findOrCreateProduct({
+        styleId: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+      });
+
+      // Look up via title+brand path (no styleId) — finds existing because title+brand match
+      const sameProduct = await findOrCreateProduct({
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+      });
+
+      expect(sameProduct.id).toBe(footwear.id);
+      expect(await prisma.product.count()).toBe(1);
+    });
   });
 
   describe("findOrCreateVariant", () => {

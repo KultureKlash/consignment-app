@@ -8,6 +8,7 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     // Run test files sequentially (shared SQLite DB)
     fileParallelism: false,
+    pool: "forks",
     // Use a separate test database
     env: {
       DATABASE_URL: "file:./test.sqlite",

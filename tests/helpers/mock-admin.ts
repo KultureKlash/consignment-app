@@ -8,14 +8,22 @@ type GraphQLCall = { query: string; variables?: Record<string, unknown> };
  * Creates a mock Shopify Admin API client.
  * Responds to known mutations/queries with realistic fake data.
  */
-export function createMockAdmin() {
+export function createMockAdmin(opts?: { failOn?: string[] }) {
   const calls: GraphQLCall[] = [];
   let productCounter = 1;
   let variantCounter = 1;
   let inventoryItemCounter = 1;
+  const failOn = opts?.failOn ?? [];
 
   const graphql = vi.fn(async (query: string, options?: { variables?: Record<string, unknown> }) => {
     calls.push({ query, variables: options?.variables });
+
+    // Configurable failures: throw if query matches any failOn substring
+    for (const pattern of failOn) {
+      if (query.includes(pattern)) {
+        throw new Error(`Mock Shopify API failure: ${pattern}`);
+      }
+    }
 
     // Publications query
     if (query.includes("publications(")) {
@@ -34,6 +42,23 @@ export function createMockAdmin() {
       return mockResponse({
         locations: {
           nodes: [{ id: "gid://shopify/Location/1001" }],
+        },
+      });
+    }
+
+    // Taxonomy search
+    if (query.includes("taxonomy") && query.includes("categories")) {
+      const search = (options?.variables?.search as string) ?? "";
+      return mockResponse({
+        taxonomy: {
+          categories: {
+            nodes: [
+              {
+                id: `gid://shopify/TaxonomyCategory/mock-${search.replace(/\s+/g, "-")}`,
+                fullName: `Apparel & Accessories > ${search.charAt(0).toUpperCase() + search.slice(1)}`,
+              },
+            ],
+          },
         },
       });
     }

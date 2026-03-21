@@ -6,17 +6,34 @@ export async function findProductByStyleId(styleId: string) {
   });
 }
 
+export async function findProductByTitleAndBrand(title: string, brand?: string) {
+  // SQLite is case-sensitive, so we search with both original and lowercased
+  const titleLower = title.toLowerCase();
+  const products = await prisma.product.findMany({
+    where: {
+      OR: [
+        { title, brand: brand ?? null },
+        { title: titleLower, brand: brand ?? null },
+      ],
+    },
+    take: 1,
+  });
+  return products[0] ?? null;
+}
+
 export async function createProduct({
   styleId,
   title,
   brand,
+  category,
 }: {
-  styleId: string;
+  styleId?: string | null;
   title: string;
   brand?: string;
+  category?: string;
 }) {
   return prisma.product.create({
-    data: { styleId, title, brand },
+    data: { styleId: styleId || null, title, brand, category },
   });
 }
 
@@ -24,14 +41,24 @@ export async function findOrCreateProduct({
   styleId,
   title,
   brand,
+  category,
 }: {
-  styleId: string;
+  styleId?: string | null;
   title: string;
   brand?: string;
+  category?: string;
 }) {
-  const existing = await findProductByStyleId(styleId);
+  // Footwear path: lookup by styleId
+  if (styleId) {
+    const existing = await findProductByStyleId(styleId);
+    if (existing) return existing;
+    return createProduct({ styleId, title, brand, category });
+  }
+
+  // Non-footwear path: lookup by title + brand
+  const existing = await findProductByTitleAndBrand(title, brand);
   if (existing) return existing;
-  return createProduct({ styleId, title, brand });
+  return createProduct({ styleId: null, title, brand, category });
 }
 
 export async function findOrCreateVariant({
@@ -41,7 +68,7 @@ export async function findOrCreateVariant({
 }: {
   productId: string;
   size: string;
-  gtin: string;
+  gtin?: string;
 }) {
   const existing = await prisma.variant.findFirst({
     where: { productId, size },
@@ -57,6 +84,6 @@ export async function findOrCreateVariant({
     return existing;
   }
   return prisma.variant.create({
-    data: { productId, size, gtin },
+    data: { productId, size, gtin: gtin || null },
   });
 }
