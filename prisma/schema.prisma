@@ -33,6 +33,8 @@ model Consignor {
   email          String   @unique
   feeRate        Float    @default(0.15)  // consignment fee — e.g. 0.15 = 15% fee, consignor keeps 85%
 
+  notificationsReadAt DateTime?
+
   listings       Listing[]
   payouts        Payout[]
   transactions   Transaction[]
