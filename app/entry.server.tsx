@@ -14,7 +14,11 @@ export default async function handleRequest(
   responseHeaders: Headers,
   reactRouterContext: EntryContext
 ) {
-  addDocumentResponseHeaders(request, responseHeaders);
+  // Skip Shopify headers for portal routes (they run outside the Shopify iframe)
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/portal")) {
+    addDocumentResponseHeaders(request, responseHeaders);
+  }
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')
     ? "onAllReady"
