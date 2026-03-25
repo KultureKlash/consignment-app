@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { getConsignorBalance } from "~/services/orders.server";
+import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders.server";
 
 interface MonthlyEarning {
   month: string;
@@ -145,16 +145,20 @@ export async function getConsignorDashboard(consignorId: string) {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   const [
-    balance,
+    pendingPayouts,
+    paidTotal,
     activeCount,
     soldCount,
-    pendingPayoutAgg,
+    awaitingInvoiceAgg,
+    invoiceSentAgg,
+    unbatchedAgg,
     recentSales,
     earningsTransactions,
     listingsByStatus,
     recentPayouts,
   ] = await Promise.all([
     getConsignorBalance(consignorId),
+    getConsignorPaidTotal(consignorId),
 
     prisma.listing.count({
       where: { consignorId, status: "active" },
@@ -164,10 +168,22 @@ export async function getConsignorDashboard(consignorId: string) {
       where: { consignorId, status: "sold" },
     }),
 
+    // Payout breakdown: awaiting invoice (status=pending)
     prisma.payout.aggregate({
       where: { consignorId, status: "pending" },
       _sum: { amount: true },
-      _count: true,
+    }),
+
+    // Payout breakdown: invoice sent (status=invoiced)
+    prisma.payout.aggregate({
+      where: { consignorId, status: "invoiced" },
+      _sum: { amount: true },
+    }),
+
+    // Payout breakdown: unbatched (sale txs not in any payout)
+    prisma.transaction.aggregate({
+      where: { consignorId, type: "sale", payoutItems: { none: {} } },
+      _sum: { consignorAmount: true },
     }),
 
     prisma.transaction.findMany({
@@ -229,11 +245,15 @@ export async function getConsignorDashboard(consignorId: string) {
 
   return {
     stats: {
-      balance,
+      totalEarnings: paidTotal,
       activeListings: activeCount,
       itemsSold: soldCount,
-      pendingPayouts: pendingPayoutAgg._sum.amount ?? 0,
-      pendingPayoutCount: pendingPayoutAgg._count ?? 0,
+      pendingPayouts,
+    },
+    payoutBreakdown: {
+      awaitingInvoice: awaitingInvoiceAgg._sum.amount ?? 0,
+      invoiceSent: invoiceSentAgg._sum.amount ?? 0,
+      unbatched: unbatchedAgg._sum.consignorAmount ?? 0,
     },
     monthlyEarnings,
     currentMonthEarnings,
@@ -250,4 +270,47 @@ export async function getConsignorDashboard(consignorId: string) {
       date: tx.createdAt,
     })),
   };
+}
+
+export async function getConsignorPayouts(consignorId: string) {
+  const payouts = await prisma.payout.findMany({
+    where: { consignorId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      items: {
+        include: {
+          transaction: {
+            include: {
+              orderItem: {
+                include: {
+                  order: true,
+                  listing: {
+                    include: { variant: { include: { product: true } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Unbatched sale transactions (not in any payout yet)
+  const unbatchedTxs = await prisma.transaction.findMany({
+    where: { consignorId, type: "sale", payoutItems: { none: {} } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      orderItem: {
+        include: {
+          order: true,
+          listing: {
+            include: { variant: { include: { product: true } } },
+          },
+        },
+      },
+    },
+  });
+
+  return { payouts, unbatchedTxs };
 }

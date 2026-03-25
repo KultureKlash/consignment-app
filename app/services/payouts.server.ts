@@ -80,8 +80,9 @@ export async function getPayoutsPageData() {
   // Summary stats
   const totalOutstanding = unpaidByConsignor.reduce((sum, c) => sum + c.total, 0);
 
-  const [pendingAgg, paidAgg] = await Promise.all([
+  const [pendingAgg, invoicedAgg, paidAgg] = await Promise.all([
     prisma.payout.aggregate({ where: { status: "pending" }, _sum: { amount: true } }),
+    prisma.payout.aggregate({ where: { status: "invoiced" }, _sum: { amount: true } }),
     prisma.payout.aggregate({ where: { status: "paid" }, _sum: { amount: true } }),
   ]);
 
@@ -91,6 +92,7 @@ export async function getPayoutsPageData() {
     stats: {
       totalOutstanding,
       totalPending: pendingAgg._sum.amount ?? 0,
+      totalInvoiced: invoicedAgg._sum.amount ?? 0,
       totalPaid: paidAgg._sum.amount ?? 0,
     },
   };
@@ -180,15 +182,34 @@ export async function createPayout({
 }
 
 /**
- * Mark a pending payout as paid.
+ * Mark a pending payout as invoiced (invoice received from consignor).
+ */
+export async function markInvoiced(payoutId: string) {
+  const payout = await prisma.payout.findUniqueOrThrow({
+    where: { id: payoutId },
+  });
+
+  if (payout.status !== "pending") {
+    throw new Error(`Cannot mark as invoiced: payout is "${payout.status}" (must be "pending")`);
+  }
+
+  return prisma.payout.update({
+    where: { id: payoutId },
+    data: { status: "invoiced" },
+    include: { consignor: true },
+  });
+}
+
+/**
+ * Mark an invoiced payout as paid.
  */
 export async function markPaid(payoutId: string) {
   const payout = await prisma.payout.findUniqueOrThrow({
     where: { id: payoutId },
   });
 
-  if (payout.status === "paid") {
-    throw new Error("Payout is already marked as paid");
+  if (payout.status !== "invoiced") {
+    throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be "invoiced")`);
   }
 
   return prisma.payout.update({

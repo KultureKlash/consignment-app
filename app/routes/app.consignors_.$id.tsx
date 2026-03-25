@@ -307,7 +307,7 @@ export default function ConsignorDetail() {
             </div>
             <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(227,227,227,0.5)" }}>
               <Link
-                to="/app/payouts"
+                to={`/app/payouts?consignor=${consignor.id}`}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

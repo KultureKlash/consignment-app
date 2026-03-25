@@ -526,3 +526,14 @@ export async function getConsignorBalance(consignorId: string): Promise<number> 
 
   return totalEarnings - totalPayouts;
 }
+
+/**
+ * Get total amount already paid out to a consignor.
+ */
+export async function getConsignorPaidTotal(consignorId: string): Promise<number> {
+  const result = await prisma.payout.aggregate({
+    where: { consignorId, status: "paid" },
+    _sum: { amount: true },
+  });
+  return result._sum.amount ?? 0;
+}
