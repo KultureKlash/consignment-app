@@ -139,8 +139,8 @@ describe("payouts.server — createPayout", () => {
 });
 
 describe("payouts.server — markPaid", () => {
-  it("marks a pending payout as paid", async () => {
-    const consignor = await createTestConsignor();
+  it("marks an invoiced payout as paid (business consignor)", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "business" });
     const { variant } = await setupVariant();
     const sale = await createSoldItem(consignor.id, variant.id, 200);
 
@@ -154,8 +154,64 @@ describe("payouts.server — markPaid", () => {
     expect(updated.status).toBe("paid");
   });
 
-  it("rejects marking an already paid payout", async () => {
-    const consignor = await createTestConsignor();
+  it("rejects pending → paid for business consignors (must be invoiced first)", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "business" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    await expect(markPaid(payout.id)).rejects.toThrow('must be "invoiced"');
+  });
+
+  it("allows pending → paid for individual consignors (skip invoice)", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "individual" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    const updated = await markPaid(payout.id);
+    expect(updated.status).toBe("paid");
+  });
+
+  it("also allows invoiced → paid for individual consignors", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "individual" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    await markInvoiced(payout.id);
+    const updated = await markPaid(payout.id);
+    expect(updated.status).toBe("paid");
+  });
+
+  it("rejects marking an already paid payout (individual)", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "individual" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    await markPaid(payout.id);
+    await expect(markPaid(payout.id)).rejects.toThrow('must be "pending" or "invoiced"');
+  });
+
+  it("rejects marking an already paid payout (business)", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "business" });
     const { variant } = await setupVariant();
     const sale = await createSoldItem(consignor.id, variant.id, 200);
 
@@ -166,7 +222,6 @@ describe("payouts.server — markPaid", () => {
 
     await markInvoiced(payout.id);
     await markPaid(payout.id);
-
     await expect(markPaid(payout.id)).rejects.toThrow('must be "invoiced"');
   });
 });

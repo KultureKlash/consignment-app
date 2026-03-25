@@ -64,7 +64,7 @@ export default function PortalListingEdit() {
 
   return (
     <div>
-      <AppHeader title="Edit Listing" subtitle="Update your submitted listing" consignorName={consignor.name} notifications={parentData?.notifications} />
+      <AppHeader title="Edit Listing" subtitle="Update your submitted listing" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 max-w-2xl">
         <button

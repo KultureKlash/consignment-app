@@ -5,9 +5,11 @@ import { useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { createListing, cancelListing } from "~/services/listings.server";
+import { adminEditListing } from "~/services/submission.server";
 import prisma from "~/db.server";
 import CreateListingForm from "~/components/CreateListingForm";
 import ListingsTable from "~/components/ListingsTable";
+import type { EditApproveFields } from "~/components/ListingsTable";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -84,8 +86,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         const imageData = (formData.get("image") as string ?? "").trim() || undefined;
 
+        const costRaw = (formData.get("cost") as string ?? "").trim();
+        const cost = costRaw ? Number(costRaw) : undefined;
+
         const listing = await createListing({
-          admin, styleId, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData,
+          admin, styleId, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData, cost,
         });
 
         return { listing, intent, quantity };
@@ -97,6 +102,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           listingId: formData.get("listingId") as string,
         });
         return { listing, intent };
+      }
+
+      case "admin-edit": {
+        await adminEditListing({
+          admin,
+          listingId: formData.get("listingId") as string,
+          title: (formData.get("title") as string) || undefined,
+          brand: (formData.get("brand") as string) || undefined,
+          category: (formData.get("category") as string) || undefined,
+          styleId: (formData.get("styleId") as string) || undefined,
+          size: (formData.get("size") as string) || undefined,
+          gtin: (formData.get("gtin") as string) || undefined,
+          price: formData.get("price") ? Number(formData.get("price")) : undefined,
+          cost: formData.has("cost") ? (formData.get("cost") ? Number(formData.get("cost")) : null) : undefined,
+        });
+        return { intent };
       }
 
       default:
@@ -111,9 +132,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Inventory() {
   const { consignors, listings, knownBrands } = useLoaderData<typeof loader>();
   const cancelFetcher = useFetcher();
+  const editFetcher = useFetcher();
   const shopify = useAppBridge();
 
   const cancelLoading = ["loading", "submitting"].includes(cancelFetcher.state);
+  const editLoading = ["loading", "submitting"].includes(editFetcher.state);
 
   useEffect(() => {
     const data = cancelFetcher.data as Record<string, unknown> | undefined;
@@ -125,8 +148,24 @@ export default function Inventory() {
     }
   }, [cancelFetcher.data, shopify]);
 
+  useEffect(() => {
+    const data = editFetcher.data as Record<string, unknown> | undefined;
+    if (!data) return;
+    if (data.error) {
+      shopify.toast.show(data.error as string);
+    } else if (data.intent === "admin-edit") {
+      shopify.toast.show("Listing updated");
+    }
+  }, [editFetcher.data, shopify]);
+
   const handleCancel = (listingId: string) => {
     cancelFetcher.submit({ intent: "cancel", listingId }, { method: "POST" });
+  };
+
+  const handleAdminEdit = (listingId: string, fields: EditApproveFields) => {
+    const submitData: Record<string, string> = { intent: "admin-edit", listingId, ...fields };
+    if (!fields.cost) delete submitData.cost;
+    editFetcher.submit(submitData, { method: "POST" });
   };
 
   return (
@@ -134,7 +173,7 @@ export default function Inventory() {
       <CreateListingForm consignors={consignors} knownBrands={knownBrands} />
 
       <s-section heading="Recent Listings">
-        <ListingsTable listings={listings} grouped onCancel={handleCancel} isLoading={cancelLoading} />
+        <ListingsTable listings={listings} grouped onCancel={handleCancel} onAdminEdit={handleAdminEdit} isLoading={cancelLoading || editLoading} />
         {listings.length > 0 && (
           <div style={{ textAlign: "center", marginTop: "12px" }}>
             <Link

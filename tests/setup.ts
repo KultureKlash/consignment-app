@@ -23,12 +23,13 @@ afterAll(async () => {
 });
 
 // Helper to create a test consignor
-export async function createTestConsignor(overrides: { name?: string; email?: string; feeRate?: number } = {}) {
+export async function createTestConsignor(overrides: { name?: string; email?: string; feeRate?: number; taxStatus?: string } = {}) {
   return prisma.consignor.create({
     data: {
       name: overrides.name ?? "Test Consignor",
       email: overrides.email ?? `test-${Date.now()}@example.com`,
       feeRate: overrides.feeRate ?? 0.15,
+      taxStatus: overrides.taxStatus ?? "individual",
     },
   });
 }

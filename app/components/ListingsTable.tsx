@@ -2,13 +2,15 @@ import { useState, useCallback } from "react";
 import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
 import { compareSizes } from "~/lib/size-order";
+import { fmt } from "~/lib/currency";
 
 type Listing = {
   id: string;
   price: number | { toFixed: (digits: number) => string };
+  cost?: number | null;
   status: string;
   createdAt: string | Date;
-  consignor: { name: string; email: string };
+  consignor: { name: string; email: string; storeOwned?: boolean };
   variant: {
     size: string;
     gtin: string | null;
@@ -24,6 +26,7 @@ export type EditApproveFields = {
   size: string;
   gtin: string;
   price: string;
+  cost?: string;
 };
 
 type SortKey = "date" | "price" | "status";
@@ -54,6 +57,7 @@ type Props = {
   onApproveWithdrawal?: (listingId: string) => void;
   onCompleteWithdrawal?: (listingId: string) => void;
   onEditApprove?: (listingId: string, fields: EditApproveFields) => void;
+  onAdminEdit?: (listingId: string, fields: EditApproveFields) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   isNavigating?: boolean;
@@ -218,6 +222,7 @@ export default function ListingsTable({
   onApproveWithdrawal,
   onCompleteWithdrawal,
   onEditApprove,
+  onAdminEdit,
   onQuickAdd,
   isLoading,
   isNavigating,
@@ -330,6 +335,7 @@ export default function ListingsTable({
                     onApproveWithdrawal={onApproveWithdrawal}
                     onCompleteWithdrawal={onCompleteWithdrawal}
                     onEditApprove={onEditApprove ? (listing: Listing) => setEditModal(listing) : undefined}
+                    onAdminEdit={onAdminEdit ? (listing: Listing) => setEditModal(listing) : undefined}
                     onQuickAdd={onQuickAdd}
                     isLoading={isLoading}
                     colCount={colCount}
@@ -347,10 +353,18 @@ export default function ListingsTable({
           </table>
         </div>
         {rejectModal && <RejectModal onConfirm={handleRejectConfirm} onCancel={() => setRejectModal(null)} reason={rejectReason} setReason={setRejectReason} />}
-        {editModal && onEditApprove && (
-          <EditApproveModal
+        {editModal && (onEditApprove || onAdminEdit) && (
+          <EditListingModal
             listing={editModal}
-            onConfirm={(fields) => { onEditApprove(editModal.id, fields); setEditModal(null); }}
+            mode={editModal.status === "submitted" && onEditApprove ? "edit-approve" : "edit"}
+            onConfirm={(fields) => {
+              if (editModal.status === "submitted" && onEditApprove) {
+                onEditApprove(editModal.id, fields);
+              } else if (onAdminEdit) {
+                onAdminEdit(editModal.id, fields);
+              }
+              setEditModal(null);
+            }}
             onCancel={() => setEditModal(null)}
           />
         )}
@@ -491,7 +505,7 @@ function FlatRow({
         {l.variant.gtin || "—"}
       </td>
       <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-        ${Number(l.price).toFixed(2)}
+        ${fmt(Number(l.price))}
       </td>
       <td style={tdStyle}>
         <div>{l.consignor.name}</div>
@@ -534,6 +548,7 @@ function GroupRows({
   onApproveWithdrawal,
   onCompleteWithdrawal,
   onEditApprove,
+  onAdminEdit,
   onQuickAdd,
   isLoading,
   colCount,
@@ -555,6 +570,7 @@ function GroupRows({
   onApproveWithdrawal?: (id: string) => void;
   onCompleteWithdrawal?: (id: string) => void;
   onEditApprove?: (listing: Listing) => void;
+  onAdminEdit?: (listing: Listing) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   colCount: number;
@@ -743,7 +759,7 @@ function GroupRows({
               {l.variant.gtin || "—"}
             </td>
             <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-              ${Number(l.price).toFixed(2)}
+              ${fmt(Number(l.price))}
             </td>
             <td style={tdStyle}>
               <div>{l.consignor.name}</div>
@@ -801,6 +817,17 @@ function GroupRows({
                       bg="#eff6ff"
                       border="#bfdbfe"
                       onClick={() => onActivate(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {onAdminEdit && !["submitted", "sold", "cancelled", "rejected", "withdrawn"].includes(l.status) && (
+                    <ActionBtn
+                      label="Edit"
+                      icon={<Pencil size={13} />}
+                      color="#7c3aed"
+                      bg="#f5f3ff"
+                      border="#c4b5fd"
+                      onClick={() => onAdminEdit(l)}
                       disabled={isLoading}
                     />
                   )}
@@ -1013,8 +1040,9 @@ const editLabelStyle: React.CSSProperties = {
   letterSpacing: "0.03em",
 };
 
-function EditApproveModal({ listing, onConfirm, onCancel }: {
+function EditListingModal({ listing, mode, onConfirm, onCancel }: {
   listing: Listing;
+  mode: "edit-approve" | "edit";
   onConfirm: (fields: EditApproveFields) => void;
   onCancel: () => void;
 }) {
@@ -1024,7 +1052,9 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
   const [styleId, setStyleId] = useState(listing.variant.product.styleId ?? "");
   const [size, setSize] = useState(listing.variant.size);
   const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
-  const [price, setPrice] = useState(String(Number(listing.price).toFixed(2)));
+  const [price, setPrice] = useState(String(fmt(Number(listing.price))));
+  const [cost, setCost] = useState(listing.cost != null ? String(listing.cost) : "");
+  const isStoreOwned = listing.consignor.storeOwned ?? false;
 
   const canSubmit = title.trim() && size.trim() && Number(price) > 0;
 
@@ -1039,7 +1069,6 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
 
   return (
     <div
-      onClick={onCancel}
       style={{
         position: "fixed",
         inset: 0,
@@ -1052,7 +1081,6 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           background: "#fff",
           borderRadius: "12px",
@@ -1066,10 +1094,14 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
           <Pencil size={16} color="#7c3aed" />
-          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>Edit & Approve</h3>
+          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>
+            {mode === "edit-approve" ? "Edit & Approve" : "Edit Listing"}
+          </h3>
         </div>
         <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
-          Fix any mistakes, then approve the listing in one step.
+          {mode === "edit-approve"
+            ? "Fix any mistakes, then approve the listing in one step."
+            : "Edit listing details."}
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1143,24 +1175,41 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
             </div>
           </div>
 
-          <div>
-            <label style={editLabelStyle}>Price ($)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              style={editInputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              step="0.01"
-              min="0.01"
-            />
+          <div style={{ display: "grid", gridTemplateColumns: isStoreOwned ? "1fr 1fr" : "1fr", gap: "12px" }}>
+            <div>
+              <label style={editLabelStyle}>Price ($)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                style={editInputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+            {isStoreOwned && (
+              <div>
+                <label style={editLabelStyle}>Cost ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  style={editInputStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Consignor info (read-only) */}
         <div style={{ marginTop: "12px", padding: "8px 12px", borderRadius: "8px", background: "#f9fafb", fontSize: "12px", color: "#6d7175" }}>
-          Submitted by <strong style={{ fontWeight: 600, color: "#1a1a1a" }}>{listing.consignor.name}</strong> ({listing.consignor.email})
+          {listing.consignor.name} ({listing.consignor.email})
+          {isStoreOwned && <span style={{ marginLeft: "6px", padding: "1px 6px", borderRadius: "4px", background: "#dbeafe", color: "#1e40af", fontWeight: 600, fontSize: "10px" }}>Store</span>}
         </div>
 
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
@@ -1181,7 +1230,11 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
             Cancel
           </button>
           <button
-            onClick={() => onConfirm({ title: title.trim(), brand: brand.trim(), category: category.trim(), styleId: styleId.trim(), size: size.trim(), gtin: gtin.trim(), price })}
+            onClick={() => onConfirm({
+              title: title.trim(), brand: brand.trim(), category: category.trim(), styleId: styleId.trim(),
+              size: size.trim(), gtin: gtin.trim(), price,
+              ...(isStoreOwned ? { cost: cost.trim() } : {}),
+            })}
             disabled={!canSubmit}
             style={{
               padding: "8px 16px",
@@ -1198,7 +1251,7 @@ function EditApproveModal({ listing, onConfirm, onCancel }: {
             onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = "#6d28d9"; }}
             onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = "#7c3aed"; }}
           >
-            Save & Approve
+            {mode === "edit-approve" ? "Save & Approve" : "Save Changes"}
           </button>
         </div>
       </div>

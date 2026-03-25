@@ -8,6 +8,7 @@ import { ChevronRight, Search } from "lucide-react";
 import CustomSelect from "~/components/CustomSelect";
 import DateRangeFilter from "~/components/DateRangeFilter";
 import { searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
+import { fmt } from "~/lib/currency";
 import type { Prisma } from "@prisma/client";
 
 const STATUS_OPTIONS = [
@@ -135,9 +136,6 @@ function formatDate(dateStr: string): string {
   return `${date} at ${time}`;
 }
 
-function formatCurrency(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function getStatusBadge(order: { status: string; paymentStatus: string }): { label: string; bg: string; color: string } {
   if (order.status === "cancelled") return { label: "Cancelled", bg: "#fef2f2", color: "#dc2626" };
@@ -315,7 +313,7 @@ export default function Orders() {
                         {formatDate(o.createdAt as unknown as string)}
                       </td>
                       <td style={{ padding: "14px 16px", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "#1a1a1a" }}>
-                        ${formatCurrency(o.total)}
+                        ${fmt(o.total)}
                       </td>
                       <td style={{ padding: "14px 16px", color: "#6d7175" }}>
                         {itemSummary}

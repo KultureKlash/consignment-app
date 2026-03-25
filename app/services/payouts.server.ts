@@ -12,6 +12,7 @@ export async function getPayoutsPageData() {
     where: {
       type: "sale",
       payoutItems: { none: {} },
+      consignor: { storeOwned: false },
     },
     include: {
       consignor: true,
@@ -201,15 +202,22 @@ export async function markInvoiced(payoutId: string) {
 }
 
 /**
- * Mark an invoiced payout as paid.
+ * Mark a payout as paid.
+ * - Business consignors: must be "invoiced" (invoice required first)
+ * - Individual consignors: can be "pending" or "invoiced" (no invoice needed)
  */
 export async function markPaid(payoutId: string) {
   const payout = await prisma.payout.findUniqueOrThrow({
     where: { id: payoutId },
+    include: { consignor: true },
   });
 
-  if (payout.status !== "invoiced") {
-    throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be "invoiced")`);
+  const isIndividual = payout.consignor.taxStatus !== "business";
+  const allowedStatuses = isIndividual ? ["pending", "invoiced"] : ["invoiced"];
+
+  if (!allowedStatuses.includes(payout.status)) {
+    const expected = isIndividual ? '"pending" or "invoiced"' : '"invoiced"';
+    throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be ${expected})`);
   }
 
   return prisma.payout.update({

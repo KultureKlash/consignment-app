@@ -5,6 +5,7 @@ import { redirect } from "react-router";
 import { Plus, Package, Trash2, Pencil, Search, Eye, EyeOff, ChevronDown, ChevronRight, PackageX } from "lucide-react";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { AppHeader } from "~/components/portal/AppHeader";
+import { fmt } from "~/lib/currency";
 import { authenticatePortal } from "~/services/portal-auth.server";
 import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal } from "~/services/submission.server";
 import prisma from "~/db.server";
@@ -177,7 +178,7 @@ function InlinePrice({ listingId, price, editable }: { listingId: string; price:
   }, [price, editing]);
 
   if (!editable) {
-    return <span className="font-medium tabular-nums">${price.toFixed(2)}</span>;
+    return <span className="font-medium tabular-nums">${fmt(price)}</span>;
   }
 
   if (!editing) {
@@ -187,7 +188,7 @@ function InlinePrice({ listingId, price, editable }: { listingId: string; price:
         className="font-medium tabular-nums cursor-pointer hover:text-[hsl(var(--cta))] transition-colors"
         title="Click to edit price"
       >
-        ${price.toFixed(2)}
+        ${fmt(price)}
       </button>
     );
   }
@@ -380,7 +381,7 @@ export default function PortalListings() {
 
   return (
     <div>
-      <AppHeader title="My Listings" subtitle="Track and manage your consignment items" consignorName={consignor.name} notifications={parentData?.notifications} />
+      <AppHeader title="My Listings" subtitle="Track and manage your consignment items" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 space-y-4 md:space-y-6">
         {/* Header + New Listing Button */}
@@ -520,7 +521,7 @@ export default function PortalListings() {
                           <InlinePrice listingId={listing.id} price={listing.price} editable={listing.status === "active" || listing.status === "approved_awaiting_dropoff"} />
                         </div>
                         <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
-                          {lowestPrices[listing.variantId] != null ? `$${lowestPrices[listing.variantId].toFixed(2)}` : "—"}
+                          {lowestPrices[listing.variantId] != null ? `$${fmt(lowestPrices[listing.variantId])}` : "—"}
                         </span>
                         <div className="flex justify-center"><StatusBadge status={listing.status} /></div>
                         <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
@@ -598,7 +599,7 @@ export default function PortalListings() {
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs text-muted-foreground">Size {listing.variant.size}</span>
                               {lowestPrices[listing.variantId] != null && (
-                                <span className="text-[10px] text-muted-foreground tabular-nums">· Lowest ${lowestPrices[listing.variantId].toFixed(2)}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums">· Lowest ${fmt(lowestPrices[listing.variantId])}</span>
                               )}
                             </div>
                             <span className="shrink-0 ml-2 text-sm font-bold">

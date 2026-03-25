@@ -5,9 +5,11 @@ import { redirect } from "react-router";
 import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Camera, X, Plus, Package, Lightbulb } from "lucide-react";
 import { processProductImage } from "~/lib/image-processing";
 import { AppHeader } from "~/components/portal/AppHeader";
+import { GlassSelect } from "~/components/portal/GlassSelect";
 import { authenticatePortal } from "~/services/portal-auth.server";
 import { submitListing } from "~/services/submission.server";
 import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, autoSuggest } from "~/lib/categories";
+import { fmt } from "~/lib/currency";
 import type { loader as portalLoader } from "./portal";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -294,7 +296,7 @@ export default function PortalListingNew() {
 
   return (
     <div>
-      <AppHeader title="Submit Listing" subtitle="Submit an item for review" consignorName={consignor.name} notifications={parentData?.notifications} />
+      <AppHeader title="Submit Listing" subtitle="Submit an item for review" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 max-w-2xl">
         {/* Back link */}
@@ -474,36 +476,22 @@ export default function PortalListingNew() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-medium text-muted-foreground block mb-1.5">Category</label>
-                      <div className="relative">
-                        <select
-                          value={mainCategory}
-                          onChange={(e) => { setMainCategory(e.target.value); setSubCategory(""); }}
-                          className="glass-input w-full px-3 py-2.5 rounded-xl text-sm appearance-none cursor-pointer"
-                        >
-                          <option value="">Select...</option>
-                          {MAIN_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                      </div>
+                      <GlassSelect
+                        options={MAIN_CATEGORIES.map((cat) => ({ label: cat, value: cat }))}
+                        value={mainCategory}
+                        onChange={(v) => { setMainCategory(v); setSubCategory(""); }}
+                        placeholder="Select..."
+                      />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-muted-foreground block mb-1.5">Subcategory</label>
-                      <div className="relative">
-                        <select
-                          value={subCategory}
-                          onChange={(e) => setSubCategory(e.target.value)}
-                          className="glass-input w-full px-3 py-2.5 rounded-xl text-sm appearance-none cursor-pointer"
-                          disabled={!mainCategory}
-                        >
-                          <option value="">Select...</option>
-                          {subCategories.map((sub) => (
-                            <option key={sub} value={sub}>{sub}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                      </div>
+                      <GlassSelect
+                        options={subCategories.map((sub) => ({ label: sub, value: sub }))}
+                        value={subCategory}
+                        onChange={setSubCategory}
+                        placeholder="Select..."
+                        disabled={!mainCategory}
+                      />
                     </div>
                   </div>
                   {/* Photo upload */}
@@ -619,7 +607,7 @@ export default function PortalListingNew() {
                   <div className="flex items-center gap-2">
                     <TrendingDown className="w-4 h-4 text-[hsl(var(--success))]" />
                     <div>
-                      <div className="text-sm font-bold tabular-nums">${marketData.lowestPrice.toFixed(2)}</div>
+                      <div className="text-sm font-bold tabular-nums">${fmt(marketData.lowestPrice)}</div>
                       <div className="text-[10px] text-muted-foreground">Lowest active price</div>
                     </div>
                   </div>

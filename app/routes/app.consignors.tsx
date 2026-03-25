@@ -8,6 +8,7 @@ import { getConsignorBalance } from "~/services/orders.server";
 import { createConsignor } from "~/services/consignors.server";
 import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
 import prisma from "~/db.server";
+import { fmt } from "~/lib/currency";
 import { ChevronRight, Plus, X } from "lucide-react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -36,8 +37,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       if (!name) return { error: "Name is required", intent };
       if (!email) return { error: "Email is required", intent };
-      if (isNaN(feeRatePercent) || feeRatePercent < 1 || feeRatePercent > 100) {
-        return { error: "Fee rate must be between 1 and 100", intent };
+      if (isNaN(feeRatePercent) || feeRatePercent < 0 || feeRatePercent > 100) {
+        return { error: "Fee rate must be between 0 and 100", intent };
       }
 
       await createConsignor({ name, email, feeRate: feeRatePercent / 100 });
@@ -159,7 +160,25 @@ export default function Consignors() {
                   onMouseEnter={(e) => { e.currentTarget.style.background = "#f8f9fa"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                 >
-                  <td style={{ padding: "6px", fontWeight: 500 }}>{c.name}</td>
+                  <td style={{ padding: "6px", fontWeight: 500 }}>
+                    {c.name}
+                    {c.storeOwned && (
+                      <span style={{
+                        marginLeft: "8px",
+                        padding: "2px 8px",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        color: "#6d7175",
+                        background: "#f3f4f6",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "9999px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.03em",
+                      }}>
+                        Store
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: "6px" }}>{c.email}</td>
                   <td style={{ padding: "6px" }}>{(c.feeRate * 100).toFixed(0)}%</td>
                   <td
@@ -169,7 +188,7 @@ export default function Consignors() {
                       color: (balances[c.id] ?? 0) > 0 ? "#1a7f37" : "#333",
                     }}
                   >
-                    ${(balances[c.id] ?? 0).toFixed(2)}
+                    ${fmt(balances[c.id] ?? 0)}
                   </td>
                   <td style={{ padding: "6px", color: "#9ca3af" }}>
                     <ChevronRight size={16} />
@@ -224,7 +243,7 @@ export default function Consignors() {
                 <div style={{ position: "relative" }}>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="100"
                     step="1"
                     value={feeRate}
