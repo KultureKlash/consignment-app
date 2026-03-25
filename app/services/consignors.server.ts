@@ -31,6 +31,22 @@ export async function getConsignorDetail(id: string) {
 }
 
 /**
+ * Create a new consignor with name, email, and fee rate.
+ */
+export async function createConsignor(data: { name: string; email: string; feeRate: number }) {
+  const existing = await prisma.consignor.findUnique({ where: { email: data.email } });
+  if (existing) throw new Error("A consignor with this email already exists");
+
+  if (data.feeRate < 0.01 || data.feeRate > 0.99) {
+    throw new Error("Fee rate must be between 1% and 99%");
+  }
+
+  return prisma.consignor.create({
+    data: { name: data.name, email: data.email, feeRate: data.feeRate },
+  });
+}
+
+/**
  * Update consignor profile fields (name, email, feeRate).
  */
 export async function updateConsignor(

@@ -171,6 +171,7 @@ model Payout {
   consignorId  String
   amount       Float
   status       String   @default("pending") // "pending" | "invoiced" | "paid"
+  invoiceSent  Boolean  @default(false)      // consignor self-reports invoice sent
 
   consignor    Consignor @relation(fields: [consignorId], references: [id])
   items        PayoutItem[]

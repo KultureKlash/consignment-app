@@ -1,10 +1,14 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useNavigate } from "react-router";
+import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useFetcher, useNavigate } from "react-router";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorBalance } from "~/services/orders.server";
+import { createConsignor } from "~/services/consignors.server";
+import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
 import prisma from "~/db.server";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -19,18 +23,122 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { consignors, balances };
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  try {
+    if (intent === "create") {
+      const name = (formData.get("name") as string ?? "").trim();
+      const email = (formData.get("email") as string ?? "").trim().toLowerCase();
+      const feeRatePercent = parseFloat(formData.get("feeRate") as string);
+
+      if (!name) return { error: "Name is required", intent };
+      if (!email) return { error: "Email is required", intent };
+      if (isNaN(feeRatePercent) || feeRatePercent < 1 || feeRatePercent > 99) {
+        return { error: "Fee rate must be between 1 and 99", intent };
+      }
+
+      await createConsignor({ name, email, feeRate: feeRatePercent / 100 });
+      return { success: true, intent };
+    }
+    throw new Error("Invalid intent");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { error: message, intent };
+  }
+};
+
+const modalOverlay: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 50,
+};
+
+const modalCard: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "14px",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+  width: "100%",
+  maxWidth: "440px",
+  overflow: "hidden",
+};
+
 export default function Consignors() {
   const { consignors, balances } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const fetcher = useFetcher();
+  const shopify = useAppBridge();
+
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [feeRate, setFeeRate] = useState("15");
+
+  const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
+
+  useEffect(() => {
+    const data = fetcher.data as Record<string, unknown> | undefined;
+    if (!data) return;
+    if (data.error) {
+      shopify.toast.show(data.error as string);
+    } else if (data.success && data.intent === "create") {
+      shopify.toast.show("Consignor created");
+      setShowModal(false);
+      setName("");
+      setEmail("");
+      setFeeRate("15");
+    }
+  }, [fetcher.data, shopify]);
+
+  const handleCreate = () => {
+    fetcher.submit(
+      { intent: "create", name, email, feeRate },
+      { method: "POST" },
+    );
+  };
+
+  const canSubmit = name.trim() && email.trim() && !isNaN(parseFloat(feeRate));
 
   return (
     <s-page heading="Consignors">
       <s-section>
-        <div style={{ marginBottom: "8px", fontSize: "13px", color: "#6d7175" }}>
-          {consignors.length} consignor{consignors.length !== 1 ? "s" : ""}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+          <span style={{ fontSize: "13px", color: "#6d7175" }}>
+            {consignors.length} consignor{consignors.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#fff",
+              background: "#111827",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#1f2937"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#111827"; }}
+          >
+            <Plus size={14} />
+            Add Consignor
+          </button>
         </div>
+
         {consignors.length === 0 ? (
-          <s-paragraph>No consignors yet.</s-paragraph>
+          <s-paragraph>No consignors yet. Add one to get started.</s-paragraph>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
@@ -72,6 +180,106 @@ export default function Consignors() {
           </table>
         )}
       </s-section>
+
+      {showModal && (
+        <div style={modalOverlay} onClick={() => setShowModal(false)}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
+              <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>Add Consignor</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6d7175" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={labelStyle}>Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onFocus={handleFocus}
+                  onBlur={handleBlurStyle}
+                  style={inputStyle}
+                  placeholder="Full name"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={handleFocus}
+                  onBlur={handleBlurStyle}
+                  style={inputStyle}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Fee Rate (%)</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    value={feeRate}
+                    onChange={(e) => setFeeRate(e.target.value)}
+                    onFocus={handleFocus}
+                    onBlur={handleBlurStyle}
+                    style={{ ...inputStyle, paddingRight: "32px" }}
+                  />
+                  <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: "#6d7175", fontSize: "14px", pointerEvents: "none" }}>%</span>
+                </div>
+                <span style={{ fontSize: "11px", color: "#8c9196", marginTop: "4px", display: "block" }}>
+                  Platform fee deducted from sales. Consignor keeps {100 - (parseFloat(feeRate) || 0)}%.
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "#374151",
+                  background: "#f3f4f6",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!canSubmit || isSubmitting}
+                style={{
+                  padding: "8px 20px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#fff",
+                  background: canSubmit ? "#111827" : "#9ca3af",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: canSubmit ? "pointer" : "default",
+                  opacity: isSubmitting ? 0.7 : 1,
+                  fontFamily: "inherit",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {isSubmitting ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </s-page>
   );
 }

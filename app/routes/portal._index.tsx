@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData } from "react-router";
 import { DollarSign, Package, ShoppingBag, Clock } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
+import { InfoTip } from "~/components/portal/InfoTip";
 import { authenticatePortal } from "~/services/portal-auth.server";
 import { getConsignorDashboard } from "~/services/portal-dashboard.server";
 import { redirect } from "react-router";
@@ -30,6 +31,7 @@ export default function PortalDashboard() {
   const {
     consignor,
     stats,
+    payoutBreakdown,
     monthlyEarnings,
     currentMonthEarnings,
     listingStatusCounts,
@@ -42,27 +44,31 @@ export default function PortalDashboard() {
   const statCards = [
     {
       label: "Total Earnings",
-      value: `$${stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `$${stats.totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: DollarSign,
-      change: "Available balance",
+      change: "Paid out",
+      tip: "Total amount that has been paid out to you.",
     },
     {
       label: "Active Listings",
       value: String(stats.activeListings),
       icon: Package,
       change: "Currently listed",
+      tip: "Items currently listed for sale in the store.",
     },
     {
       label: "Items Sold",
       value: String(stats.itemsSold),
       icon: ShoppingBag,
       change: "All time",
+      tip: "Total number of your items that have been sold.",
     },
     {
       label: "Pending Payouts",
       value: `$${stats.pendingPayouts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: Clock,
-      change: `${stats.pendingPayoutCount} pending`,
+      change: "Awaiting payout",
+      tip: "Earnings from sales that haven't been paid out yet. Check the Payouts page for details.",
     },
   ];
 
@@ -71,7 +77,13 @@ export default function PortalDashboard() {
       <AppHeader title={`Hi, ${consignor.name.split(" ")[0]}`} subtitle="Welcome to your dashboard" consignorName={consignor.name} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 space-y-4 md:space-y-6">
-        {/* Stats */}
+        {/* Legend + Stats */}
+        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 animate-slide-up">
+          <span className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-full bg-amber-400/20">
+            <span className="text-[10px] font-bold leading-none text-amber-300">i</span>
+          </span>
+          Tap for info on what each term means
+        </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {statCards.map((stat, i) => (
             <div
@@ -81,7 +93,10 @@ export default function PortalDashboard() {
             >
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
-                  <p className="text-[11px] md:text-sm text-muted-foreground truncate">{stat.label}</p>
+                  <p className="text-[11px] md:text-sm text-muted-foreground flex items-center gap-1.5">
+                    <span className="truncate">{stat.label}</span>
+                    <InfoTip text={stat.tip} />
+                  </p>
                   <p className="text-base md:text-2xl font-bold mt-0.5 md:mt-1 tracking-tight tabular-nums">{stat.value}</p>
                 </div>
                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
@@ -92,6 +107,36 @@ export default function PortalDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Payout Breakdown */}
+        {(payoutBreakdown.unbatched > 0 || payoutBreakdown.awaitingInvoice > 0 || payoutBreakdown.invoiceSent > 0) && (
+          <div className="glass-panel rounded-2xl p-3 md:p-4 animate-slide-up" style={{ animationDelay: "320ms" }}>
+            <p className="text-xs text-muted-foreground mb-2">Payout Breakdown</p>
+            <div className="flex flex-wrap gap-4 md:gap-8">
+              {payoutBreakdown.unbatched > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Unbatched</span>
+                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.unbatched.toFixed(2)}</span>
+                </div>
+              )}
+              {payoutBreakdown.awaitingInvoice > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[hsl(var(--warning))]" />
+                  <span className="text-xs text-muted-foreground">Awaiting Invoice</span>
+                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.awaitingInvoice.toFixed(2)}</span>
+                </div>
+              )}
+              {payoutBreakdown.invoiceSent > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="text-xs text-muted-foreground">Invoice Received</span>
+                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.invoiceSent.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Performance Chart + Listings Status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

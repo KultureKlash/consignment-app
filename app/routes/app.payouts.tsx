@@ -4,9 +4,9 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useCallback, useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getPayoutsPageData, createPayout, markPaid, cancelPayout } from "~/services/payouts.server";
+import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/payouts.server";
 import {
-  DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X,
+  DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X, FileText,
 } from "lucide-react";
 import CustomSelect from "~/components/CustomSelect";
 import DateRangeFilter from "~/components/DateRangeFilter";
@@ -28,6 +28,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const transactionIds = JSON.parse(formData.get("transactionIds") as string) as string[];
         const payout = await createPayout({ consignorId, transactionIds });
         return { payout, intent };
+      }
+      case "mark-invoiced": {
+        const payoutId = formData.get("payoutId") as string;
+        await markInvoiced(payoutId);
+        return { intent };
       }
       case "mark-paid": {
         const payoutId = formData.get("payoutId") as string;
@@ -211,7 +216,8 @@ export default function Payouts() {
   // Recalculate stats from filtered data
   const filteredStats = {
     totalOutstanding: filteredUnpaid.reduce((sum, e) => sum + e.total, 0),
-    totalPending: filteredPayouts.filter((p) => p.status !== "paid").reduce((sum, p) => sum + p.amount, 0),
+    totalPending: filteredPayouts.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0),
+    totalInvoiced: filteredPayouts.filter((p) => p.status === "invoiced").reduce((sum, p) => sum + p.amount, 0),
     totalPaid: filteredPayouts.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0),
   };
 
@@ -226,6 +232,8 @@ export default function Payouts() {
       shopify.toast.show("Payout created");
       setSelectedTxs({});
       setExpandedConsignor(null);
+    } else if (data.intent === "mark-invoiced") {
+      shopify.toast.show("Payout marked as invoiced");
     } else if (data.intent === "mark-paid") {
       shopify.toast.show("Payout marked as paid");
     } else if (data.intent === "cancel") {
@@ -277,6 +285,10 @@ export default function Payouts() {
     );
   };
 
+  const handleMarkInvoiced = (payoutId: string) => {
+    fetcher.submit({ intent: "mark-invoiced", payoutId }, { method: "POST" });
+  };
+
   const handleMarkPaid = (payoutId: string) => {
     fetcher.submit({ intent: "mark-paid", payoutId }, { method: "POST" });
   };
@@ -298,10 +310,11 @@ export default function Payouts() {
         </header>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
           <StatCard label="Outstanding" value={`$${fmt(filteredStats.totalOutstanding)}`} icon={DollarSign} accentColor="#059669" bgTint="#f0fdf4" />
-          <StatCard label="Pending Payouts" value={`$${fmt(filteredStats.totalPending)}`} icon={Clock} accentColor="#d97706" bgTint="#fffbeb" />
-          <StatCard label="Paid Out" value={`$${fmt(filteredStats.totalPaid)}`} icon={CheckCircle2} accentColor="#2563eb" bgTint="#eff6ff" />
+          <StatCard label="Awaiting Invoice" value={`$${fmt(filteredStats.totalPending)}`} icon={Clock} accentColor="#d97706" bgTint="#fffbeb" />
+          <StatCard label="Invoice Received" value={`$${fmt(filteredStats.totalInvoiced)}`} icon={FileText} accentColor="#2563eb" bgTint="#eff6ff" />
+          <StatCard label="Paid Out" value={`$${fmt(filteredStats.totalPaid)}`} icon={CheckCircle2} accentColor="#059669" bgTint="#ecfdf5" />
         </div>
 
         {/* Filters */}
@@ -564,9 +577,30 @@ export default function Payouts() {
                             {relativeDate(payout.createdAt as unknown as string)}
                           </span>
                           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
-                            <span style={{ padding: "3px 10px", borderRadius: "9999px", fontSize: "11px", fontWeight: 600, background: "#fffbeb", color: "#d97706", textTransform: "capitalize", width: "48px", textAlign: "center" }}>
-                              {payout.status}
+                            <span style={{
+                              padding: "3px 10px",
+                              borderRadius: "9999px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: payout.status === "invoiced" ? "#eff6ff" : "#fffbeb",
+                              color: payout.status === "invoiced" ? "#2563eb" : "#d97706",
+                              whiteSpace: "nowrap",
+                            }}>
+                              {payout.status === "pending" ? "Awaiting Invoice" : "Invoice Received"}
                             </span>
+                            {payout.status === "pending" && payout.invoiceSent && (
+                              <span style={{
+                                padding: "3px 10px",
+                                borderRadius: "9999px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                background: "#eff6ff",
+                                color: "#2563eb",
+                                whiteSpace: "nowrap",
+                              }}>
+                                Invoice Sent
+                              </span>
+                            )}
                             <span style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums", width: "90px", textAlign: "right" }}>
                               ${fmt(payout.amount)}
                             </span>
@@ -607,21 +641,35 @@ export default function Payouts() {
                               );
                             })}
                             <div style={{ display: "flex", gap: "8px", padding: "12px 20px 12px 48px", borderTop: "1px solid rgba(227,227,227,0.3)" }}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMarkPaid(payout.id); }}
-                                disabled={isSubmitting}
-                                style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#059669", border: "none", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
-                              >
-                                <CheckCircle2 size={12} style={{ marginRight: "4px", verticalAlign: "middle" }} />
-                                Mark Paid
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleCancel(payout.id); }}
-                                disabled={isSubmitting}
-                                style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
-                              >
-                                Cancel
-                              </button>
+                              {payout.status === "pending" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleMarkInvoiced(payout.id); }}
+                                  disabled={isSubmitting}
+                                  style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#2563eb", border: "none", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                                >
+                                  <FileText size={12} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                                  Mark Invoiced
+                                </button>
+                              )}
+                              {payout.status === "invoiced" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleMarkPaid(payout.id); }}
+                                  disabled={isSubmitting}
+                                  style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#059669", border: "none", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                                >
+                                  <CheckCircle2 size={12} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                                  Mark Paid
+                                </button>
+                              )}
+                              {payout.status === "pending" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleCancel(payout.id); }}
+                                  disabled={isSubmitting}
+                                  style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                                >
+                                  Cancel
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

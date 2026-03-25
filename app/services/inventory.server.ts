@@ -2,7 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Variant } from "@prisma/client";
 
-async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
+export async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(`#graphql
     query {
       locations(first: 1) {

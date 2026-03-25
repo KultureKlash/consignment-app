@@ -2,6 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify-taxonomy.server";
+import { getPrimaryLocationId } from "~/services/inventory.server";
 
 function deriveSku(product: Product, variant: Variant): string {
   const isFootwear = !product.category || product.category.startsWith("Footwear");
@@ -182,6 +183,31 @@ export async function ensureShopifyProductAndVariant({
       }
     }
 
+    // Enable inventory tracking FIRST — must complete before syncInventory runs
+    await admin.graphql(
+      `#graphql
+      mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+        inventoryItemUpdate(id: $id, input: $input) {
+          userErrors { field message }
+        }
+      }`,
+      { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true } } }
+    );
+
+    // Activate inventory at the primary location (required before inventorySetQuantities works)
+    const locationId = await getPrimaryLocationId(admin);
+    const activateRes = await admin.graphql(
+      `#graphql
+      mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
+        inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
+          inventoryLevel { id }
+          userErrors { field message }
+        }
+      }`,
+      { variables: { inventoryItemId: shopifyVariant.inventoryItem.id, locationId } }
+    );
+    await activateRes.json();
+
     await Promise.all([
       prisma.product.update({
         where: { id: product.id },
@@ -197,38 +223,32 @@ export async function ensureShopifyProductAndVariant({
           inventoryItemId: shopifyVariant.inventoryItem.id,
         },
       }),
-      admin.graphql(
+    ]);
+
+    // Set barcode on the variant + SKU on the inventory item
+    const sku = deriveSku(product, variant);
+    if (variant.gtin) {
+      await admin.graphql(
+        `#graphql
+        mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants { id barcode }
+            userErrors { field message }
+          }
+        }`,
+        { variables: { productId: shopifyProduct.id, variants: [{ id: shopifyVariant.id, barcode: variant.gtin }] } }
+      );
+    }
+    if (sku) {
+      await admin.graphql(
         `#graphql
         mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
           inventoryItemUpdate(id: $id, input: $input) {
             userErrors { field message }
           }
         }`,
-        { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true } } }
-      ),
-    ]);
-
-    // Set barcode + SKU on the auto-created variant (must run after product is fully committed)
-    const sku = deriveSku(product, variant);
-    if (variant.gtin || sku) {
-      const variantUpdate: Record<string, string> = { id: shopifyVariant.id };
-      if (variant.gtin) variantUpdate.barcode = variant.gtin;
-      if (sku) variantUpdate.sku = sku;
-      const barcodeRes = await admin.graphql(
-        `#graphql
-        mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-            productVariants { id barcode sku }
-            userErrors { field message }
-          }
-        }`,
-        { variables: { productId: shopifyProduct.id, variants: [variantUpdate] } }
+        { variables: { id: shopifyVariant.inventoryItem.id, input: { sku } } }
       );
-      const barcodeData = await barcodeRes.json();
-      const barcodeErrors = barcodeData.data.productVariantsBulkUpdate.userErrors;
-      if (barcodeErrors.length > 0) {
-        console.error("Barcode/SKU sync error:", barcodeErrors);
-      }
     }
 
     return;
@@ -258,7 +278,6 @@ export async function ensureShopifyProductAndVariant({
           {
             optionValues: [{ name: variant.size, optionName: "Size" }],
             barcode: variant.gtin || "",
-            sku: deriveSku(product, variant),
           },
         ],
       },
@@ -276,24 +295,38 @@ export async function ensureShopifyProductAndVariant({
 
   const shopifyVariant = productVariants[0];
 
-  await Promise.all([
-    prisma.variant.update({
-      where: { id: variant.id },
-      data: {
-        shopifyVariantId: shopifyVariant.id,
-        inventoryItemId: shopifyVariant.inventoryItem.id,
-      },
-    }),
-    admin.graphql(
-      `#graphql
-      mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
-        inventoryItemUpdate(id: $id, input: $input) {
-          userErrors { field message }
-        }
-      }`,
-      { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true } } }
-    ),
-  ]);
+  // Enable inventory tracking + set SKU on the inventory item
+  const variantSku = deriveSku(product, variant);
+  await admin.graphql(
+    `#graphql
+    mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+      inventoryItemUpdate(id: $id, input: $input) {
+        userErrors { field message }
+      }
+    }`,
+    { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true, ...(variantSku ? { sku: variantSku } : {}) } } }
+  );
+
+  // Activate inventory at the primary location (required before inventorySetQuantities works)
+  const locationId = await getPrimaryLocationId(admin);
+  await admin.graphql(
+    `#graphql
+    mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
+      inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
+        inventoryLevel { id }
+        userErrors { field message }
+      }
+    }`,
+    { variables: { inventoryItemId: shopifyVariant.inventoryItem.id, locationId } }
+  );
+
+  await prisma.variant.update({
+    where: { id: variant.id },
+    data: {
+      shopifyVariantId: shopifyVariant.id,
+      inventoryItemId: shopifyVariant.inventoryItem.id,
+    },
+  });
 }
 
 export async function backfillProductImages(admin: AdminApiContext): Promise<number> {
