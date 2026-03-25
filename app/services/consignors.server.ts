@@ -37,8 +37,8 @@ export async function createConsignor(data: { name: string; email: string; feeRa
   const existing = await prisma.consignor.findUnique({ where: { email: data.email } });
   if (existing) throw new Error("A consignor with this email already exists");
 
-  if (data.feeRate < 0.01 || data.feeRate > 0.99) {
-    throw new Error("Fee rate must be between 1% and 99%");
+  if (data.feeRate < 0.01 || data.feeRate > 1) {
+    throw new Error("Fee rate must be between 1% and 100%");
   }
 
   return prisma.consignor.create({
@@ -62,10 +62,10 @@ export async function updateConsignor(
     if (existing) throw new Error("Email already in use by another consignor");
   }
 
-  // Validate fee rate (1–99%)
+  // Validate fee rate (1–100%)
   if (data.feeRate !== undefined) {
-    if (data.feeRate < 0.01 || data.feeRate > 0.99) {
-      throw new Error("Fee rate must be between 1% and 99%");
+    if (data.feeRate < 0.01 || data.feeRate > 1) {
+      throw new Error("Fee rate must be between 1% and 100%");
     }
   }
 

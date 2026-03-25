@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useFetcher } from "react-router";
-import { Bell, ShoppingBag, CreditCard, CheckCircle, Truck } from "lucide-react";
+import { Bell, ShoppingBag, CreditCard, CheckCircle, Truck, XCircle, PackageX, MapPin } from "lucide-react";
 import type { PortalNotification } from "~/services/portal-dashboard.server";
 
 function getInitials(name: string): string {
@@ -30,7 +30,11 @@ const NOTIFICATION_ICONS: Record<string, typeof ShoppingBag> = {
   sale: ShoppingBag,
   payout: CreditCard,
   approved: CheckCircle,
+  rejected: XCircle,
   dropoff: Truck,
+  withdrawal_requested: PackageX,
+  pickup_ready: MapPin,
+  withdrawn: CheckCircle,
 };
 
 export function AppHeader({
@@ -108,7 +112,7 @@ export function AppHeader({
                     No notifications
                   </div>
                 ) : (
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-80 overflow-y-auto glass-scrollbar">
                     {items.map((notif) => {
                       const Icon = NOTIFICATION_ICONS[notif.type] ?? Bell;
                       return (

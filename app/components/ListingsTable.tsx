@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Package, ChevronRight, Plus } from "lucide-react";
+import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
 import { compareSizes } from "~/lib/size-order";
 
@@ -14,6 +14,16 @@ type Listing = {
     gtin: string | null;
     product: { id: string; title: string; styleId: string | null; brand: string | null; category?: string | null; imageUrl?: string | null };
   };
+};
+
+export type EditApproveFields = {
+  title: string;
+  brand: string;
+  category: string;
+  styleId: string;
+  size: string;
+  gtin: string;
+  price: string;
 };
 
 type SortKey = "date" | "price" | "status";
@@ -38,6 +48,12 @@ type Props = {
   listings: Listing[];
   grouped?: boolean;
   onCancel?: (listingId: string) => void;
+  onApprove?: (listingId: string) => void;
+  onReject?: (listingId: string, reason: string) => void;
+  onActivate?: (listingId: string) => void;
+  onApproveWithdrawal?: (listingId: string) => void;
+  onCompleteWithdrawal?: (listingId: string) => void;
+  onEditApprove?: (listingId: string, fields: EditApproveFields) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   isNavigating?: boolean;
@@ -177,9 +193,13 @@ function groupByProduct(listings: Listing[]): ProductGroup[] {
 }
 
 function statusSummary(listings: Listing[]): string {
+  const submitted = listings.filter((l) => l.status === "submitted").length;
+  const approved = listings.filter((l) => l.status === "approved_awaiting_dropoff").length;
   const active = listings.filter((l) => l.status === "active").length;
   const sold = listings.filter((l) => l.status === "sold").length;
   const parts: string[] = [];
+  if (submitted) parts.push(`${submitted} submitted`);
+  if (approved) parts.push(`${approved} approved`);
   if (active) parts.push(`${active} active`);
   if (sold) parts.push(`${sold} sold`);
   if (parts.length === 0) return `${listings.length} listing${listings.length !== 1 ? "s" : ""}`;
@@ -192,6 +212,12 @@ export default function ListingsTable({
   listings,
   grouped,
   onCancel,
+  onApprove,
+  onReject,
+  onActivate,
+  onApproveWithdrawal,
+  onCompleteWithdrawal,
+  onEditApprove,
   onQuickAdd,
   isLoading,
   isNavigating,
@@ -201,6 +227,9 @@ export default function ListingsTable({
   selectedIds,
   onSelectionChange,
 }: Props) {
+  const [rejectModal, setRejectModal] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [editModal, setEditModal] = useState<Listing | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const hasSelection = !!selectedIds && !!onSelectionChange;
 
@@ -244,15 +273,16 @@ export default function ListingsTable({
     onSelectionChange(next);
   };
 
-  const activeListings = listings.filter((l) => l.status === "active");
-  const allActiveSelected = activeListings.length > 0 && activeListings.every((l) => selectedIds?.has(l.id));
+  const selectableStatuses = ["submitted", "approved_awaiting_dropoff", "active"];
+  const selectableListings = listings.filter((l) => selectableStatuses.includes(l.status));
+  const allSelectableSelected = selectableListings.length > 0 && selectableListings.every((l) => selectedIds?.has(l.id));
 
   const toggleAll = () => {
     if (!onSelectionChange) return;
-    if (allActiveSelected) {
+    if (allSelectableSelected) {
       onSelectionChange(new Set());
     } else {
-      onSelectionChange(new Set(activeListings.map((l) => l.id)));
+      onSelectionChange(new Set(selectableListings.map((l) => l.id)));
     }
   };
 
@@ -268,39 +298,63 @@ export default function ListingsTable({
     onSelectionChange(next);
   };
 
+  const handleRejectConfirm = () => {
+    if (rejectModal && rejectReason.trim() && onReject) {
+      onReject(rejectModal, rejectReason.trim());
+      setRejectModal(null);
+      setRejectReason("");
+    }
+  };
+
   // ── Grouped view ──
   if (grouped) {
     const groups = groupByProduct(listings);
 
     return (
-      <div style={wrapperStyle}>
-        <table style={tableStyle}>
-          <tbody>
-            {groups.map((group) => {
-              const isExpanded = expandedGroups.has(group.productId);
-              return (
-                <GroupRows
-                  key={group.productId}
-                  group={group}
-                  isExpanded={isExpanded}
-                  onToggle={() => toggleGroup(group.productId)}
-                  onCancel={onCancel}
-                  onQuickAdd={onQuickAdd}
-                  isLoading={isLoading}
-                  colCount={colCount}
-                  sortBy={sortBy}
-                  sortDir={sortDir}
-                  onSortChange={onSortChange}
-                  hasSelection={hasSelection}
-                  selectedIds={selectedIds}
-                  onToggleId={toggleId}
-                  onToggleGroup={toggleGroupSelection}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <>
+        <div style={wrapperStyle}>
+          <table style={tableStyle}>
+            <tbody>
+              {groups.map((group) => {
+                const isExpanded = expandedGroups.has(group.productId);
+                return (
+                  <GroupRows
+                    key={group.productId}
+                    group={group}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleGroup(group.productId)}
+                    onCancel={onCancel}
+                    onApprove={onApprove}
+                    onReject={onReject ? (id: string) => { setRejectModal(id); setRejectReason(""); } : undefined}
+                    onActivate={onActivate}
+                    onApproveWithdrawal={onApproveWithdrawal}
+                    onCompleteWithdrawal={onCompleteWithdrawal}
+                    onEditApprove={onEditApprove ? (listing: Listing) => setEditModal(listing) : undefined}
+                    onQuickAdd={onQuickAdd}
+                    isLoading={isLoading}
+                    colCount={colCount}
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSortChange={onSortChange}
+                    hasSelection={hasSelection}
+                    selectedIds={selectedIds}
+                    onToggleId={toggleId}
+                    onToggleGroup={toggleGroupSelection}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {rejectModal && <RejectModal onConfirm={handleRejectConfirm} onCancel={() => setRejectModal(null)} reason={rejectReason} setReason={setRejectReason} />}
+        {editModal && onEditApprove && (
+          <EditApproveModal
+            listing={editModal}
+            onConfirm={(fields) => { onEditApprove(editModal.id, fields); setEditModal(null); }}
+            onCancel={() => setEditModal(null)}
+          />
+        )}
+      </>
     );
   }
 
@@ -314,7 +368,7 @@ export default function ListingsTable({
               <th style={checkboxThStyle}>
                 <input
                   type="checkbox"
-                  checked={allActiveSelected}
+                  checked={allSelectableSelected}
                   onChange={toggleAll}
                   style={checkboxStyle}
                 />
@@ -374,7 +428,7 @@ function FlatRow({
   isSelected: boolean;
   onToggle: () => void;
 }) {
-  const isActive = l.status === "active";
+  const isSelectable = ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status);
   return (
     <tr
       style={flatRowStyle}
@@ -383,7 +437,7 @@ function FlatRow({
     >
       {hasSelection && (
         <td style={checkboxTdStyle}>
-          {isActive ? (
+          {isSelectable ? (
             <input
               type="checkbox"
               checked={isSelected}
@@ -474,6 +528,12 @@ function GroupRows({
   isExpanded,
   onToggle,
   onCancel,
+  onApprove,
+  onReject,
+  onActivate,
+  onApproveWithdrawal,
+  onCompleteWithdrawal,
+  onEditApprove,
   onQuickAdd,
   isLoading,
   colCount,
@@ -489,6 +549,12 @@ function GroupRows({
   isExpanded: boolean;
   onToggle: () => void;
   onCancel?: (id: string) => void;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string) => void;
+  onActivate?: (id: string) => void;
+  onApproveWithdrawal?: (id: string) => void;
+  onCompleteWithdrawal?: (id: string) => void;
+  onEditApprove?: (listing: Listing) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   colCount: number;
@@ -500,8 +566,8 @@ function GroupRows({
   onToggleId: (id: string) => void;
   onToggleGroup: (ids: string[]) => void;
 }) {
-  const groupActiveIds = group.listings.filter((l) => l.status === "active").map((l) => l.id);
-  const allGroupSelected = hasSelection && groupActiveIds.length > 0 && groupActiveIds.every((id) => selectedIds?.has(id));
+  const groupSelectableIds = group.listings.filter((l) => ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status)).map((l) => l.id);
+  const allGroupSelected = hasSelection && groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedIds?.has(id));
 
   const scrollRef = useCallback((node: HTMLTableRowElement | null) => {
     if (node) {
@@ -568,7 +634,7 @@ function GroupRows({
               <span style={{ fontSize: "12px", color: "#9ca3af" }}>
                 {group.styleId && <><strong style={{ fontWeight: 500 }}>Style:</strong> {group.styleId}</>}
                 {group.brand && ` / ${group.brand}`}
-                {" · "}Qty: {group.listings.filter((l) => l.status === "active").length}
+                {" · "}{statusSummary(group.listings)}
               </span>
             </div>
 
@@ -614,11 +680,11 @@ function GroupRows({
         <tr ref={scrollRef} style={{ borderBottom: "1px solid #e8eaed", background: "#f9fafb" }}>
           {hasSelection && (
             <td style={checkboxThStyle} onClick={(e) => e.stopPropagation()}>
-              {groupActiveIds.length > 0 && (
+              {groupSelectableIds.length > 0 && (
                 <input
                   type="checkbox"
                   checked={allGroupSelected}
-                  onChange={() => onToggleGroup(groupActiveIds)}
+                  onChange={() => onToggleGroup(groupSelectableIds)}
                   style={checkboxStyle}
                 />
               )}
@@ -639,13 +705,13 @@ function GroupRows({
             Created
             {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
           </td>
-          {onCancel && <td style={thStyle}>Actions</td>}
+          {(onCancel || onApprove) && <td style={thStyle}>Actions</td>}
         </tr>
       )}
 
       {/* Child listing rows */}
       {isExpanded && group.listings.map((l, i) => {
-        const isActive = l.status === "active";
+        const isSelectable = ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status);
         return (
           <tr
             key={l.id}
@@ -658,7 +724,7 @@ function GroupRows({
           >
             {hasSelection && (
               <td style={checkboxTdStyle} onClick={(e) => e.stopPropagation()}>
-                {isActive ? (
+                {isSelectable ? (
                   <input
                     type="checkbox"
                     checked={selectedIds?.has(l.id) ?? false}
@@ -689,25 +755,453 @@ function GroupRows({
             <td style={{ ...tdStyle, fontSize: "12px", color: "#6d7175" }}>
               {relativeTime(l.createdAt)}
             </td>
-            {onCancel && (
+            {(onCancel || onApprove) && (
               <td style={tdStyle}>
-                {l.status === "active" ? (
-                  <s-button
-                    tone="critical"
-                    variant="tertiary"
-                    onClick={() => onCancel(l.id)}
-                    {...(isLoading ? { disabled: true } : {})}
-                  >
-                    Cancel
-                  </s-button>
-                ) : (
-                  <span style={{ color: "#d1d5db" }}>—</span>
-                )}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                  {l.status === "submitted" && onApprove && (
+                    <>
+                      <ActionBtn
+                        label="Approve"
+                        icon={<Check size={13} />}
+                        color="#0d9488"
+                        bg="#f0fdfa"
+                        border="#99f0e4"
+                        onClick={() => onApprove(l.id)}
+                        disabled={isLoading}
+                      />
+                      {onEditApprove && (
+                        <ActionBtn
+                          label="Edit"
+                          icon={<Pencil size={13} />}
+                          color="#7c3aed"
+                          bg="#f5f3ff"
+                          border="#c4b5fd"
+                          onClick={() => onEditApprove(l)}
+                          disabled={isLoading}
+                        />
+                      )}
+                      {onReject && (
+                        <ActionBtn
+                          label="Reject"
+                          icon={<X size={13} />}
+                          color="#dc2626"
+                          bg="#fef2f2"
+                          border="#fecaca"
+                          onClick={() => onReject(l.id)}
+                          disabled={isLoading}
+                        />
+                      )}
+                    </>
+                  )}
+                  {l.status === "approved_awaiting_dropoff" && onActivate && (
+                    <ActionBtn
+                      label="Activate"
+                      icon={<Zap size={13} />}
+                      color="#2c6ecb"
+                      bg="#eff6ff"
+                      border="#bfdbfe"
+                      onClick={() => onActivate(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {l.status === "active" && onCancel && (
+                    <ActionBtn
+                      label="Cancel"
+                      icon={<X size={13} />}
+                      color="#6d7175"
+                      bg="#f6f6f7"
+                      border="#e3e3e3"
+                      onClick={() => onCancel(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {l.status === "withdrawal_requested" && onApproveWithdrawal && (
+                    <ActionBtn
+                      label="Approve Withdrawal"
+                      icon={<Check size={13} />}
+                      color="#ea580c"
+                      bg="#fff7ed"
+                      border="#fed7aa"
+                      onClick={() => onApproveWithdrawal(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {l.status === "pending_pickup" && onCompleteWithdrawal && (
+                    <ActionBtn
+                      label="Picked Up"
+                      icon={<Check size={13} />}
+                      color="#0891b2"
+                      bg="#ecfeff"
+                      border="#a5f3fc"
+                      onClick={() => onCompleteWithdrawal(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {!["submitted", "approved_awaiting_dropoff", "active", "withdrawal_requested", "pending_pickup"].includes(l.status) && (
+                    <span style={{ color: "#d1d5db" }}>—</span>
+                  )}
+                </div>
               </td>
             )}
           </tr>
         );
       })}
     </>
+  );
+}
+
+// ── Shared action button ──
+
+function ActionBtn({ label, icon, color, bg, border, onClick, disabled }: {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  bg: string;
+  border: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      disabled={disabled}
+      title={label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        padding: "4px 10px",
+        fontSize: "11px",
+        fontWeight: 600,
+        borderRadius: "6px",
+        border: `1px solid ${border}`,
+        background: bg,
+        color,
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontFamily: "inherit",
+        transition: "all 0.15s ease",
+        opacity: disabled ? 0.5 : 1,
+      }}
+      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.opacity = "0.8"; } }}
+      onMouseLeave={(e) => { if (!disabled) { e.currentTarget.style.opacity = "1"; } }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// ── Reject modal ──
+
+function RejectModal({ onConfirm, onCancel, reason, setReason }: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  reason: string;
+  setReason: (r: string) => void;
+}) {
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "24px",
+          maxWidth: "420px",
+          width: "100%",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        }}
+      >
+        <h3 style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 4px" }}>Reject Listing</h3>
+        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
+          Provide a reason for rejection. The consignor will see this.
+        </p>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Item condition doesn't meet our standards..."
+          style={{
+            width: "100%",
+            minHeight: "80px",
+            padding: "10px 12px",
+            fontSize: "13px",
+            borderRadius: "8px",
+            border: "1px solid #d1d5db",
+            fontFamily: "inherit",
+            resize: "vertical",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "#111827"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,24,39,0.08)"; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; e.currentTarget.style.boxShadow = "none"; }}
+          autoFocus
+        />
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 500,
+              borderRadius: "8px",
+              border: "1px solid #e3e3e3",
+              background: "#fff",
+              color: "#6d7175",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!reason.trim()}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 600,
+              borderRadius: "8px",
+              border: "none",
+              background: !reason.trim() ? "#fca5a5" : "#dc2626",
+              color: "#fff",
+              cursor: !reason.trim() ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "background 0.15s",
+            }}
+          >
+            Reject Listing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit & Approve modal ──
+
+const editInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 12px",
+  fontSize: "13px",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontFamily: "inherit",
+  outline: "none",
+  boxSizing: "border-box" as const,
+  transition: "border-color 0.15s, box-shadow 0.15s",
+};
+
+const editLabelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "11px",
+  fontWeight: 600,
+  color: "#6d7175",
+  marginBottom: "4px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.03em",
+};
+
+function EditApproveModal({ listing, onConfirm, onCancel }: {
+  listing: Listing;
+  onConfirm: (fields: EditApproveFields) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(listing.variant.product.title);
+  const [brand, setBrand] = useState(listing.variant.product.brand ?? "");
+  const [category, setCategory] = useState(listing.variant.product.category ?? "");
+  const [styleId, setStyleId] = useState(listing.variant.product.styleId ?? "");
+  const [size, setSize] = useState(listing.variant.size);
+  const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
+  const [price, setPrice] = useState(String(Number(listing.price).toFixed(2)));
+
+  const canSubmit = title.trim() && size.trim() && Number(price) > 0;
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = "#7c3aed";
+    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.1)";
+  };
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = "#d1d5db";
+    e.currentTarget.style.boxShadow = "none";
+  };
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "24px",
+          maxWidth: "480px",
+          width: "100%",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <Pencil size={16} color="#7c3aed" />
+          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>Edit & Approve</h3>
+        </div>
+        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
+          Fix any mistakes, then approve the listing in one step.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div>
+            <label style={editLabelStyle}>Product Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              style={editInputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={editLabelStyle}>Brand</label>
+              <input
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                style={editInputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+            <div>
+              <label style={editLabelStyle}>Category</label>
+              <input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                style={editInputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={editLabelStyle}>Style ID</label>
+            <input
+              value={styleId}
+              onChange={(e) => setStyleId(e.target.value)}
+              style={editInputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="Optional"
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={editLabelStyle}>Size</label>
+              <input
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                style={editInputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+            <div>
+              <label style={editLabelStyle}>GTIN / Barcode</label>
+              <input
+                value={gtin}
+                onChange={(e) => setGtin(e.target.value)}
+                style={{ ...editInputStyle, fontFamily: "monospace" }}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={editLabelStyle}>Price ($)</label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              style={editInputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              step="0.01"
+              min="0.01"
+            />
+          </div>
+        </div>
+
+        {/* Consignor info (read-only) */}
+        <div style={{ marginTop: "12px", padding: "8px 12px", borderRadius: "8px", background: "#f9fafb", fontSize: "12px", color: "#6d7175" }}>
+          Submitted by <strong style={{ fontWeight: 600, color: "#1a1a1a" }}>{listing.consignor.name}</strong> ({listing.consignor.email})
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 500,
+              borderRadius: "8px",
+              border: "1px solid #e3e3e3",
+              background: "#fff",
+              color: "#6d7175",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm({ title: title.trim(), brand: brand.trim(), category: category.trim(), styleId: styleId.trim(), size: size.trim(), gtin: gtin.trim(), price })}
+            disabled={!canSubmit}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 600,
+              borderRadius: "8px",
+              border: "none",
+              background: !canSubmit ? "#c4b5fd" : "#7c3aed",
+              color: "#fff",
+              cursor: !canSubmit ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = "#6d28d9"; }}
+            onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = "#7c3aed"; }}
+          >
+            Save & Approve
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

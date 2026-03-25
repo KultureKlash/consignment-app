@@ -3,6 +3,57 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify-taxonomy.server";
 import { getPrimaryLocationId } from "~/services/inventory.server";
+import { compareSizes } from "~/lib/size-order";
+
+/** Reorder variants on a Shopify product so sizes display in logical order */
+async function reorderVariantsBySizes(admin: AdminApiContext, shopifyProductId: string) {
+  const res = await admin.graphql(
+    `#graphql
+    query productVariants($id: ID!) {
+      product(id: $id) {
+        variants(first: 100) {
+          nodes {
+            id
+            selectedOptions { name value }
+          }
+        }
+      }
+    }`,
+    { variables: { id: shopifyProductId } }
+  );
+  const { data } = await res.json();
+  const variants = data.product?.variants?.nodes;
+  if (!variants || variants.length < 2) return;
+
+  const withSize = variants.map((v: any) => ({
+    id: v.id,
+    size: v.selectedOptions.find((o: any) => o.name === "Size")?.value ?? "",
+  }));
+  const sorted = [...withSize].sort((a: any, b: any) => compareSizes(a.size, b.size));
+
+  // Skip if already in order
+  if (sorted.every((v: any, i: number) => v.id === withSize[i].id)) return;
+
+  const reorderRes = await admin.graphql(
+    `#graphql
+    mutation productVariantsBulkReorder($productId: ID!, $positions: [ProductVariantPositionInput!]!) {
+      productVariantsBulkReorder(productId: $productId, positions: $positions) {
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        productId: shopifyProductId,
+        positions: sorted.map((v: any, i: number) => ({ id: v.id, position: i + 1 })),
+      },
+    }
+  );
+  const reorderData = await reorderRes.json();
+  const reorderErrors = reorderData.data?.productVariantsBulkReorder?.userErrors;
+  if (reorderErrors?.length > 0) {
+    console.error("Variant reorder failed:", reorderErrors);
+  }
+}
 
 function deriveSku(product: Product, variant: Variant): string {
   const isFootwear = !product.category || product.category.startsWith("Footwear");
@@ -327,6 +378,13 @@ export async function ensureShopifyProductAndVariant({
       inventoryItemId: shopifyVariant.inventoryItem.id,
     },
   });
+
+  // Reorder size options so they display sorted in Shopify
+  try {
+    await reorderVariantsBySizes(admin, product.shopifyProductId!);
+  } catch (err) {
+    console.error("Failed to reorder size options:", err);
+  }
 }
 
 export async function backfillProductImages(admin: AdminApiContext): Promise<number> {

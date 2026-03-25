@@ -32,7 +32,7 @@ export function InfoTip({ text }: { text: string }) {
       {open && pos && typeof document !== "undefined" && createPortal(
         <span
           style={{ top: pos.top, left: pos.left, transform: "translateY(-100%)" }}
-          className="fixed w-56 px-3.5 py-2.5 rounded-xl text-xs leading-relaxed text-foreground bg-[hsl(0,0%,14%)] border border-[rgba(255,255,255,0.12)] shadow-lg z-[9999] pointer-events-none"
+          className="fixed max-w-56 w-max px-3.5 py-2.5 rounded-xl text-xs leading-relaxed text-foreground bg-[hsl(0,0%,14%)] border border-[rgba(255,255,255,0.12)] shadow-lg z-[9999] pointer-events-none"
         >
           {text}
         </span>,

@@ -133,11 +133,11 @@ describe("consignors.server — updateConsignor", () => {
 
   it("rejects fee rate below 1%", async () => {
     const consignor = await createTestConsignor();
-    await expect(updateConsignor(consignor.id, { feeRate: 0 })).rejects.toThrow("Fee rate must be between 1% and 99%");
+    await expect(updateConsignor(consignor.id, { feeRate: 0 })).rejects.toThrow("Fee rate must be between 1% and 100%");
   });
 
-  it("rejects fee rate above 99%", async () => {
+  it("rejects fee rate above 100%", async () => {
     const consignor = await createTestConsignor();
-    await expect(updateConsignor(consignor.id, { feeRate: 1.0 })).rejects.toThrow("Fee rate must be between 1% and 99%");
+    await expect(updateConsignor(consignor.id, { feeRate: 1.01 })).rejects.toThrow("Fee rate must be between 1% and 100%");
   });
 });

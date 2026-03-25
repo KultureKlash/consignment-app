@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { createPayout, markPaid, cancelPayout, getPayoutsPageData } from "~/services/payouts.server";
+import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData } from "~/services/payouts.server";
 
 async function setupVariant() {
   const product = await prisma.product.create({
@@ -149,6 +149,7 @@ describe("payouts.server — markPaid", () => {
       transactionIds: [sale.transaction.id],
     });
 
+    await markInvoiced(payout.id);
     const updated = await markPaid(payout.id);
     expect(updated.status).toBe("paid");
   });
@@ -163,9 +164,10 @@ describe("payouts.server — markPaid", () => {
       transactionIds: [sale.transaction.id],
     });
 
+    await markInvoiced(payout.id);
     await markPaid(payout.id);
 
-    await expect(markPaid(payout.id)).rejects.toThrow("already marked as paid");
+    await expect(markPaid(payout.id)).rejects.toThrow('must be "invoiced"');
   });
 });
 
@@ -208,6 +210,7 @@ describe("payouts.server — cancelPayout", () => {
       transactionIds: [sale.transaction.id],
     });
 
+    await markInvoiced(payout.id);
     await markPaid(payout.id);
 
     await expect(cancelPayout(payout.id)).rejects.toThrow("Cannot cancel a paid payout");
@@ -281,6 +284,7 @@ describe("payouts.server — getPayoutsPageData", () => {
       consignorId: consignor.id,
       transactionIds: [sale2.transaction.id],
     });
+    await markInvoiced(paidPayout.id);
     await markPaid(paidPayout.id);
 
     const data = await getPayoutsPageData();

@@ -65,10 +65,16 @@ export const searchIconWrap: React.CSSProperties = {
 
 export const statusBadge = (status: string): React.CSSProperties => {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
+    submitted: { bg: "#ede9fe", text: "#7c3aed", border: "#c4b5fd" },
+    approved_awaiting_dropoff: { bg: "#e0f7f6", text: "#0d9488", border: "#99f0e4" },
     active: { bg: "#e4f5e9", text: "#1a7f37", border: "#b7e4c7" },
     pending_sale: { bg: "#fff8e1", text: "#b86e00", border: "#ffe082" },
     sold: { bg: "#e8f4fd", text: "#2c6ecb", border: "#b3d9f2" },
     cancelled: { bg: "#f6f6f7", text: "#6d7175", border: "#e3e3e3" },
+    rejected: { bg: "#fef2f2", text: "#dc2626", border: "#fecaca" },
+    withdrawal_requested: { bg: "#fff7ed", text: "#ea580c", border: "#fed7aa" },
+    pending_pickup: { bg: "#ecfeff", text: "#0891b2", border: "#a5f3fc" },
+    withdrawn: { bg: "#f6f6f7", text: "#6d7175", border: "#e3e3e3" },
   };
   const c = colors[status] ?? colors.cancelled;
   return {
@@ -116,8 +122,19 @@ export function relativeTime(date: string | Date): string {
 }
 
 export function statusLabel(status: string): string {
-  if (status === "pending_sale") return "pending";
-  return status;
+  const labels: Record<string, string> = {
+    submitted: "submitted",
+    approved_awaiting_dropoff: "awaiting drop-off",
+    active: "active",
+    pending_sale: "pending",
+    sold: "sold",
+    cancelled: "cancelled",
+    rejected: "rejected",
+    withdrawal_requested: "withdrawal requested",
+    pending_pickup: "pending pickup",
+    withdrawn: "withdrawn",
+  };
+  return labels[status] ?? status;
 }
 
 export function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {

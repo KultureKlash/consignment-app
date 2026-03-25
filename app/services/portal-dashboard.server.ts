@@ -27,6 +27,9 @@ const STATUS_COLORS: Record<string, string> = {
   pending_sale: "bg-[hsl(var(--warning))]",
   sold: "bg-[hsl(var(--success))]",
   cancelled: "bg-red-500/70",
+  withdrawal_requested: "bg-orange-500/70",
+  pending_pickup: "bg-cyan-500/70",
+  withdrawn: "bg-muted-foreground/70",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -34,6 +37,9 @@ const STATUS_LABELS: Record<string, string> = {
   pending_sale: "Pending Sale",
   sold: "Sold",
   cancelled: "Cancelled",
+  withdrawal_requested: "Withdrawal Requested",
+  pending_pickup: "Pending Pickup",
+  withdrawn: "Withdrawn",
 };
 
 function getMonthlyEarnings(
@@ -66,7 +72,10 @@ function getMonthlyEarnings(
 
 function buildNotifications(
   sales: { id: string; createdAt: Date; product: string; consignorAmount: number }[],
-  payouts: { id: string; createdAt: Date; amount: number; status: string }[]
+  payouts: { id: string; createdAt: Date; amount: number; status: string }[],
+  rejections: { id: string; rejectedAt: Date; product: string; size: string; reason: string }[] = [],
+  approvals: { id: string; approvedAt: Date; product: string; size: string }[] = [],
+  withdrawals: { id: string; time: Date; product: string; size: string; type: "withdrawal_requested" | "pickup_ready" | "withdrawn" }[] = [],
 ): PortalNotification[] {
   const notifications: PortalNotification[] = [];
 
@@ -92,8 +101,56 @@ function buildNotifications(
     });
   }
 
+  for (const r of rejections) {
+    notifications.push({
+      id: `rejected-${r.id}`,
+      type: "rejected",
+      title: "Listing Rejected",
+      description: `${r.product} (${r.size}) — ${r.reason}`,
+      time: r.rejectedAt,
+      color: "text-red-400",
+    });
+  }
+
+  for (const a of approvals) {
+    notifications.push({
+      id: `approved-${a.id}`,
+      type: "approved",
+      title: "Listing Approved",
+      description: `${a.product} (${a.size}) — ready for drop-off`,
+      time: a.approvedAt,
+      color: "text-teal-400",
+    });
+  }
+
+  for (const w of withdrawals) {
+    const titles: Record<string, string> = {
+      withdrawal_requested: "Withdrawal Submitted",
+      pickup_ready: "Ready for Pickup",
+      withdrawn: "Withdrawal Complete",
+    };
+    const descriptions: Record<string, string> = {
+      withdrawal_requested: `${w.product} (${w.size}) — withdrawal request sent`,
+      pickup_ready: `${w.product} (${w.size}) — approved, come pick up your item`,
+      withdrawn: `${w.product} (${w.size}) — picked up`,
+    };
+    const colors: Record<string, string> = {
+      withdrawal_requested: "text-orange-400",
+      pickup_ready: "text-cyan-400",
+      withdrawn: "text-muted-foreground",
+    };
+    notifications.push({
+      id: `${w.type}-${w.id}`,
+      type: w.type,
+      title: titles[w.type],
+      description: descriptions[w.type],
+      time: w.time,
+      color: colors[w.type],
+    });
+  }
+
   notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  return notifications.slice(0, 10);
+  return notifications.slice(0, 20);
 }
 
 export async function getConsignorNotifications(
@@ -103,7 +160,7 @@ export async function getConsignorNotifications(
   items: PortalNotification[];
   unreadCount: number;
 }> {
-  const [recentSales, recentPayouts] = await Promise.all([
+  const [recentSales, recentPayouts, recentRejections, recentApprovals, withdrawalListings] = await Promise.all([
     prisma.transaction.findMany({
       where: { consignorId, type: "sale" },
       orderBy: { createdAt: "desc" },
@@ -124,6 +181,25 @@ export async function getConsignorNotifications(
       take: 10,
       select: { id: true, createdAt: true, amount: true, status: true },
     }),
+    prisma.listing.findMany({
+      where: { consignorId, status: "rejected", rejectedAt: { not: null } },
+      orderBy: { rejectedAt: "desc" },
+      take: 10,
+      include: { variant: { include: { product: true } } },
+    }),
+    prisma.listing.findMany({
+      where: { consignorId, status: "approved_awaiting_dropoff", approvedAt: { not: null } },
+      orderBy: { approvedAt: "desc" },
+      take: 10,
+      include: { variant: { include: { product: true } } },
+    }),
+    // All withdrawal-related listings (covers all 3 statuses)
+    prisma.listing.findMany({
+      where: { consignorId, status: { in: ["withdrawal_requested", "pending_pickup", "withdrawn"] }, withdrawnAt: { not: null } },
+      orderBy: { withdrawnAt: "desc" },
+      take: 10,
+      include: { variant: { include: { product: true } } },
+    }),
   ]);
 
   const saleNotifs = recentSales.map((tx) => ({
@@ -133,7 +209,60 @@ export async function getConsignorNotifications(
     consignorAmount: tx.consignorAmount,
   }));
 
-  const items = buildNotifications(saleNotifs, recentPayouts);
+  const rejectionNotifs = recentRejections.map((l) => ({
+    id: l.id,
+    rejectedAt: l.rejectedAt!,
+    product: l.variant.product.title,
+    size: l.variant.size,
+    reason: l.rejectionReason ?? "No reason provided",
+  }));
+
+  const approvalNotifs = recentApprovals.map((l) => ({
+    id: l.id,
+    approvedAt: l.approvedAt!,
+    product: l.variant.product.title,
+    size: l.variant.size,
+  }));
+
+  // Build withdrawal notifications — each listing generates a notification for its current step
+  // plus any earlier steps it has passed through
+  const withdrawalNotifs: { id: string; time: Date; product: string; size: string; type: "withdrawal_requested" | "pickup_ready" | "withdrawn" }[] = [];
+
+  for (const l of withdrawalListings) {
+    // Step 1: withdrawal requested (always present for these statuses)
+    withdrawalNotifs.push({
+      id: l.id,
+      time: l.withdrawnAt!,
+      product: l.variant.product.title,
+      size: l.variant.size,
+      type: "withdrawal_requested",
+    });
+
+    // Step 2: pickup ready (pending_pickup or withdrawn have been approved)
+    if (l.status === "pending_pickup" || l.status === "withdrawn") {
+      withdrawalNotifs.push({
+        id: l.id,
+        // Use withdrawnAt + 1ms offset so it sorts after the request notification
+        time: new Date((l.withdrawnAt as Date).getTime() + 1000),
+        product: l.variant.product.title,
+        size: l.variant.size,
+        type: "pickup_ready",
+      });
+    }
+
+    // Step 3: withdrawn (final state)
+    if (l.status === "withdrawn") {
+      withdrawalNotifs.push({
+        id: l.id,
+        time: new Date((l.withdrawnAt as Date).getTime() + 2000),
+        product: l.variant.product.title,
+        size: l.variant.size,
+        type: "withdrawn",
+      });
+    }
+  }
+
+  const items = buildNotifications(saleNotifs, recentPayouts, rejectionNotifs, approvalNotifs, withdrawalNotifs);
   const unreadCount = notificationsReadAt
     ? items.filter((item) => new Date(item.time) > notificationsReadAt).length
     : items.length;
