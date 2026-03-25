@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useFetcher, useLoaderData } from "react-router";
+import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useCallback, useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
@@ -138,7 +138,8 @@ export default function Payouts() {
   const [expandedConsignor, setExpandedConsignor] = useState<string | null>(null);
   const [selectedTxs, setSelectedTxs] = useState<Record<string, Set<string>>>({});
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
-  const [filterConsignor, setFilterConsignor] = useState("");
+  const [searchParams] = useSearchParams();
+  const [filterConsignor, setFilterConsignor] = useState(searchParams.get("consignor") ?? "");
   const [datePreset, setDatePreset] = useState("all");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
