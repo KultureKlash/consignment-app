@@ -5,10 +5,21 @@ import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { cancelListing, bulkCancelListings, createListing } from "~/services/listings.server";
+import {
+  approveListing,
+  rejectListing,
+  activateListing,
+  adminEditAndApprove,
+  bulkApproveListing,
+  bulkActivateListing,
+  approveWithdrawal,
+  completeWithdrawal,
+} from "~/services/submission.server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
 import ListingsFilter from "~/components/ListingsFilter";
 import ListingsTable from "~/components/ListingsTable";
+import type { EditApproveFields } from "~/components/ListingsTable";
 import Pagination from "~/components/Pagination";
 import QuickAddPopover from "~/components/QuickAddPopover";
 
@@ -94,6 +105,65 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { listing, intent, quantity };
     }
 
+    if (intent === "approve") {
+      const listingId = formData.get("listingId") as string;
+      await approveListing({ listingId });
+      return { intent };
+    }
+
+    if (intent === "reject") {
+      const listingId = formData.get("listingId") as string;
+      const reason = (formData.get("reason") as string) ?? "";
+      if (!reason.trim()) throw new Error("Rejection reason is required");
+      await rejectListing({ listingId, reason: reason.trim() });
+      return { intent };
+    }
+
+    if (intent === "activate") {
+      const listingId = formData.get("listingId") as string;
+      await activateListing({ admin, listingId });
+      return { intent };
+    }
+
+    if (intent === "admin-edit-approve") {
+      const listingId = formData.get("listingId") as string;
+      await adminEditAndApprove({
+        listingId,
+        title: (formData.get("title") as string) || undefined,
+        brand: (formData.get("brand") as string) || undefined,
+        category: (formData.get("category") as string) || undefined,
+        styleId: (formData.get("styleId") as string) || undefined,
+        size: (formData.get("size") as string) || undefined,
+        gtin: (formData.get("gtin") as string) || undefined,
+        price: formData.get("price") ? Number(formData.get("price")) : undefined,
+      });
+      return { intent };
+    }
+
+    if (intent === "bulk-approve") {
+      const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+      const result = await bulkApproveListing({ listingIds: ids });
+      return { approved: result.approved, intent };
+    }
+
+    if (intent === "bulk-activate") {
+      const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+      const result = await bulkActivateListing({ admin, listingIds: ids });
+      return { activated: result.activated, syncErrors: result.errors, intent };
+    }
+
+    if (intent === "approve-withdrawal") {
+      const listingId = formData.get("listingId") as string;
+      await approveWithdrawal({ admin, listingId });
+      return { intent };
+    }
+
+    if (intent === "complete-withdrawal") {
+      const listingId = formData.get("listingId") as string;
+      await completeWithdrawal({ listingId });
+      return { intent };
+    }
+
     throw new Error("Invalid intent");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -107,6 +177,7 @@ export default function Listings() {
   const navigation = useNavigation();
   const cancelFetcher = useFetcher();
   const addFetcher = useFetcher();
+  const approvalFetcher = useFetcher();
   const shopify = useAppBridge();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [quickAdd, setQuickAdd] = useState<{ productId: string; anchorEl: HTMLElement } | null>(null);
@@ -114,6 +185,7 @@ export default function Listings() {
   const isNavigating = navigation.state === "loading";
   const cancelLoading = ["loading", "submitting"].includes(cancelFetcher.state);
   const addLoading = ["loading", "submitting"].includes(addFetcher.state);
+  const approvalLoading = ["loading", "submitting"].includes(approvalFetcher.state);
 
   // Clear selection on page/filter change
   useEffect(() => {
@@ -149,6 +221,37 @@ export default function Listings() {
     }
   }, [addFetcher.data, shopify]);
 
+  // Approval/reject/activate toast
+  useEffect(() => {
+    const data = approvalFetcher.data as Record<string, unknown> | undefined;
+    if (!data) return;
+    if (data.error) {
+      shopify.toast.show(data.error as string);
+    } else if (data.intent === "approve") {
+      shopify.toast.show("Listing approved");
+    } else if (data.intent === "reject") {
+      shopify.toast.show("Listing rejected");
+    } else if (data.intent === "activate") {
+      shopify.toast.show("Listing activated & synced to Shopify");
+    } else if (data.intent === "admin-edit-approve") {
+      shopify.toast.show("Listing updated & approved");
+    } else if (data.intent === "bulk-approve") {
+      const count = data.approved as number;
+      shopify.toast.show(`Approved ${count} listing${count !== 1 ? "s" : ""}`);
+      setSelectedIds(new Set());
+    } else if (data.intent === "approve-withdrawal") {
+      shopify.toast.show("Withdrawal approved — pending pickup");
+    } else if (data.intent === "complete-withdrawal") {
+      shopify.toast.show("Withdrawal complete — item withdrawn");
+    } else if (data.intent === "bulk-activate") {
+      const count = data.activated as number;
+      const syncErrors = (data.syncErrors as string[]) ?? [];
+      const msg = `Activated ${count} listing${count !== 1 ? "s" : ""}`;
+      shopify.toast.show(syncErrors.length > 0 ? `${msg} (${syncErrors.length} sync error${syncErrors.length !== 1 ? "s" : ""})` : msg);
+      setSelectedIds(new Set());
+    }
+  }, [approvalFetcher.data, shopify]);
+
   const handleFilterChange = (params: Record<string, string>) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -171,6 +274,49 @@ export default function Listings() {
     if (selectedIds.size === 0) return;
     cancelFetcher.submit(
       { intent: "bulk-cancel", listingIds: Array.from(selectedIds).join(",") },
+      { method: "POST" },
+    );
+  };
+
+  const handleApprove = (listingId: string) => {
+    approvalFetcher.submit({ intent: "approve", listingId }, { method: "POST" });
+  };
+
+  const handleReject = (listingId: string, reason: string) => {
+    approvalFetcher.submit({ intent: "reject", listingId, reason }, { method: "POST" });
+  };
+
+  const handleActivate = (listingId: string) => {
+    approvalFetcher.submit({ intent: "activate", listingId }, { method: "POST" });
+  };
+
+  const handleApproveWithdrawal = (listingId: string) => {
+    approvalFetcher.submit({ intent: "approve-withdrawal", listingId }, { method: "POST" });
+  };
+
+  const handleCompleteWithdrawal = (listingId: string) => {
+    approvalFetcher.submit({ intent: "complete-withdrawal", listingId }, { method: "POST" });
+  };
+
+  const handleEditApprove = (listingId: string, fields: EditApproveFields) => {
+    approvalFetcher.submit(
+      { intent: "admin-edit-approve", listingId, ...fields },
+      { method: "POST" },
+    );
+  };
+
+  const handleBulkApprove = () => {
+    if (selectedIds.size === 0) return;
+    approvalFetcher.submit(
+      { intent: "bulk-approve", listingIds: Array.from(selectedIds).join(",") },
+      { method: "POST" },
+    );
+  };
+
+  const handleBulkActivate = () => {
+    if (selectedIds.size === 0) return;
+    approvalFetcher.submit(
+      { intent: "bulk-activate", listingIds: Array.from(selectedIds).join(",") },
       { method: "POST" },
     );
   };
@@ -252,25 +398,6 @@ export default function Listings() {
               <span style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a" }}>
                 {selectedIds.size} selected
               </span>
-              {(() => {
-                const activeIds = listings.filter((l) => l.status === "active").map((l) => l.id);
-                const allSelected = activeIds.length > 0 && activeIds.every((id) => selectedIds.has(id));
-                return !allSelected && activeIds.length > selectedIds.size ? (
-                  <span
-                    onClick={() => setSelectedIds(new Set(activeIds))}
-                    style={{
-                      fontSize: "12px",
-                      color: "#6d7175",
-                      cursor: "pointer",
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "#6d7175"; }}
-                  >
-                    Select all ({activeIds.length})
-                  </span>
-                ) : null;
-              })()}
               <span
                 onClick={() => setSelectedIds(new Set())}
                 style={{
@@ -285,26 +412,38 @@ export default function Listings() {
                 Clear
               </span>
             </div>
-            <button
-              onClick={handleBulkCancel}
-              disabled={cancelLoading}
-              style={{
-                padding: "7px 16px",
-                fontSize: "12px",
-                fontWeight: 600,
-                borderRadius: "10px",
-                border: "none",
-                background: cancelLoading ? "#374151" : "#111827",
-                color: "#fff",
-                cursor: cancelLoading ? "not-allowed" : "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => { if (!cancelLoading) { e.currentTarget.style.background = "#374151"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)"; } }}
-              onMouseLeave={(e) => { if (!cancelLoading) { e.currentTarget.style.background = "#111827"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } }}
-            >
-              {cancelLoading ? "Cancelling..." : "Cancel selected"}
-            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {/* Show bulk approve if any selected are submitted */}
+              {listings.some((l) => selectedIds.has(l.id) && l.status === "submitted") && (
+                <BulkActionButton
+                  label={approvalLoading ? "Approving..." : "Approve selected"}
+                  onClick={handleBulkApprove}
+                  disabled={approvalLoading}
+                  bg="#0d9488"
+                  bgHover="#0f766e"
+                />
+              )}
+              {/* Show bulk activate if any selected are approved_awaiting_dropoff */}
+              {listings.some((l) => selectedIds.has(l.id) && l.status === "approved_awaiting_dropoff") && (
+                <BulkActionButton
+                  label={approvalLoading ? "Activating..." : "Activate selected"}
+                  onClick={handleBulkActivate}
+                  disabled={approvalLoading}
+                  bg="#2c6ecb"
+                  bgHover="#1e5aab"
+                />
+              )}
+              {/* Show bulk cancel if any selected are active */}
+              {listings.some((l) => selectedIds.has(l.id) && l.status === "active") && (
+                <BulkActionButton
+                  label={cancelLoading ? "Cancelling..." : "Cancel selected"}
+                  onClick={handleBulkCancel}
+                  disabled={cancelLoading}
+                  bg="#111827"
+                  bgHover="#374151"
+                />
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -312,8 +451,14 @@ export default function Listings() {
           listings={listings}
           grouped
           onCancel={handleCancel}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onActivate={handleActivate}
+          onApproveWithdrawal={handleApproveWithdrawal}
+          onCompleteWithdrawal={handleCompleteWithdrawal}
+          onEditApprove={handleEditApprove}
           onQuickAdd={handleQuickAdd}
-          isLoading={cancelLoading}
+          isLoading={cancelLoading || approvalLoading}
           isNavigating={isNavigating}
           sortBy={sortBy}
           sortDir={sortDir}
@@ -341,6 +486,37 @@ export default function Listings() {
         />
       </s-section>
     </s-page>
+  );
+}
+
+function BulkActionButton({ label, onClick, disabled, bg, bgHover }: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  bg: string;
+  bgHover: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: "7px 16px",
+        fontSize: "12px",
+        fontWeight: 600,
+        borderRadius: "10px",
+        border: "none",
+        background: disabled ? bgHover : bg,
+        color: "#fff",
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontFamily: "inherit",
+        transition: "all 0.2s ease",
+      }}
+      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)"; } }}
+      onMouseLeave={(e) => { if (!disabled) { e.currentTarget.style.background = bg; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } }}
+    >
+      {label}
+    </button>
   );
 }
 

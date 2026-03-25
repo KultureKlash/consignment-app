@@ -88,32 +88,67 @@ export default function PortalPayouts() {
           Tap for info on what each term means
         </p>
 
-        {/* Summary stats */}
-        <div className="grid grid-cols-3 gap-3 md:gap-4">
+        {/* Summary stats — Desktop: 3 equal cols, Mobile: 2 cols with Paid Out spanning 2 rows */}
+        {/* Desktop */}
+        <div className="hidden md:grid grid-cols-3 gap-4">
           {[
             { label: "Unbatched", display: `$${fmt(totalUnbatched)}`, icon: CircleDot, color: "text-muted-foreground", tip: "Sales earnings not yet grouped into a payout by the admin." },
             { label: "Awaiting Invoice", display: String(activePayouts.length), icon: Clock, color: "text-[hsl(var(--warning))]", tip: "Number of payouts awaiting your invoice. Send your invoice so we can process payment." },
             { label: "Paid Out", display: `$${fmt(totalPaid)}`, icon: CheckCircle2, color: "text-[hsl(var(--success))]", tip: "Total amount that has been paid to you." },
           ].map((stat, i) => (
-            <div
-              key={stat.label}
-              className="stat-card animate-slide-up !p-3 md:!p-5"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-start justify-between">
+            <div key={stat.label} className="stat-card animate-slide-up !p-5" style={{ animationDelay: `${i * 80}ms` }}>
+              <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-[11px] md:text-sm text-muted-foreground flex items-center gap-1.5">
-                    <span className="truncate">{stat.label}</span>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    {stat.label}
                     <InfoTip text={stat.tip} />
                   </p>
-                  <p className="text-base md:text-2xl font-bold mt-0.5 md:mt-1 tracking-tight tabular-nums">{stat.display}</p>
+                  <p className="text-2xl font-bold mt-1 tracking-tight tabular-nums">{stat.display}</p>
                 </div>
-                <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
-                  <stat.icon className={`w-3.5 h-3.5 md:w-5 md:h-5 ${stat.color}`} />
+                <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
               </div>
             </div>
           ))}
+        </div>
+        {/* Mobile: 2-col grid, Paid Out hero card spans right column */}
+        <div className="md:hidden grid grid-cols-[1fr_1.2fr] grid-rows-2 gap-3">
+          {/* Unbatched — top left */}
+          <div className="stat-card animate-slide-up !p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Unbatched</p>
+              <InfoTip text="Sales earnings not yet grouped into a payout by the admin." />
+            </div>
+            <div className="flex items-end justify-between mt-auto pt-3">
+              <p className="text-xl font-bold tracking-tight tabular-nums">${fmt(totalUnbatched)}</p>
+              <CircleDot className="w-4 h-4 text-muted-foreground/50" />
+            </div>
+          </div>
+          {/* Paid Out — right, hero card spanning 2 rows */}
+          <div className="row-span-2 stat-card animate-slide-up !p-4 flex flex-col justify-between border-[hsl(var(--success))]/20" style={{ animationDelay: "160ms", boxShadow: "0 0 30px -8px hsl(152 60% 52% / 0.12)" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Paid Out</p>
+              <InfoTip text="Total amount that has been paid to you." />
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center py-4">
+              <div className="w-10 h-10 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))]" />
+              </div>
+              <p className="text-3xl font-bold tracking-tight tabular-nums">${fmt(totalPaid)}</p>
+            </div>
+          </div>
+          {/* Awaiting Invoice — bottom left */}
+          <div className="stat-card animate-slide-up !p-4 flex flex-col justify-between" style={{ animationDelay: "80ms" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Awaiting</p>
+              <InfoTip text="Payouts awaiting your invoice. Send your invoice so we can process payment." />
+            </div>
+            <div className="flex items-end justify-between mt-auto pt-3">
+              <p className="text-xl font-bold tracking-tight tabular-nums">{activePayouts.length}</p>
+              <Clock className="w-4 h-4 text-[hsl(var(--warning))]/60" />
+            </div>
+          </div>
         </div>
 
         {/* Unbatched Sales */}

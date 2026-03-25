@@ -247,7 +247,7 @@ export default function ConsignorDetail() {
                   <input
                     type="number"
                     min="1"
-                    max="99"
+                    max="100"
                     step="1"
                     value={feeRatePercent}
                     onChange={(e) => setFeeRatePercent(e.target.value)}

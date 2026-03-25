@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { to: "/portal", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/portal/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/portal/listings", icon: Package, label: "Listings" },
   { to: "/portal/sales", icon: ShoppingBag, label: "Sales" },
   { to: "/portal/payouts", icon: DollarSign, label: "Payouts" },
@@ -36,7 +36,6 @@ export function Sidebar({ consignorName }: { consignorName: string }) {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.end}
             className={({ isActive }) =>
               `nav-item ${isActive ? "nav-item-active" : ""}`
             }
@@ -75,7 +74,6 @@ export function BottomTabBar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.end}
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"

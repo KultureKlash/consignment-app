@@ -2,6 +2,16 @@
 
 @import "tailwindcss";
 
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 @layer base {
   :root {
     --background: 0 0% 7%;
@@ -39,6 +49,8 @@
     --glow: 0 0% 70%;
     --success: 152 60% 52%;
     --warning: 38 92% 60%;
+    --cta: 152 55% 48%;
+    --cta-foreground: 0 0% 100%;
 
     --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 0 0% 65%;
@@ -162,9 +174,52 @@
   .btn-glow:active {
     transform: scale(0.97);
   }
+  .btn-cta {
+    background: linear-gradient(135deg, hsl(var(--cta) / 0.25), hsl(var(--cta) / 0.15));
+    color: hsl(var(--cta));
+    font-weight: 600;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--cta) / 0.3);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    box-shadow: 0 0 20px -6px hsl(var(--cta) / 0.2), inset 0 1px 0 hsl(var(--cta) / 0.1);
+  }
+  .btn-cta:hover {
+    background: linear-gradient(135deg, hsl(var(--cta) / 0.35), hsl(var(--cta) / 0.2));
+    border-color: hsl(var(--cta) / 0.5);
+    box-shadow: 0 0 30px -4px hsl(var(--cta) / 0.35), inset 0 1px 0 hsl(var(--cta) / 0.15);
+    transform: translateY(-1px);
+  }
+  .btn-cta:active {
+    transform: scale(0.97);
+  }
+  .btn-cta:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 @layer utilities {
+  .glass-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .glass-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .glass-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+  }
+  .glass-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .glass-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  }
   .animate-glow-pulse {
     animation: glow-pulse 3s ease-in-out infinite;
   }
@@ -184,6 +239,9 @@
   .bg-card { background-color: hsl(var(--card)); }
   .bg-muted { background-color: hsl(var(--muted)); }
   .bg-primary { background-color: hsl(var(--primary)); }
+  .bg-cta { background-color: hsl(var(--cta)); }
+  .text-cta { color: hsl(var(--cta)); }
+  .text-cta-foreground { color: hsl(var(--cta-foreground)); }
   .bg-success { background-color: hsl(var(--success)); }
   .bg-warning { background-color: hsl(var(--warning)); }
   .border-border { border-color: hsl(var(--border)); }

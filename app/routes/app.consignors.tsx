@@ -36,8 +36,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       if (!name) return { error: "Name is required", intent };
       if (!email) return { error: "Email is required", intent };
-      if (isNaN(feeRatePercent) || feeRatePercent < 1 || feeRatePercent > 99) {
-        return { error: "Fee rate must be between 1 and 99", intent };
+      if (isNaN(feeRatePercent) || feeRatePercent < 1 || feeRatePercent > 100) {
+        return { error: "Fee rate must be between 1 and 100", intent };
       }
 
       await createConsignor({ name, email, feeRate: feeRatePercent / 100 });
@@ -225,7 +225,7 @@ export default function Consignors() {
                   <input
                     type="number"
                     min="1"
-                    max="99"
+                    max="100"
                     step="1"
                     value={feeRate}
                     onChange={(e) => setFeeRate(e.target.value)}

@@ -22,9 +22,9 @@ describe("shopify-products.server", () => {
       const createCalls = findCalls("productCreate");
       expect(createCalls).toHaveLength(1);
 
-      // Should have called inventoryItemUpdate (tracked: true)
+      // Should have called inventoryItemUpdate (tracked: true + sku)
       const trackCalls = findCalls("inventoryItemUpdate");
-      expect(trackCalls).toHaveLength(1);
+      expect(trackCalls).toHaveLength(2);
 
       // DB should be updated with Shopify IDs
       const updatedProduct = await prisma.product.findUnique({ where: { id: product.id } });
@@ -149,11 +149,16 @@ describe("shopify-products.server", () => {
 
       await ensureShopifyProductAndVariant({ admin, product, variant });
 
-      // After productCreate, a productVariantsBulkUpdate sets barcode + SKU
-      const updateCalls = findCalls("productVariantsBulkUpdate");
-      expect(updateCalls).toHaveLength(1);
-      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
-      expect(variants[0].sku).toBe("DD1391-100");
+      // After productCreate, SKU is set via inventoryItemUpdate (second call)
+      const invCalls = findCalls("inventoryItemUpdate");
+      // First call: tracked: true; Second call: sku
+      const skuCall = invCalls.find((c) => {
+        const vars = c.variables as Record<string, Record<string, unknown>>;
+        return vars.input?.sku !== undefined;
+      });
+      expect(skuCall).toBeDefined();
+      const skuVars = skuCall!.variables as Record<string, Record<string, string>>;
+      expect(skuVars.input.sku).toBe("DD1391-100");
     });
 
     it("sets SKU to GTIN for non-footwear product on create", async () => {
@@ -168,10 +173,14 @@ describe("shopify-products.server", () => {
 
       await ensureShopifyProductAndVariant({ admin, product, variant });
 
-      const updateCalls = findCalls("productVariantsBulkUpdate");
-      expect(updateCalls).toHaveLength(1);
-      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
-      expect(variants[0].sku).toBe("AMI-HAT-OS-ABC123");
+      const invCalls = findCalls("inventoryItemUpdate");
+      const skuCall = invCalls.find((c) => {
+        const vars = c.variables as Record<string, Record<string, unknown>>;
+        return vars.input?.sku !== undefined;
+      });
+      expect(skuCall).toBeDefined();
+      const skuVars = skuCall!.variables as Record<string, Record<string, string>>;
+      expect(skuVars.input.sku).toBe("AMI-HAT-OS-ABC123");
     });
 
     it("falls back to GTIN for footwear without styleId", async () => {
@@ -185,11 +194,15 @@ describe("shopify-products.server", () => {
 
       await ensureShopifyProductAndVariant({ admin, product, variant });
 
-      const updateCalls = findCalls("productVariantsBulkUpdate");
-      expect(updateCalls).toHaveLength(1);
-      const variants = (updateCalls[0].variables as Record<string, unknown>).variants as Array<Record<string, string>>;
+      const invCalls = findCalls("inventoryItemUpdate");
+      const skuCall = invCalls.find((c) => {
+        const vars = c.variables as Record<string, Record<string, unknown>>;
+        return vars.input?.sku !== undefined;
+      });
+      expect(skuCall).toBeDefined();
+      const skuVars = skuCall!.variables as Record<string, Record<string, string>>;
       // No styleId + no category = treated as footwear, falls back to gtin
-      expect(variants[0].sku).toBe("FALLBACK-GTIN");
+      expect(skuVars.input.sku).toBe("FALLBACK-GTIN");
     });
 
     it("sets SKU on new variant added to existing product", async () => {
@@ -209,12 +222,13 @@ describe("shopify-products.server", () => {
 
       await ensureShopifyProductAndVariant({ admin, product, variant });
 
-      // productVariantsBulkCreate should include sku
+      // SKU is set via inventoryItemUpdate (combined with tracked: true)
       const createCalls = findCalls("productVariantsBulkCreate");
       expect(createCalls).toHaveLength(1);
-      const vars = createCalls[0].variables as Record<string, unknown>;
-      const variants = vars.variants as Array<Record<string, string>>;
-      expect(variants[0].sku).toBe("DD1391-100");
+      const invCalls = findCalls("inventoryItemUpdate");
+      expect(invCalls).toHaveLength(1);
+      const invVars = invCalls[0].variables as Record<string, Record<string, unknown>>;
+      expect(invVars.input.sku).toBe("DD1391-100");
     });
 
     it("creates product without taxonomy when category is null", async () => {

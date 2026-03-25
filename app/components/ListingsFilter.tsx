@@ -17,10 +17,16 @@ type Props = {
 
 const STATUS_OPTIONS = [
   { label: "All", value: "all" },
+  { label: "Submitted", value: "submitted" },
+  { label: "Awaiting Drop-off", value: "approved_awaiting_dropoff" },
   { label: "Active", value: "active" },
   { label: "Pending", value: "pending_sale" },
   { label: "Sold", value: "sold" },
+  { label: "Rejected", value: "rejected" },
   { label: "Cancelled", value: "cancelled" },
+  { label: "Withdrawal Requested", value: "withdrawal_requested" },
+  { label: "Pending Pickup", value: "pending_pickup" },
+  { label: "Withdrawn", value: "withdrawn" },
 ];
 
 export default function ListingsFilter({

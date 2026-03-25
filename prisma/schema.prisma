@@ -81,15 +81,20 @@ model Listing {
   variantId       String
 
   price           Float
-  status          String    @default("active") // "active" | "sold" | "cancelled"
+  status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "active" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
 
   // Lifecycle timestamps
   createdAt       DateTime  @default(now())
+  submittedAt     DateTime? // consignor submitted for review
+  approvedAt      DateTime? // admin approved
+  rejectedAt      DateTime? // admin rejected
+  rejectionReason String?   // admin reason for rejection
   receivedAt      DateTime?
   authenticatedAt DateTime?
   listedAt        DateTime?
   soldAt          DateTime?
-  withdrawnAt     DateTime?
+  withdrawnAt     DateTime?  // set when consignor requests withdrawal
+  withdrawalApprovedAt DateTime? // set when admin approves → pending_pickup
 
   // Reassignment tracking (populated only for post-payout refund reassignments)
   reassignedFromConsignorId  String?

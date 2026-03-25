@@ -51,7 +51,7 @@ const sectionTitle: React.CSSProperties = {
 };
 
 export default function Dashboard() {
-  const { totalSales, totalOrders, totalCommission, inventoryValue, updatedAt, activityFeed } =
+  const { totalSales, totalOrders, totalCommission, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
   const [showAllActivity, setShowAllActivity] = useState(false);
   const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
@@ -107,20 +107,26 @@ export default function Dashboard() {
                   <h2 style={sectionTitle}>Action Required</h2>
                   <span style={{
                     padding: "2px 8px",
-                    background: "#fef2f2",
-                    color: "#d72c0d",
+                    background: submittedCount + awaitingDropoffCount + withdrawalRequestCount > 0 ? "#fef2f2" : "#f6f6f7",
+                    color: submittedCount + awaitingDropoffCount + withdrawalRequestCount > 0 ? "#d72c0d" : "#6d7175",
                     fontSize: "10px",
                     fontWeight: 700,
                     borderRadius: "9999px",
-                    border: "1px solid #fecaca",
+                    border: `1px solid ${submittedCount + awaitingDropoffCount + withdrawalRequestCount > 0 ? "#fecaca" : "#e3e3e3"}`,
                   }}>
-                    0 Total
+                    {submittedCount + awaitingDropoffCount + withdrawalRequestCount} Total
                   </span>
                 </div>
                 <div style={{ padding: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <ActionItem label="Awaiting Approval" count={0} color="#2c6ecb" />
-                  <ActionItem label="Awaiting Drop-off" count={0} color="#b86e00" />
-                  <ActionItem label="Withdrawal Requests" count={0} color="#1a7f37" />
+                  <Link to="/app/listings?status=submitted" style={{ textDecoration: "none" }}>
+                    <ActionItem label="Awaiting Approval" count={submittedCount} color="#2c6ecb" subtitle="Submitted by consignors" />
+                  </Link>
+                  <Link to="/app/listings?status=approved_awaiting_dropoff" style={{ textDecoration: "none" }}>
+                    <ActionItem label="Awaiting Drop-off" count={awaitingDropoffCount} color="#b86e00" subtitle="Approved, pending item arrival" />
+                  </Link>
+                  <Link to="/app/listings?status=withdrawal_requested" style={{ textDecoration: "none" }}>
+                    <ActionItem label="Withdrawal Requests" count={withdrawalRequestCount} color="#ea580c" subtitle="Requires review" />
+                  </Link>
                 </div>
               </div>
             </motion.section>

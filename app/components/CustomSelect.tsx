@@ -153,7 +153,13 @@ export default function CustomSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span style={value ? undefined : { color: "#9ca3af" }}>
+        <span style={{
+          ...(value ? {} : { color: "#9ca3af" }),
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          minWidth: 0,
+        }}>
           {value ? selectedLabel : placeholder}
         </span>
         <span style={chevronStyle} />

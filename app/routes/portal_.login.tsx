@@ -19,7 +19,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const result = await loginPortal(email, password);
   if ("error" in result) return { error: result.error };
 
-  throw redirect("/portal", {
+  throw redirect("/portal/dashboard", {
     headers: {
       "Set-Cookie": createSessionCookie(result.consignor.id),
     },
