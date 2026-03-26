@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { fmt } from "~/lib/currency";
 import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders.server";
 
 interface MonthlyEarning {
@@ -43,7 +44,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function getMonthlyEarnings(
-  transactions: { createdAt: Date; consignorAmount: number }[]
+  transactions: { createdAt: Date; consignorAmount: number; grossAmount: number; salePrice?: number; cost?: number }[],
+  storeOwned = false,
 ): MonthlyEarning[] {
   const now = new Date();
   const months: MonthlyEarning[] = [];
@@ -60,7 +62,18 @@ function getMonthlyEarnings(
       (now.getFullYear() - txDate.getFullYear()) * 12 +
       (now.getMonth() - txDate.getMonth());
     if (monthsDiff >= 0 && monthsDiff < 6) {
-      months[5 - monthsDiff].value += tx.consignorAmount;
+      let value: number;
+      if (storeOwned) {
+        // Refund txs have positive salePrice/cost but negative grossAmount
+        // Use grossAmount sign to determine direction
+        const isRefund = tx.grossAmount < 0;
+        const profit = (tx.salePrice ?? 0) - (tx.cost ?? 0);
+        value = isRefund ? -profit : profit;
+      } else {
+        // consignorAmount is already negative for refunds
+        value = tx.consignorAmount;
+      }
+      months[5 - monthsDiff].value += value;
     }
   }
 
@@ -84,7 +97,7 @@ function buildNotifications(
       id: `sale-${sale.id}`,
       type: "sale",
       title: "Item Sold",
-      description: `${sale.product} sold for $${sale.consignorAmount.toFixed(2)}`,
+      description: `${sale.product} sold for $${fmt(sale.consignorAmount)}`,
       time: sale.createdAt,
       color: "text-[hsl(var(--success))]",
     });
@@ -95,7 +108,7 @@ function buildNotifications(
       id: `payout-${payout.id}`,
       type: "payout",
       title: payout.status === "paid" ? "Payout Received" : "Payout Pending",
-      description: `$${payout.amount.toFixed(2)} ${payout.status === "paid" ? "paid out" : "pending"}`,
+      description: `$${fmt(payout.amount)} ${payout.status === "paid" ? "paid out" : "pending"}`,
       time: payout.createdAt,
       color: payout.status === "paid" ? "text-primary" : "text-[hsl(var(--warning))]",
     });
@@ -153,9 +166,24 @@ function buildNotifications(
   return notifications.slice(0, 20);
 }
 
+/** Check if in-app notifications are enabled from prefs JSON */
+function isInAppEnabled(prefsJson: string | null | undefined): boolean {
+  if (!prefsJson) return true; // null = all enabled
+  try {
+    const parsed = JSON.parse(prefsJson);
+    // New format: { inApp: boolean, email: boolean }
+    if (typeof parsed.inApp === "boolean") return parsed.inApp;
+    // Legacy format: { disabled: string[] } — treat as enabled
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 export async function getConsignorNotifications(
   consignorId: string,
   notificationsReadAt: Date | null,
+  notificationPrefs?: string | null,
 ): Promise<{
   items: PortalNotification[];
   unreadCount: number;
@@ -262,14 +290,16 @@ export async function getConsignorNotifications(
     }
   }
 
-  const items = buildNotifications(saleNotifs, recentPayouts, rejectionNotifs, approvalNotifs, withdrawalNotifs);
+  const allItems = buildNotifications(saleNotifs, recentPayouts, rejectionNotifs, approvalNotifs, withdrawalNotifs);
+  const inAppEnabled = isInAppEnabled(notificationPrefs);
+  const items = inAppEnabled ? allItems : [];
   const unreadCount = notificationsReadAt
     ? items.filter((item) => new Date(item.time) > notificationsReadAt).length
     : items.length;
   return { items, unreadCount };
 }
 
-export async function getConsignorDashboard(consignorId: string) {
+export async function getConsignorDashboard(consignorId: string, storeOwned = false) {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -285,9 +315,13 @@ export async function getConsignorDashboard(consignorId: string) {
     earningsTransactions,
     listingsByStatus,
     recentPayouts,
+    // Store-owned: profit-based total earnings
+    storeOwnedProfitAgg,
+    inventoryValueAgg,
+    totalSalesRevenueAgg,
   ] = await Promise.all([
-    getConsignorBalance(consignorId),
-    getConsignorPaidTotal(consignorId),
+    storeOwned ? Promise.resolve(0) : getConsignorBalance(consignorId),
+    storeOwned ? Promise.resolve(0) : getConsignorPaidTotal(consignorId),
 
     prisma.listing.count({
       where: { consignorId, status: "active" },
@@ -298,25 +332,32 @@ export async function getConsignorDashboard(consignorId: string) {
     }),
 
     // Payout breakdown: awaiting invoice (status=pending)
-    prisma.payout.aggregate({
-      where: { consignorId, status: "pending" },
-      _sum: { amount: true },
-    }),
+    storeOwned
+      ? Promise.resolve({ _sum: { amount: null } })
+      : prisma.payout.aggregate({
+          where: { consignorId, status: "pending" },
+          _sum: { amount: true },
+        }),
 
     // Payout breakdown: invoice sent (status=invoiced)
-    prisma.payout.aggregate({
-      where: { consignorId, status: "invoiced" },
-      _sum: { amount: true },
-    }),
+    storeOwned
+      ? Promise.resolve({ _sum: { amount: null } })
+      : prisma.payout.aggregate({
+          where: { consignorId, status: "invoiced" },
+          _sum: { amount: true },
+        }),
 
     // Payout breakdown: unbatched (sale txs not in any payout)
-    prisma.transaction.aggregate({
-      where: { consignorId, type: "sale", payoutItems: { none: {} } },
-      _sum: { consignorAmount: true },
-    }),
+    storeOwned
+      ? Promise.resolve({ _sum: { consignorAmount: null } })
+      : prisma.transaction.aggregate({
+          where: { consignorId, type: "sale", payoutItems: { none: {} } },
+          _sum: { consignorAmount: true },
+        }),
 
+    // Recent sales: only show non-refunded items
     prisma.transaction.findMany({
-      where: { consignorId, type: "sale" },
+      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: {
@@ -331,9 +372,10 @@ export async function getConsignorDashboard(consignorId: string) {
       },
     }),
 
+    // Performance chart: include sale + refund/void txs so refunds offset sales
     prisma.transaction.findMany({
-      where: { consignorId, type: "sale", createdAt: { gte: sixMonthsAgo } },
-      select: { createdAt: true, consignorAmount: true },
+      where: { consignorId, type: { in: ["sale", "refund", "void"] }, createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true, consignorAmount: true, grossAmount: true, salePrice: true, cost: true },
     }),
 
     prisma.listing.groupBy({
@@ -342,15 +384,39 @@ export async function getConsignorDashboard(consignorId: string) {
       _count: true,
     }),
 
-    prisma.payout.findMany({
-      where: { consignorId },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, createdAt: true, amount: true, status: true },
+    storeOwned
+      ? Promise.resolve([])
+      : prisma.payout.findMany({
+          where: { consignorId },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: { id: true, createdAt: true, amount: true, status: true },
+        }),
+
+    // Store-owned: sum of (salePrice - cost) for sold items = total profit
+    storeOwned
+      ? prisma.transaction.aggregate({
+          where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+          _sum: { salePrice: true, cost: true },
+        })
+      : Promise.resolve({ _sum: { salePrice: null, cost: null } }),
+
+    // Inventory value: sum of prices for active listings
+    prisma.listing.aggregate({
+      where: { consignorId, status: "active" },
+      _sum: { price: true },
     }),
+
+    // Total sales revenue (for regular consignors): sum of salePrice from sold transactions
+    storeOwned
+      ? Promise.resolve({ _sum: { salePrice: null } })
+      : prisma.transaction.aggregate({
+          where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+          _sum: { salePrice: true },
+        }),
   ]);
 
-  const monthlyEarnings = getMonthlyEarnings(earningsTransactions);
+  const monthlyEarnings = getMonthlyEarnings(earningsTransactions, storeOwned);
   const currentMonthEarnings = monthlyEarnings[monthlyEarnings.length - 1]?.value ?? 0;
 
   const totalListings = listingsByStatus.reduce((sum, g) => sum + g._count, 0);
@@ -372,12 +438,28 @@ export async function getConsignorDashboard(consignorId: string) {
   }));
   const notifications = buildNotifications(recentSaleNotifs, recentPayouts);
 
+  // Store-owned: totalEarnings = profit (revenue - cost), no pending payouts
+  const totalEarnings = storeOwned
+    ? (storeOwnedProfitAgg._sum.salePrice ?? 0) - (storeOwnedProfitAgg._sum.cost ?? 0)
+    : paidTotal;
+
+  const totalRevenue = storeOwned ? (storeOwnedProfitAgg._sum.salePrice ?? 0) : undefined;
+  const totalCost = storeOwned ? (storeOwnedProfitAgg._sum.cost ?? 0) : undefined;
+  const inventoryValue = inventoryValueAgg._sum.price ?? 0;
+  const totalSalesRevenue = storeOwned ? 0 : (totalSalesRevenueAgg._sum.salePrice ?? 0);
+
   return {
+    storeOwned,
     stats: {
-      totalEarnings: paidTotal,
+      totalEarnings,
       activeListings: activeCount,
       itemsSold: soldCount,
-      pendingPayouts,
+      pendingPayouts: storeOwned ? null : pendingPayouts,
+      inventoryValue,
+      totalSalesRevenue,
+      // Extra stats for store-owned
+      totalRevenue,
+      totalCost,
     },
     payoutBreakdown: {
       awaitingInvoice: awaitingInvoiceAgg._sum.amount ?? 0,
@@ -394,14 +476,20 @@ export async function getConsignorDashboard(consignorId: string) {
       size: tx.orderItem?.listing.variant.size ?? "",
       orderNumber: tx.orderItem?.order.orderNumber ?? "",
       salePrice: tx.salePrice,
+      cost: tx.cost,
       fee: tx.feeAmount,
       payout: tx.consignorAmount,
+      profit: tx.salePrice - tx.cost,
       date: tx.createdAt,
     })),
   };
 }
 
-export async function getConsignorPayouts(consignorId: string) {
+export async function getConsignorPayouts(consignorId: string, storeOwned = false) {
+  if (storeOwned) {
+    return { payouts: [], unbatchedTxs: [], storeOwned: true };
+  }
+
   const payouts = await prisma.payout.findMany({
     where: { consignorId },
     orderBy: { createdAt: "desc" },
@@ -442,4 +530,99 @@ export async function getConsignorPayouts(consignorId: string) {
   });
 
   return { payouts, unbatchedTxs };
+}
+
+export async function getConsignorSales(
+  consignorId: string,
+  filters: { search?: string; status?: string } = {},
+  storeOwned = false,
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: Record<string, any> = { consignorId, type: "sale" };
+
+  // Status filter: "refunded" means the orderItem was refunded
+  if (filters.status === "refunded") {
+    where.orderItem = { status: "refunded" };
+  } else if (filters.status === "sold") {
+    where.orderItem = { status: "sold" };
+  }
+
+  // Search filter
+  if (filters.search) {
+    const s = filters.search;
+    where.OR = [
+      { orderItem: { order: { orderNumber: { contains: s } } } },
+      { orderItem: { listing: { variant: { product: { title: { contains: s } } } } } },
+    ];
+  }
+
+  const txInclude = {
+    orderItem: {
+      include: {
+        order: true,
+        listing: {
+          include: { variant: { include: { product: true } } },
+        },
+      },
+    },
+    payoutItems: {
+      include: { payout: { select: { id: true, status: true } } },
+    },
+  };
+
+  const [transactions, totalEarned, salesCount] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: txInclude,
+    }),
+    prisma.transaction.aggregate({
+      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+      _sum: { consignorAmount: true, salePrice: true, cost: true },
+    }),
+    prisma.transaction.count({
+      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+    }),
+  ]);
+
+  const totalSalePrice = totalEarned._sum.salePrice ?? 0;
+  const totalCost = totalEarned._sum.cost ?? 0;
+  const totalEarnedVal = storeOwned
+    ? totalSalePrice - totalCost
+    : (totalEarned._sum.consignorAmount ?? 0);
+  const avgSale = salesCount > 0 ? totalSalePrice / salesCount : 0;
+
+  const sales = transactions.map((tx) => {
+    const payoutItem = tx.payoutItems[0];
+    let payoutStatus: "unbatched" | "pending" | "paid" = "unbatched";
+    if (payoutItem) {
+      payoutStatus = payoutItem.payout.status === "paid" ? "paid" : "pending";
+    }
+
+    return {
+      id: tx.id,
+      product: tx.orderItem?.listing.variant.product.title ?? "Unknown",
+      size: tx.orderItem?.listing.variant.size ?? "",
+      orderNumber: tx.orderItem?.order.orderNumber ?? "",
+      salePrice: tx.salePrice,
+      cost: tx.cost,
+      fee: tx.feeAmount,
+      payout: tx.consignorAmount,
+      profit: tx.salePrice - tx.cost,
+      date: tx.createdAt,
+      status: tx.orderItem?.status ?? "sold",
+      payoutStatus,
+    };
+  });
+
+  return {
+    storeOwned,
+    sales,
+    stats: {
+      totalEarned: totalEarnedVal,
+      itemsSold: salesCount,
+      avgSale: Math.round(avgSale * 100) / 100,
+    },
+  };
 }

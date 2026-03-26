@@ -10,6 +10,7 @@ import {
   rejectListing,
   activateListing,
   adminEditAndApprove,
+  adminEditListing,
   bulkApproveListing,
   bulkActivateListing,
   approveWithdrawal,
@@ -51,7 +52,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       limit: 25,
       grouped: true,
     }),
-    prisma.consignor.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.consignor.findMany({ select: { id: true, name: true, storeOwned: true }, orderBy: { name: "asc" } }),
   ]);
 
   return { ...result, consignors, filters: { search, status, category, consignorId }, sortBy, sortDir };
@@ -101,6 +102,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         price,
         count: quantity,
         consignorId,
+        cost: formData.get("cost") ? Number(formData.get("cost")) : undefined,
       });
       return { listing, intent, quantity };
     }
@@ -136,6 +138,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         size: (formData.get("size") as string) || undefined,
         gtin: (formData.get("gtin") as string) || undefined,
         price: formData.get("price") ? Number(formData.get("price")) : undefined,
+      });
+      return { intent };
+    }
+
+    if (intent === "admin-edit") {
+      const listingId = formData.get("listingId") as string;
+      await adminEditListing({
+        admin,
+        listingId,
+        title: (formData.get("title") as string) || undefined,
+        brand: (formData.get("brand") as string) || undefined,
+        category: (formData.get("category") as string) || undefined,
+        styleId: (formData.get("styleId") as string) || undefined,
+        size: (formData.get("size") as string) || undefined,
+        gtin: (formData.get("gtin") as string) || undefined,
+        price: formData.get("price") ? Number(formData.get("price")) : undefined,
+        cost: formData.has("cost") ? (formData.get("cost") ? Number(formData.get("cost")) : null) : undefined,
       });
       return { intent };
     }
@@ -235,6 +254,8 @@ export default function Listings() {
       shopify.toast.show("Listing activated & synced to Shopify");
     } else if (data.intent === "admin-edit-approve") {
       shopify.toast.show("Listing updated & approved");
+    } else if (data.intent === "admin-edit") {
+      shopify.toast.show("Listing updated");
     } else if (data.intent === "bulk-approve") {
       const count = data.approved as number;
       shopify.toast.show(`Approved ${count} listing${count !== 1 ? "s" : ""}`);
@@ -303,6 +324,12 @@ export default function Listings() {
       { intent: "admin-edit-approve", listingId, ...fields },
       { method: "POST" },
     );
+  };
+
+  const handleAdminEdit = (listingId: string, fields: EditApproveFields) => {
+    const submitData: Record<string, string> = { intent: "admin-edit", listingId, ...fields };
+    if (!fields.cost) delete submitData.cost;
+    approvalFetcher.submit(submitData, { method: "POST" });
   };
 
   const handleBulkApprove = () => {
@@ -457,6 +484,7 @@ export default function Listings() {
           onApproveWithdrawal={handleApproveWithdrawal}
           onCompleteWithdrawal={handleCompleteWithdrawal}
           onEditApprove={handleEditApprove}
+          onAdminEdit={handleAdminEdit}
           onQuickAdd={handleQuickAdd}
           isLoading={cancelLoading || approvalLoading}
           isNavigating={isNavigating}

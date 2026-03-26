@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { fmt } from "~/lib/currency";
 
 type FeedEvent = {
   event: string;
@@ -22,10 +23,11 @@ export async function getDashboardData() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [salesAgg, totalOrders, commissionAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount] = await Promise.all([
+  const [salesAgg, totalOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount] = await Promise.all([
     prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { grossAmount: true } }),
     prisma.order.count(),
-    prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { feeAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
     prisma.listing.aggregate({ where: { status: "active" }, _sum: { price: true } }),
     prisma.listing.count({ where: { status: "submitted" } }),
     prisma.listing.count({ where: { status: "approved_awaiting_dropoff" } }),
@@ -33,7 +35,9 @@ export async function getDashboardData() {
   ]);
 
   const totalSales = salesAgg._sum.grossAmount ?? 0;
-  const totalCommission = commissionAgg._sum.feeAmount ?? 0;
+  const consignmentFees = consignFeesAgg._sum.feeAmount ?? 0;
+  const storeProfit = (storeAgg._sum.grossAmount ?? 0) - (storeAgg._sum.cost ?? 0);
+  const totalEarnings = consignmentFees + storeProfit;
   const inventoryValue = inventoryAgg._sum.price ?? 0;
 
   // Activity feed: recent events from listings + refund transactions
@@ -69,7 +73,9 @@ export async function getDashboardData() {
   return {
     totalSales,
     totalOrders,
-    totalCommission,
+    consignmentFees,
+    storeProfit,
+    totalEarnings,
     inventoryValue,
     submittedCount,
     awaitingDropoffCount,
@@ -122,7 +128,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
 
     if (listing.status === "sold" && listing.soldAt) {
       events.push({
-        event: `${product} (${size}) sold for $${listing.price.toFixed(2)}`,
+        event: `${product} (${size}) sold for $${fmt(listing.price)}`,
         time: relativeTime(now, listing.soldAt),
         type: "sale",
         sortTime: listing.soldAt.getTime(),
@@ -139,7 +145,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     }
 
     events.push({
-      event: `${listing.consignor.name} listed ${product} (${size}) at $${listing.price.toFixed(2)}`,
+      event: `${listing.consignor.name} listed ${product} (${size}) at $${fmt(listing.price)}`,
       time: relativeTime(now, listing.createdAt),
       type: "listing",
       sortTime: listing.createdAt.getTime(),
@@ -152,7 +158,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     const product = listing.variant.product.title;
     const size = listing.variant.size;
     events.push({
-      event: `${product} (${size}) refunded $${Math.abs(tx.grossAmount).toFixed(2)}`,
+      event: `${product} (${size}) refunded $${fmt(Math.abs(tx.grossAmount))}`,
       time: relativeTime(now, tx.createdAt),
       type: "request",
       sortTime: tx.createdAt.getTime(),

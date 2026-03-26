@@ -31,7 +31,15 @@ model Consignor {
   id             String   @id @default(cuid())
   name           String
   email          String   @unique
+  phone          String?                 // consignor phone number
+  taxStatus      String   @default("individual") // "individual" | "business"
+  province       String?                 // Canadian province code (e.g. "QC", "ON") — required for business
+  gstNumber      String?                 // GST/HST registration number
+  qstNumber      String?                 // QST number (Quebec only)
+  storeOwned     Boolean  @default(false)  // true = store-owned inventory, excluded from payouts
   feeRate        Float    @default(0.15)  // consignment fee — e.g. 0.15 = 15% fee, consignor keeps 85%
+  avatarColor    String?                 // HSL color string for portal avatar badge
+  notificationPrefs String?              // JSON: { disabled: string[] } — null = all enabled
 
   notificationsReadAt DateTime?
 
@@ -81,6 +89,7 @@ model Listing {
   variantId       String
 
   price           Float
+  cost            Float?                // acquisition cost (store-owned inventory only)
   status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "active" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
 
   // Lifecycle timestamps
@@ -144,6 +153,7 @@ model Transaction {
 
   // Audit-grade breakdown (immutable snapshot at creation time)
   salePrice        Float    @default(0) // unit price at time of sale
+  cost             Float    @default(0) // acquisition cost snapshot (store-owned only, 0 for consignment)
   feeRate          Float    @default(0) // fee rate snapshot — e.g. 0.15 = 15%
   grossAmount      Float    @default(0) // salePrice (per-item, always 1 unit)
   feeAmount        Float    @default(0) // grossAmount × feeRate

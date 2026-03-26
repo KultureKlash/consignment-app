@@ -131,13 +131,19 @@ describe("consignors.server — updateConsignor", () => {
     expect(updated.feeRate).toBeCloseTo(0.13);
   });
 
-  it("rejects fee rate below 1%", async () => {
+  it("allows 0% fee rate (store-owned)", async () => {
     const consignor = await createTestConsignor();
-    await expect(updateConsignor(consignor.id, { feeRate: 0 })).rejects.toThrow("Fee rate must be between 1% and 100%");
+    const updated = await updateConsignor(consignor.id, { feeRate: 0 });
+    expect(updated.feeRate).toBe(0);
+  });
+
+  it("rejects negative fee rate", async () => {
+    const consignor = await createTestConsignor();
+    await expect(updateConsignor(consignor.id, { feeRate: -0.01 })).rejects.toThrow("Fee rate must be between 0% and 100%");
   });
 
   it("rejects fee rate above 100%", async () => {
     const consignor = await createTestConsignor();
-    await expect(updateConsignor(consignor.id, { feeRate: 1.01 })).rejects.toThrow("Fee rate must be between 1% and 100%");
+    await expect(updateConsignor(consignor.id, { feeRate: 1.01 })).rejects.toThrow("Fee rate must be between 0% and 100%");
   });
 });

@@ -13,9 +13,9 @@ export const links: LinksFunction = () => [
 export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
-  const notifications = await getConsignorNotifications(consignor.id, consignor.notificationsReadAt);
+  const notifications = await getConsignorNotifications(consignor.id, consignor.notificationsReadAt, consignor.notificationPrefs);
   return {
-    consignor: { id: consignor.id, name: consignor.name, email: consignor.email },
+    consignor: { id: consignor.id, name: consignor.name, email: consignor.email, avatarColor: consignor.avatarColor, storeOwned: consignor.storeOwned },
     notifications,
   };
 }

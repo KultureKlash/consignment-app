@@ -271,6 +271,106 @@ export async function adminEditAndApprove({
   });
 }
 
+// ── Admin: Edit listing (any non-terminal status) without changing status ──
+
+const TERMINAL_STATUSES = ["sold", "cancelled", "rejected", "withdrawn"];
+
+export async function adminEditListing({
+  admin,
+  listingId,
+  title,
+  brand,
+  category,
+  styleId,
+  size,
+  gtin,
+  price,
+  cost,
+}: {
+  admin?: AdminApiContext;
+  listingId: string;
+  title?: string;
+  brand?: string;
+  category?: string;
+  styleId?: string | null;
+  size?: string;
+  gtin?: string;
+  price?: number;
+  cost?: number | null;
+}) {
+  const listing = await prisma.listing.findUniqueOrThrow({
+    where: { id: listingId },
+    include: { variant: { include: { product: true } }, consignor: true },
+  });
+
+  if (TERMINAL_STATUSES.includes(listing.status)) {
+    throw new Error(`Cannot edit listing with status "${listing.status}"`);
+  }
+
+  // Rebuild product/variant if fields changed (same dedup logic as adminEditAndApprove)
+  let variantId = listing.variantId;
+  const currentProduct = listing.variant.product;
+
+  const needsNewProduct =
+    (title && title !== currentProduct.title) ||
+    (brand && brand !== currentProduct.brand) ||
+    (category && category !== currentProduct.category) ||
+    (styleId !== undefined && styleId !== currentProduct.styleId);
+
+  if (needsNewProduct) {
+    const product = await findOrCreateProduct({
+      styleId: styleId !== undefined ? styleId : currentProduct.styleId,
+      title: title ?? currentProduct.title,
+      brand: brand ?? currentProduct.brand ?? undefined,
+      category: category ?? currentProduct.category ?? undefined,
+    });
+    const variant = await findOrCreateVariant({
+      productId: product.id,
+      size: size ?? listing.variant.size,
+      gtin: gtin ?? listing.variant.gtin ?? undefined,
+    });
+    variantId = variant.id;
+  } else if (size && size !== listing.variant.size) {
+    const variant = await findOrCreateVariant({
+      productId: currentProduct.id,
+      size,
+      gtin: gtin ?? listing.variant.gtin ?? undefined,
+    });
+    variantId = variant.id;
+  } else if (gtin && gtin !== (listing.variant.gtin ?? "")) {
+    await prisma.variant.update({
+      where: { id: listing.variantId },
+      data: { gtin },
+    });
+  }
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: {
+      variantId,
+      ...(price !== undefined ? { price } : {}),
+      ...(cost !== undefined ? { cost } : {}),
+    },
+    include: { consignor: true, variant: { include: { product: true } } },
+  });
+
+  // Re-sync to Shopify if the listing is live
+  if (admin && ["active", "pending_sale"].includes(listing.status)) {
+    try {
+      await ensureShopifyProductAndVariant({
+        admin,
+        product: updated.variant.product,
+        variant: updated.variant,
+      });
+      await syncInventory({ admin, variant: updated.variant });
+    } catch (err) {
+      console.error("Shopify sync after edit failed:", err);
+    }
+  }
+
+  return updated;
+}
+
 // ── Admin: Activate listing (check-in / dropoff) → goes live on Shopify ──
 
 export async function activateListing({

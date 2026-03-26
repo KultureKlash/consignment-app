@@ -5,6 +5,7 @@ import { redirect } from "react-router";
 import { ChevronDown, ChevronRight, Clock, FileText, CheckCircle2, CircleDot, DollarSign, Send } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
+import { fmt } from "~/lib/currency";
 import { authenticatePortal } from "~/services/portal-auth.server";
 import { getConsignorPayouts } from "~/services/portal-dashboard.server";
 import prisma from "~/db.server";
@@ -13,7 +14,7 @@ import type { loader as portalLoader } from "./portal";
 export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
-  const data = await getConsignorPayouts(consignor.id);
+  const data = await getConsignorPayouts(consignor.id, consignor.storeOwned);
   return { consignor, ...data };
 }
 
@@ -40,14 +41,13 @@ export async function action({ request }: ActionFunctionArgs) {
   return { error: "Invalid intent" };
 }
 
-function fmt(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, isIndividual }: { status: string; isIndividual?: boolean }) {
   const config: Record<string, { label: string; bg: string; text: string }> = {
-    pending: { label: "Awaiting Invoice", bg: "bg-[hsl(var(--warning))]/15", text: "text-[hsl(var(--warning))]" },
-    invoiced: { label: "Awaiting Invoice", bg: "bg-[hsl(var(--warning))]/15", text: "text-[hsl(var(--warning))]" },
+    pending: isIndividual
+      ? { label: "Processing", bg: "bg-[hsl(var(--warning))]/15", text: "text-[hsl(var(--warning))]" }
+      : { label: "Awaiting Invoice", bg: "bg-[hsl(var(--warning))]/15", text: "text-[hsl(var(--warning))]" },
+    invoiced: { label: "Invoice Sent", bg: "bg-primary/15", text: "text-primary" },
     paid: { label: "Paid", bg: "bg-[hsl(var(--success))]/15", text: "text-[hsl(var(--success))]" },
   };
   const c = config[status] ?? { label: status, bg: "bg-muted", text: "text-muted-foreground" };
@@ -61,13 +61,39 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PortalPayouts() {
-  const { consignor, payouts, unbatchedTxs } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  const { consignor, payouts, unbatchedTxs } = loaderData;
   const parentData = useRouteLoaderData<typeof portalLoader>("routes/portal");
   const fetcher = useFetcher();
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
   const [showUnbatched, setShowUnbatched] = useState(false);
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
+  const storeOwned = (loaderData as Record<string, unknown>).storeOwned === true;
 
+  if (storeOwned) {
+    return (
+      <div>
+        <AppHeader
+          title="Payouts"
+          subtitle="Payout management"
+          consignorName={consignor.name}
+          avatarColor={parentData?.consignor?.avatarColor}
+          notifications={parentData?.notifications}
+        />
+        <div className="px-4 md:px-8 pb-8">
+          <div className="glass-panel rounded-2xl p-12 text-center">
+            <DollarSign className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm font-medium mb-1">Not applicable</p>
+            <p className="text-sm text-muted-foreground">
+              Payouts don't apply to store-owned inventory. View your profit on the Sales page.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isIndividual = consignor.taxStatus !== "business";
   const activePayouts = payouts.filter((p) => p.status === "pending" || p.status === "invoiced");
   const paidPayouts = payouts.filter((p) => p.status === "paid");
 
@@ -77,7 +103,7 @@ export default function PortalPayouts() {
 
   return (
     <div>
-      <AppHeader title="Payouts" subtitle="Track your earnings and payment status" consignorName={consignor.name} notifications={parentData?.notifications} />
+      <AppHeader title="Payouts" subtitle="Track your earnings and payment status" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 space-y-4 md:space-y-6">
         {/* Legend */}
@@ -93,7 +119,7 @@ export default function PortalPayouts() {
         <div className="hidden md:grid grid-cols-3 gap-4">
           {[
             { label: "Unbatched", display: `$${fmt(totalUnbatched)}`, icon: CircleDot, color: "text-muted-foreground", tip: "Sales earnings not yet grouped into a payout by the admin." },
-            { label: "Awaiting Invoice", display: String(activePayouts.length), icon: Clock, color: "text-[hsl(var(--warning))]", tip: "Number of payouts awaiting your invoice. Send your invoice so we can process payment." },
+            { label: isIndividual ? "Pending" : "Awaiting Invoice", display: String(activePayouts.length), icon: Clock, color: "text-[hsl(var(--warning))]", tip: isIndividual ? "Number of payouts being processed for payment." : "Number of payouts awaiting your invoice. Send your invoice so we can process payment." },
             { label: "Paid Out", display: `$${fmt(totalPaid)}`, icon: CheckCircle2, color: "text-[hsl(var(--success))]", tip: "Total amount that has been paid to you." },
           ].map((stat, i) => (
             <div key={stat.label} className="stat-card animate-slide-up !p-5" style={{ animationDelay: `${i * 80}ms` }}>
@@ -138,11 +164,11 @@ export default function PortalPayouts() {
               <p className="text-3xl font-bold tracking-tight tabular-nums">${fmt(totalPaid)}</p>
             </div>
           </div>
-          {/* Awaiting Invoice — bottom left */}
+          {/* Awaiting Invoice / Pending — bottom left */}
           <div className="stat-card animate-slide-up !p-4 flex flex-col justify-between" style={{ animationDelay: "80ms" }}>
             <div className="flex items-center justify-between">
-              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Awaiting</p>
-              <InfoTip text="Payouts awaiting your invoice. Send your invoice so we can process payment." />
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{isIndividual ? "Pending" : "Awaiting"}</p>
+              <InfoTip text={isIndividual ? "Payouts being processed for payment." : "Payouts awaiting your invoice. Send your invoice so we can process payment."} />
             </div>
             <div className="flex items-end justify-between mt-auto pt-3">
               <p className="text-xl font-bold tracking-tight tabular-nums">{activePayouts.length}</p>
@@ -217,7 +243,7 @@ export default function PortalPayouts() {
         {activePayouts.length > 0 && (
           <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "400ms" }}>
             <div className="px-4 md:px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
-              <h3 className="text-sm md:text-base font-semibold flex items-center gap-1.5">Active Payouts <InfoTip text="Payouts awaiting your invoice. Click 'Mark Invoice Sent' once you've sent it." /></h3>
+              <h3 className="text-sm md:text-base font-semibold flex items-center gap-1.5">Active Payouts <InfoTip text={isIndividual ? "Payouts being processed. You'll be paid directly — no invoice needed." : "Payouts awaiting your invoice. Click 'Mark Invoice Sent' once you've sent it."} /></h3>
               <p className="text-xs text-muted-foreground">{activePayouts.length} payout{activePayouts.length !== 1 ? "s" : ""} in progress</p>
             </div>
             <div className="divide-y divide-[rgba(255,255,255,0.06)]">
@@ -232,7 +258,7 @@ export default function PortalPayouts() {
                       {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                       <div className="flex-1 flex items-center justify-between min-w-0">
                         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                          <StatusBadge status={payout.status} />
+                          <StatusBadge status={payout.status} isIndividual={isIndividual} />
                           {payout.status === "pending" && payout.invoiceSent && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary">
                               <Send className="w-2.5 h-2.5" />
@@ -251,8 +277,8 @@ export default function PortalPayouts() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
-                        {/* Mark Invoice Sent for pending payouts */}
-                        {payout.status === "pending" && !payout.invoiceSent && (
+                        {/* Mark Invoice Sent for pending payouts — business consignors only */}
+                        {!isIndividual && payout.status === "pending" && !payout.invoiceSent && (
                           <div className="px-6 md:px-10 py-3 border-b border-[rgba(255,255,255,0.06)]">
                             <button
                               onClick={(e) => {
@@ -271,7 +297,7 @@ export default function PortalPayouts() {
                             <p className="text-[10px] text-muted-foreground mt-1.5">Let us know you've sent your invoice so we can process it faster.</p>
                           </div>
                         )}
-                        {payout.status === "pending" && payout.invoiceSent && (
+                        {!isIndividual && payout.status === "pending" && payout.invoiceSent && (
                           <div className="px-6 md:px-10 py-3 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                             <span className="text-xs text-primary font-medium">Invoice marked as sent</span>

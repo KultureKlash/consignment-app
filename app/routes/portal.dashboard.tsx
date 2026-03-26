@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData } from "react-router";
-import { DollarSign, Package, ShoppingBag, Clock } from "lucide-react";
+import { DollarSign, Package, ShoppingBag, Clock, TrendingUp } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
+import { fmt } from "~/lib/currency";
 import { authenticatePortal } from "~/services/portal-auth.server";
 import { getConsignorDashboard } from "~/services/portal-dashboard.server";
 import type { loader as portalLoader } from "./portal";
@@ -22,7 +23,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) return null;
 
-  const data = await getConsignorDashboard(consignor.id);
+  const data = await getConsignorDashboard(consignor.id, consignor.storeOwned);
   return { ...data };
 }
 
@@ -36,6 +37,7 @@ export default function PortalDashboard() {
   if (!loaderData) return null;
 
   const {
+    storeOwned,
     stats,
     payoutBreakdown,
     monthlyEarnings,
@@ -46,40 +48,76 @@ export default function PortalDashboard() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const statCards = [
-    {
-      label: "Total Earnings",
-      value: `$${stats.totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      icon: DollarSign,
-      change: "Paid out",
-      tip: "Total amount that has been paid out to you.",
-    },
-    {
-      label: "Active Listings",
-      value: String(stats.activeListings),
-      icon: Package,
-      change: "Currently listed",
-      tip: "Items currently listed for sale in the store.",
-    },
-    {
-      label: "Items Sold",
-      value: String(stats.itemsSold),
-      icon: ShoppingBag,
-      change: "All time",
-      tip: "Total number of your items that have been sold.",
-    },
-    {
-      label: "Pending Payouts",
-      value: `$${stats.pendingPayouts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      icon: Clock,
-      change: "Awaiting payout",
-      tip: "Earnings from sales that haven't been paid out yet. Check the Payouts page for details.",
-    },
-  ];
+  const fmt2 = fmt;
+
+  type StatCard = { label: string; value: string; icon: typeof DollarSign; change: string; tip: string; changeIcon?: typeof TrendingUp; changeColor?: string };
+  const statCards: StatCard[] = storeOwned
+    ? [
+        {
+          label: "Total Profit",
+          value: `$${fmt2(stats.totalEarnings)}`,
+          icon: TrendingUp,
+          change: "Revenue minus cost",
+          tip: "Total profit from sold items (sale price minus acquisition cost).",
+        },
+        {
+          label: "Active Listings",
+          value: String(stats.activeListings),
+          icon: Package,
+          change: "Currently listed",
+          tip: "Items currently listed for sale in the store.",
+        },
+        {
+          label: "Items Sold",
+          value: String(stats.itemsSold),
+          icon: ShoppingBag,
+          change: "All time",
+          tip: "Total number of items that have been sold.",
+        },
+        {
+          label: "Total Revenue",
+          value: `$${fmt2(stats.totalRevenue ?? 0)}`,
+          icon: DollarSign,
+          change: `Cost: $${fmt2(stats.totalCost ?? 0)}`,
+          tip: "Total revenue from sold items before subtracting acquisition cost.",
+        },
+      ]
+    : [
+        {
+          label: "Total Earnings",
+          value: `$${fmt2(stats.totalEarnings)}`,
+          icon: DollarSign,
+          change: "Paid out",
+          tip: "Total amount that has been paid out to you.",
+        },
+        {
+          label: "Active Listings",
+          value: String(stats.activeListings),
+          icon: Package,
+          change: `$${fmt2(stats.inventoryValue)} Inventory Value`,
+          changeIcon: TrendingUp,
+          changeColor: "text-[hsl(var(--success))]",
+          tip: "Items currently listed for sale. Inventory value is the total asking price of all active listings.",
+        },
+        {
+          label: "Items Sold",
+          value: String(stats.itemsSold),
+          icon: ShoppingBag,
+          change: "All time",
+          tip: "Total number of your items that have been sold.",
+        },
+        {
+          label: "Total Sales",
+          value: `$${fmt2(stats.totalSalesRevenue)}`,
+          icon: TrendingUp,
+          change: "Revenue all time",
+          tip: "Total sale price of all your sold items.",
+        },
+      ];
 
   return (
     <div>
-      <AppHeader title={`Hi, ${consignorName.split(" ")[0]}`} subtitle="Welcome to your dashboard" consignorName={consignorName} notifications={parentData?.notifications} />
+      <AppHeader title={`Hi, ${consignorName.split(" ")[0]}`} subtitle="Welcome to your dashboard" consignorName={consignorName} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
       <div className="px-4 md:px-8 pb-8 space-y-4 md:space-y-6">
         {/* Legend + Stats */}
@@ -108,13 +146,16 @@ export default function PortalDashboard() {
                   <stat.icon className="w-3.5 h-3.5 md:w-5 md:h-5 text-primary" />
                 </div>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-2 md:mt-3">{stat.change}</p>
+              <p className={`text-[10px] md:text-xs mt-2 md:mt-3 flex items-center gap-1 ${stat.changeColor ?? "text-muted-foreground"}`}>
+                {stat.changeIcon && <stat.changeIcon className="w-3 h-3" />}
+                {stat.change}
+              </p>
             </div>
           ))}
         </div>
 
-        {/* Payout Breakdown */}
-        {(payoutBreakdown.unbatched > 0 || payoutBreakdown.awaitingInvoice > 0 || payoutBreakdown.invoiceSent > 0) && (
+        {/* Payout Breakdown — hidden for store-owned */}
+        {!storeOwned && (payoutBreakdown.unbatched > 0 || payoutBreakdown.awaitingInvoice > 0 || payoutBreakdown.invoiceSent > 0) && (
           <div className="glass-panel rounded-2xl p-3 md:p-4 animate-slide-up" style={{ animationDelay: "320ms" }}>
             <p className="text-xs text-muted-foreground mb-2">Payout Breakdown</p>
             <div className="flex flex-wrap gap-4 md:gap-8">
@@ -122,21 +163,21 @@ export default function PortalDashboard() {
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Unbatched</span>
-                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.unbatched.toFixed(2)}</span>
+                  <span className="text-sm font-medium tabular-nums">${fmt(payoutBreakdown.unbatched)}</span>
                 </div>
               )}
               {payoutBreakdown.awaitingInvoice > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[hsl(var(--warning))]" />
                   <span className="text-xs text-muted-foreground">Awaiting Invoice</span>
-                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.awaitingInvoice.toFixed(2)}</span>
+                  <span className="text-sm font-medium tabular-nums">${fmt(payoutBreakdown.awaitingInvoice)}</span>
                 </div>
               )}
               {payoutBreakdown.invoiceSent > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   <span className="text-xs text-muted-foreground">Invoice Received</span>
-                  <span className="text-sm font-medium tabular-nums">${payoutBreakdown.invoiceSent.toFixed(2)}</span>
+                  <span className="text-sm font-medium tabular-nums">${fmt(payoutBreakdown.invoiceSent)}</span>
                 </div>
               )}
             </div>
@@ -150,7 +191,7 @@ export default function PortalDashboard() {
             <div className="flex items-center justify-between mb-3 md:mb-6">
               <div>
                 <h2 className="text-sm md:text-lg font-semibold">Performance</h2>
-                <p className="text-xs md:text-sm text-muted-foreground">Earnings over time</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{storeOwned ? "Profit over time" : "Earnings over time"}</p>
               </div>
               <div className="text-right">
                 <p className="text-lg md:text-2xl font-bold text-primary glow-text">
@@ -174,7 +215,7 @@ export default function PortalDashboard() {
                       color: "hsl(0, 0%, 92%)",
                       boxShadow: "0 0 20px hsl(0, 0%, 70%, 0.15)",
                     }}
-                    formatter={(value) => [`$${Number(value).toLocaleString()}`, "Earnings"]}
+                    formatter={(value) => [`$${Number(value).toLocaleString()}`, storeOwned ? "Profit" : "Earnings"]}
                   />
                   <Line
                     type="monotone"
@@ -243,8 +284,8 @@ export default function PortalDashboard() {
                     <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Size</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Sale</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Fee</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payout</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{storeOwned ? "Cost" : "Fee"}</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{storeOwned ? "Profit" : "Payout"}</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
                   </tr>
                 </thead>
@@ -257,9 +298,13 @@ export default function PortalDashboard() {
                     >
                       <td className="px-6 py-4 font-medium">{sale.product}</td>
                       <td className="px-6 py-4 text-muted-foreground">{sale.size}</td>
-                      <td className="px-6 py-4 font-medium tabular-nums">${sale.salePrice}</td>
-                      <td className="px-6 py-4 text-muted-foreground tabular-nums">${sale.fee.toFixed(2)}</td>
-                      <td className="px-6 py-4 font-medium text-primary tabular-nums">${sale.payout.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-medium tabular-nums">${fmt(sale.salePrice)}</td>
+                      <td className="px-6 py-4 text-muted-foreground tabular-nums">
+                        {storeOwned ? `$${fmt(sale.cost)}` : `$${fmt(sale.fee)}`}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-primary tabular-nums">
+                        ${storeOwned ? fmt(sale.profit) : fmt(sale.payout)}
+                      </td>
                       <td className="px-6 py-4 text-muted-foreground tabular-nums">
                         {new Date(sale.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>

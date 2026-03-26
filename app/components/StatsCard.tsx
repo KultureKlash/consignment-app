@@ -1,87 +1,63 @@
 import { useState } from "react";
-import { ArrowUpRight, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export interface StatsCardProps {
   label: string;
   value: string;
   trend?: string;
   icon: LucideIcon;
-  color?: string; // accent color hex
+  color?: string;
 }
 
 type ColorTheme = {
-  bg: string;
   iconBg: string;
-  iconBorder: string;
   iconColor: string;
-  accentBorder: string;
-  glowColor: string;
-  badgeBg: string;
-  badgeColor: string;
-  badgeDot: string;
+  accentGradient: string;
+  hoverBorder: string;
+  glowShadow: string;
 };
 
 function getTheme(color?: string): ColorTheme {
   switch (color) {
     case "green":
       return {
-        bg: "#ffffff",
-        iconBg: "#ecfdf5",
-        iconBorder: "#a7f3d0",
-        iconColor: "#059669",
-        accentBorder: "#34d399",
-        glowColor: "rgba(5,150,105,0.08)",
-        badgeBg: "#ecfdf5",
-        badgeColor: "#059669",
-        badgeDot: "#10b981",
+        iconBg: "linear-gradient(135deg, #064e3b, #065f46)",
+        iconColor: "#ffffff",
+        accentGradient: "linear-gradient(90deg, #065f46, #047857, transparent)",
+        hoverBorder: "rgba(6, 95, 70, 0.35)",
+        glowShadow: "0 8px 24px -4px rgba(6, 78, 59, 0.15), 0 2px 6px rgba(6, 78, 59, 0.08)",
       };
     case "blue":
       return {
-        bg: "#ffffff",
-        iconBg: "#eff6ff",
-        iconBorder: "#bfdbfe",
-        iconColor: "#2563eb",
-        accentBorder: "#60a5fa",
-        glowColor: "rgba(37,99,235,0.08)",
-        badgeBg: "#eff6ff",
-        badgeColor: "#2563eb",
-        badgeDot: "#3b82f6",
+        iconBg: "linear-gradient(135deg, #1e3a5f, #1e40af)",
+        iconColor: "#ffffff",
+        accentGradient: "linear-gradient(90deg, #1e40af, #2563eb, transparent)",
+        hoverBorder: "rgba(30, 64, 175, 0.35)",
+        glowShadow: "0 8px 24px -4px rgba(30, 58, 95, 0.15), 0 2px 6px rgba(30, 58, 95, 0.08)",
       };
     case "purple":
       return {
-        bg: "#ffffff",
-        iconBg: "#f5f3ff",
-        iconBorder: "#c4b5fd",
-        iconColor: "#7c3aed",
-        accentBorder: "#a78bfa",
-        glowColor: "rgba(124,58,237,0.08)",
-        badgeBg: "#f5f3ff",
-        badgeColor: "#7c3aed",
-        badgeDot: "#8b5cf6",
+        iconBg: "linear-gradient(135deg, #3b0764, #5b21b6)",
+        iconColor: "#ffffff",
+        accentGradient: "linear-gradient(90deg, #5b21b6, #7c3aed, transparent)",
+        hoverBorder: "rgba(91, 33, 182, 0.35)",
+        glowShadow: "0 8px 24px -4px rgba(59, 7, 100, 0.15), 0 2px 6px rgba(59, 7, 100, 0.08)",
       };
     case "amber":
       return {
-        bg: "#ffffff",
-        iconBg: "#fffbeb",
-        iconBorder: "#fcd34d",
-        iconColor: "#d97706",
-        accentBorder: "#fbbf24",
-        glowColor: "rgba(217,119,6,0.08)",
-        badgeBg: "#fffbeb",
-        badgeColor: "#d97706",
-        badgeDot: "#f59e0b",
+        iconBg: "linear-gradient(135deg, #78350f, #92400e)",
+        iconColor: "#ffffff",
+        accentGradient: "linear-gradient(90deg, #92400e, #b45309, transparent)",
+        hoverBorder: "rgba(146, 64, 14, 0.35)",
+        glowShadow: "0 8px 24px -4px rgba(120, 53, 15, 0.15), 0 2px 6px rgba(120, 53, 15, 0.08)",
       };
     default:
       return {
-        bg: "#ffffff",
-        iconBg: "#f6f6f7",
-        iconBorder: "#e3e3e3",
-        iconColor: "#6d7175",
-        accentBorder: "#9ca3af",
-        glowColor: "rgba(0,0,0,0.04)",
-        badgeBg: "#f6f6f7",
-        badgeColor: "#6d7175",
-        badgeDot: "#9ca3af",
+        iconBg: "linear-gradient(135deg, #1e293b, #334155)",
+        iconColor: "#ffffff",
+        accentGradient: "linear-gradient(90deg, #334155, #475569, transparent)",
+        hoverBorder: "rgba(51, 65, 85, 0.35)",
+        glowShadow: "0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05)",
       };
   }
 }
@@ -90,101 +66,89 @@ export default function StatsCard({ label, value, trend, icon: Icon, color }: St
   const [hovered, setHovered] = useState(false);
   const t = getTheme(color);
 
-  const card: React.CSSProperties = {
-    background: t.bg,
-    border: `1px solid ${hovered ? t.accentBorder : "#e3e3e3"}`,
-    borderRadius: "12px",
-    padding: "24px",
-    boxShadow: hovered
-      ? `0 4px 16px ${t.glowColor}, 0 1px 3px rgba(0,0,0,0.06)`
-      : "0 1px 2px rgba(0,0,0,0.05)",
-    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-    transform: hovered ? "translateY(-2px)" : "translateY(0)",
-    cursor: "default",
-  };
-
-  const iconBox: React.CSSProperties = {
-    padding: "10px",
-    background: t.iconBg,
-    borderRadius: "10px",
-    border: `1px solid ${t.iconBorder}`,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-    transform: hovered ? "scale(1.08)" : "scale(1)",
-  };
-
   return (
     <div
-      style={card}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        background: "#ffffff",
+        border: `1px solid ${hovered ? t.hoverBorder : "rgba(0, 0, 0, 0.06)"}`,
+        borderRadius: "14px",
+        padding: "20px 22px",
+        boxShadow: hovered
+          ? t.glowShadow
+          : "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
+        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        cursor: "default",
+        overflow: "hidden",
+      }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-        <div style={iconBox}>
-          <Icon size={18} color={t.iconColor} />
-        </div>
-        <span style={{
-          fontSize: "10px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: t.badgeColor,
-          background: t.badgeBg,
-          padding: "3px 8px",
-          borderRadius: "9999px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "4px",
-        }}>
-          <span style={{
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            background: t.badgeDot,
-            animation: "pulse-dot 2s ease-in-out infinite",
-          }} />
-          Live
-        </span>
-      </div>
-      <div>
-        <p style={{ fontSize: "13px", fontWeight: 500, color: "#6d7175", marginBottom: "6px", letterSpacing: "0.01em" }}>{label}</p>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-          <h3 style={{
-            fontSize: "26px",
-            fontWeight: 700,
-            letterSpacing: "-0.03em",
-            color: "#1a1a1a",
-            fontVariantNumeric: "tabular-nums",
-            margin: 0,
-            transition: "color 0.2s",
-          }}>
-            {value}
-          </h3>
-          {trend && (
-            <span style={{ fontSize: "12px", fontWeight: 600, color: "#059669", display: "flex", alignItems: "center" }}>
-              <ArrowUpRight size={12} style={{ marginRight: "2px" }} />
-              {trend}
-            </span>
-          )}
-        </div>
-      </div>
-      {/* Accent bottom bar */}
+      {/* Icon */}
       <div style={{
-        marginTop: "16px",
+        width: "36px",
+        height: "36px",
+        borderRadius: "10px",
+        background: t.iconBg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: "14px",
+        transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        transform: hovered ? "scale(1.08)" : "scale(1)",
+      }}>
+        <Icon size={17} color={t.iconColor} strokeWidth={2} />
+      </div>
+
+      {/* Label */}
+      <p style={{
+        fontSize: "12px",
+        fontWeight: 500,
+        color: "#8c9196",
+        letterSpacing: "0.02em",
+        margin: "0 0 4px",
+      }}>
+        {label}
+      </p>
+
+      {/* Value + Trend */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+        <span style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          letterSpacing: "-0.03em",
+          color: "#1a1a1a",
+          fontVariantNumeric: "tabular-nums",
+          lineHeight: 1.1,
+        }}>
+          {value}
+        </span>
+        {trend && (
+          <span style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            color: "#059669",
+            background: "#ecfdf5",
+            padding: "2px 6px",
+            borderRadius: "6px",
+          }}>
+            {trend}
+          </span>
+        )}
+      </div>
+
+      {/* Accent bar */}
+      <div style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
         height: "3px",
-        borderRadius: "3px",
-        background: `linear-gradient(90deg, ${t.accentBorder}, transparent)`,
-        opacity: hovered ? 1 : 0.3,
+        background: t.accentGradient,
+        opacity: hovered ? 0.9 : 0.35,
         transition: "opacity 0.3s ease",
       }} />
-      <style>{`
-        @keyframes pulse-dot {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.85); }
-        }
-      `}</style>
     </div>
   );
 }

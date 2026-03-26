@@ -160,11 +160,13 @@ export async function creditOrder({
       const feeRate = item.listing.consignor.feeRate;
       const feeAmount = grossAmount * feeRate;
       const consignorAmount = grossAmount - feeAmount;
+      const listingCost = item.listing.cost ?? 0;
       await tx.transaction.create({
         data: {
           consignorId: item.listing.consignorId,
           orderItemId: item.id,
           salePrice: item.price,
+          cost: listingCost,
           feeRate,
           grossAmount,
           feeAmount,
@@ -419,10 +421,11 @@ async function refundItem(
     listing: {
       consignorId: string;
       variantId: string;
+      cost?: number | null;
       consignor: { feeRate: number };
       variant: { shopifyVariantId?: string | null; product: { category: string | null } };
     };
-    transactions: Array<{ type: string; feeRate: number; payoutItems: Array<{ payout: { status: string } }> }>;
+    transactions: Array<{ type: string; feeRate: number; cost?: number; payoutItems: Array<{ payout: { status: string } }> }>;
   },
   affectedVariantIds: Set<string>,
   restoreInventory: boolean,
@@ -483,6 +486,7 @@ async function refundItem(
     if (wasPaid) {
       const saleTx = item.transactions.find((t) => t.type === "sale");
       const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
+      const refundCost = saleTx?.cost ?? item.listing.cost ?? 0;
       const refundGross = item.price;
       const refundFee = refundGross * rate;
       const refundConsignor = refundGross - refundFee;
@@ -492,6 +496,7 @@ async function refundItem(
           consignorId: item.listing.consignorId,
           orderItemId: item.id,
           salePrice: item.price,
+          cost: refundCost,
           feeRate: rate,
           grossAmount: -refundGross,
           feeAmount: -refundFee,

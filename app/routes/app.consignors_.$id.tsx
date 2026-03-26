@@ -7,6 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorDetail, updateConsignor } from "~/services/consignors.server";
 import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
 import { ArrowLeft, Copy, Check, User, BarChart3 } from "lucide-react";
+import { fmt } from "~/lib/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -25,12 +26,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const name = (formData.get("name") as string ?? "").trim();
       const email = (formData.get("email") as string ?? "").trim();
       const feeRate = parseFloat(formData.get("feeRate") as string);
+      const storeOwned = formData.get("storeOwned") === "true";
 
       if (!name) return { error: "Name is required", intent };
       if (!email) return { error: "Email is required", intent };
       if (isNaN(feeRate)) return { error: "Invalid fee rate", intent };
 
-      await updateConsignor(id, { name, email, feeRate });
+      await updateConsignor(id, { name, email, feeRate, storeOwned });
       return { success: true, intent };
     }
     throw new Error("Invalid intent");
@@ -92,6 +94,7 @@ export default function ConsignorDetail() {
   const [name, setName] = useState(consignor.name);
   const [email, setEmail] = useState(consignor.email);
   const [feeRatePercent, setFeeRatePercent] = useState(String(Math.round(consignor.feeRate * 100)));
+  const [storeOwned, setStoreOwned] = useState(consignor.storeOwned);
 
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
 
@@ -99,7 +102,8 @@ export default function ConsignorDetail() {
   const hasChanges =
     name !== consignor.name ||
     email !== consignor.email ||
-    feeRatePercent !== String(Math.round(consignor.feeRate * 100));
+    feeRatePercent !== String(Math.round(consignor.feeRate * 100)) ||
+    storeOwned !== consignor.storeOwned;
 
   useEffect(() => {
     const data = fetcher.data as Record<string, unknown> | undefined;
@@ -119,7 +123,7 @@ export default function ConsignorDetail() {
 
   const handleSave = () => {
     fetcher.submit(
-      { intent: "update", name, email, feeRate: String(parseFloat(feeRatePercent) / 100) },
+      { intent: "update", name, email, feeRate: String(parseFloat(feeRatePercent) / 100), storeOwned: String(storeOwned) },
       { method: "POST" },
     );
   };
@@ -205,7 +209,7 @@ export default function ConsignorDetail() {
             <span>Member since {memberSince}</span>
             <span style={{ color: "#d1d5db" }}>|</span>
             <span style={{ fontWeight: 600, color: balance > 0 ? "#1a7f37" : "#333" }}>
-              Balance: ${balance.toFixed(2)}
+              Balance: ${fmt(balance)}
             </span>
           </div>
         </div>
@@ -246,7 +250,7 @@ export default function ConsignorDetail() {
                 <div style={{ position: "relative" }}>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="100"
                     step="1"
                     value={feeRatePercent}
@@ -258,6 +262,24 @@ export default function ConsignorDetail() {
                   <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: "#6d7175", fontSize: "14px", pointerEvents: "none" }}>%</span>
                 </div>
               </div>
+              {/* Store Owned checkbox */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 0" }}>
+                <input
+                  type="checkbox"
+                  id="storeOwned"
+                  checked={storeOwned}
+                  onChange={(e) => setStoreOwned(e.target.checked)}
+                  style={{ width: "16px", height: "16px", accentColor: "#111827", cursor: "pointer" }}
+                />
+                <label htmlFor="storeOwned" style={{ fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer" }}>
+                  Store owned inventory
+                </label>
+              </div>
+              {storeOwned && (
+                <p style={{ fontSize: "11px", color: "#9ca3af", margin: "-8px 0 0 26px" }}>
+                  This account will be excluded from payout workflows.
+                </p>
+              )}
             </div>
           </div>
 

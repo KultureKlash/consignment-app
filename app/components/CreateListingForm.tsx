@@ -18,6 +18,7 @@ type Consignor = {
   name: string;
   email: string;
   feeRate: number;
+  storeOwned: boolean;
 };
 
 type Props = {
@@ -130,7 +131,7 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
   const [productSearch, setProductSearch] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [formFields, setFormFields] = useState({
-    styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1",
+    styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1", cost: "",
   });
   const [mainCategory, setMainCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -251,7 +252,7 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
     if (intent === "create") {
       const qty = (data as Record<string, unknown>).quantity ?? 1;
       shopify.toast.show(`${qty} listing(s) created`);
-      setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1" });
+      setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1", cost: "" });
       setSelectedProductId(null);
       setSelectedProduct(null);
       setGtinLocked(false);
@@ -277,7 +278,7 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
     setGtinLocked(false);
     setNewSizeMode(false);
     setProductSearch("");
-    setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1" });
+    setFormFields({ styleId: "", title: "", brand: "", size: "", gtin: "", price: "", quantity: "1", cost: "" });
     setMainCategory("");
     setSubCategory("");
     setCategoryManual(false);
@@ -974,6 +975,35 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                 />
               </div>
             </div>
+            {selectedConsignorObj?.storeOwned && (
+              <div>
+                <label style={fieldLabel}>Cost <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span></label>
+                <div style={{ position: "relative" }}>
+                  <span style={{
+                    position: "absolute",
+                    left: "14px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#6d7175",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    pointerEvents: "none",
+                  }}>$</span>
+                  <input
+                    type="number"
+                    value={formFields.cost}
+                    onChange={(e) => setFormFields({ ...formFields, cost: e.target.value })}
+                    onFocus={handleFocus}
+                    onBlur={handleBlurStyle}
+                    placeholder="0.00"
+                    min="0"
+                    step="1"
+                    style={{ ...inputStyle, paddingLeft: "30px" }}
+                  />
+                </div>
+                <p style={helperText}>Acquisition cost for profit tracking</p>
+              </div>
+            )}
             {isFootwearCat && (
               <div>
                 <label style={fieldLabel}>GTIN / Barcode</label>
@@ -1036,17 +1066,17 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
 
           setFieldErrors(new Set());
           const category = mainCategory ? buildCategory(mainCategory, subCategory || undefined) : "";
-          fetcher.submit(
-            {
-              intent: "create",
-              consignorId: selectedConsignor,
-              ...formFields,
-              category,
-              ...(shopifyCategory ? { shopifyCategoryId: shopifyCategory.id } : {}),
-              ...(imageBase64 ? { image: imageBase64 } : {}),
-            },
-            { method: "POST" }
-          );
+          const submitData: Record<string, string> = {
+            intent: "create",
+            consignorId: selectedConsignor,
+            ...formFields,
+            category,
+          };
+          if (shopifyCategory) submitData.shopifyCategoryId = shopifyCategory.id;
+          if (imageBase64) submitData.image = imageBase64;
+          // Only include cost if it has a value (store-owned items)
+          if (!formFields.cost) delete submitData.cost;
+          fetcher.submit(submitData, { method: "POST" });
         }}
         disabled={isLoading}
         style={{

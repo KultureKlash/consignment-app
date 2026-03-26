@@ -18,6 +18,7 @@ export async function createListing({
   consignorId,
   taxonomyId,
   imageData,
+  cost,
 }: {
   admin: AdminApiContext;
   styleId?: string | null;
@@ -31,6 +32,7 @@ export async function createListing({
   consignorId: string;
   taxonomyId?: string;
   imageData?: string;
+  cost?: number;
 }) {
 
   // 1️⃣ Find or create product in DB
@@ -62,7 +64,7 @@ export async function createListing({
   const listings = [];
   for (let i = 0; i < count; i++) {
     const listing = await prisma.listing.create({
-      data: { consignorId, variantId: variant.id, price, listedAt: new Date() },
+      data: { consignorId, variantId: variant.id, price, cost: cost ?? null, listedAt: new Date() },
       include: { consignor: true },
     });
     listings.push(listing);

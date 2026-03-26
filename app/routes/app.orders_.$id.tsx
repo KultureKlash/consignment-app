@@ -3,6 +3,7 @@ import { Link, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getOrderDetail } from "~/services/order-queries.server";
+import { fmt } from "~/lib/currency";
 import {
   ArrowLeft, ShoppingBag, DollarSign,
   TrendingUp, Users, Package, Clock, FileText,
@@ -72,9 +73,6 @@ function formatDate(dateStr: string): string {
   return `${date}, ${time}`;
 }
 
-function fmt(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   open: { bg: "#ecfdf5", color: "#059669" },

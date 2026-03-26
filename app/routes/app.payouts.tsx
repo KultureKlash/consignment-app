@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/payouts.server";
+import { fmt } from "~/lib/currency";
 import {
   DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X, FileText,
 } from "lucide-react";
@@ -80,9 +81,6 @@ const sectionTitleStyle: React.CSSProperties = {
   margin: 0,
 };
 
-function fmt(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function relativeDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -587,7 +585,9 @@ export default function Payouts() {
                               color: payout.status === "invoiced" ? "#2563eb" : "#d97706",
                               whiteSpace: "nowrap",
                             }}>
-                              {payout.status === "pending" ? "Awaiting Invoice" : "Invoice Received"}
+                              {payout.status === "pending"
+                                ? (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment")
+                                : "Invoice Received"}
                             </span>
                             {payout.status === "pending" && payout.invoiceSent && (
                               <span style={{
@@ -642,7 +642,7 @@ export default function Payouts() {
                               );
                             })}
                             <div style={{ display: "flex", gap: "8px", padding: "12px 20px 12px 48px", borderTop: "1px solid rgba(227,227,227,0.3)" }}>
-                              {payout.status === "pending" && (
+                              {payout.status === "pending" && payout.consignor.taxStatus === "business" && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleMarkInvoiced(payout.id); }}
                                   disabled={isSubmitting}
@@ -652,7 +652,7 @@ export default function Payouts() {
                                   Mark Invoiced
                                 </button>
                               )}
-                              {payout.status === "invoiced" && (
+                              {(payout.status === "invoiced" || (payout.status === "pending" && payout.consignor.taxStatus !== "business")) && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleMarkPaid(payout.id); }}
                                   disabled={isSubmitting}

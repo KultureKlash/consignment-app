@@ -41,11 +41,13 @@ export function AppHeader({
   title,
   subtitle,
   consignorName,
+  avatarColor,
   notifications,
 }: {
   title: string;
   subtitle?: string;
   consignorName?: string;
+  avatarColor?: string | null;
   notifications?: { items: PortalNotification[]; unreadCount: number };
 }) {
   const [bellOpen, setBellOpen] = useState(false);
@@ -138,15 +140,25 @@ export function AppHeader({
           </div>
 
           {/* Mobile: initials only */}
-          <div className="flex md:hidden w-8 h-8 rounded-full items-center justify-center text-xs font-bold glow-border"
-            style={{ background: "hsl(0, 0%, 20%)", color: "hsl(0, 0%, 90%)" }}
+          <div className="flex md:hidden w-8 h-8 rounded-full items-center justify-center text-xs font-bold"
+            style={{
+              background: avatarColor || "hsl(0, 0%, 20%)",
+              color: "#fff",
+              boxShadow: `0 0 12px -2px ${avatarColor || "hsl(0, 0%, 30%)"}`,
+              border: `1px solid ${avatarColor ? avatarColor.replace(")", ", 0.5)").replace("hsl(", "hsla(") : "rgba(255,255,255,0.15)"}`,
+            }}
           >
             {getInitials(consignorName)}
           </div>
           {/* Desktop: full pill */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full glass-panel glow-border">
+          <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full glass-panel"
+            style={{
+              boxShadow: `0 0 15px -3px ${avatarColor || "hsl(0, 0%, 30%)"}`,
+              border: `1px solid ${avatarColor ? avatarColor.replace(")", ", 0.4)").replace("hsl(", "hsla(") : "rgba(255,255,255,0.12)"}`,
+            }}
+          >
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{ background: "hsl(0, 0%, 20%)", color: "hsl(0, 0%, 90%)" }}
+              style={{ background: avatarColor || "hsl(0, 0%, 20%)", color: "#fff" }}
             >
               {getInitials(consignorName)}
             </div>
