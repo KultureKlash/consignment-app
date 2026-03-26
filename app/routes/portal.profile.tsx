@@ -64,33 +64,27 @@ export async function action({ request }: ActionFunctionArgs) {
   const intent = form.get("intent");
 
   if (intent === "update-profile") {
-    const name = (form.get("name") as string ?? "").trim();
-    if (!name) return { error: "Name is required" };
+    const { updateProfileSchema, parseForm } = await import("~/lib/validation");
+    try {
+      const data = parseForm(updateProfileSchema, form);
 
-    const phone = (form.get("phone") as string ?? "").trim() || null;
-    const taxStatus = form.get("taxStatus") as string;
-    if (taxStatus && !["individual", "business"].includes(taxStatus)) {
-      return { error: "Invalid tax status" };
+      const { default: prisma } = await import("~/db.server");
+      await prisma.consignor.update({
+        where: { id: consignor.id },
+        data: {
+          name: data.name,
+          phone: data.phone || null,
+          taxStatus: data.taxStatus,
+          province: data.taxStatus === "business" ? (data.province || null) : null,
+          gstNumber: data.taxStatus === "business" ? (data.gstNumber || null) : null,
+          qstNumber: data.taxStatus === "business" && data.province === "QC" ? (data.qstNumber || null) : null,
+        },
+      });
+
+      return { success: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Invalid input" };
     }
-
-    const province = (form.get("province") as string ?? "").trim() || null;
-    const gstNumber = (form.get("gstNumber") as string ?? "").trim() || null;
-    const qstNumber = (form.get("qstNumber") as string ?? "").trim() || null;
-
-    const { default: prisma } = await import("~/db.server");
-    await prisma.consignor.update({
-      where: { id: consignor.id },
-      data: {
-        name,
-        phone,
-        taxStatus: taxStatus || "individual",
-        province: taxStatus === "business" ? province : null,
-        gstNumber: taxStatus === "business" ? gstNumber : null,
-        qstNumber: taxStatus === "business" && province === "QC" ? qstNumber : null,
-      },
-    });
-
-    return { success: true };
   }
 
   if (intent === "update-color") {

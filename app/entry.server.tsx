@@ -14,10 +14,28 @@ export default async function handleRequest(
   responseHeaders: Headers,
   reactRouterContext: EntryContext
 ) {
-  // Skip Shopify headers for portal routes (they run outside the Shopify iframe)
   const url = new URL(request.url);
-  if (!url.pathname.startsWith("/portal")) {
+  const isPortal = url.pathname.startsWith("/portal");
+
+  // Skip Shopify headers for portal routes (they run outside the Shopify iframe)
+  if (!isPortal) {
     addDocumentResponseHeaders(request, responseHeaders);
+  }
+
+  // Security headers for all routes
+  responseHeaders.set("X-Content-Type-Options", "nosniff");
+  responseHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  responseHeaders.set("X-DNS-Prefetch-Control", "off");
+  responseHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  // Portal-only headers (can't use X-Frame-Options or strict CSP on Shopify embedded routes)
+  if (isPortal) {
+    responseHeaders.set("X-Frame-Options", "DENY");
+    responseHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    responseHeaders.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+    );
   }
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')

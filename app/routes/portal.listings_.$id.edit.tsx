@@ -25,24 +25,24 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
+  const { portalFormRateLimit } = await import("~/lib/rate-limit.server");
+  const limited = portalFormRateLimit(request);
+  if (limited) return { error: "Too many requests. Please slow down." };
+
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
   const form = await request.formData();
 
-  const size = (form.get("size") as string ?? "").trim();
-  const gtin = (form.get("gtin") as string ?? "").trim() || undefined;
-  const price = parseFloat(form.get("price") as string);
-
-  if (!size) return { error: "Size is required" };
-  if (isNaN(price) || price <= 0) return { error: "Valid price is required" };
+  const { portalEditListingSchema, parseForm } = await import("~/lib/validation");
 
   try {
+    const data = parseForm(portalEditListingSchema, form);
     await updateSubmittedListing({
       listingId: params.id!,
       consignorId: consignor.id,
-      size,
-      gtin,
-      price,
+      size: data.size,
+      gtin: data.gtin,
+      price: data.price,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {

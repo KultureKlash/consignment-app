@@ -9,7 +9,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Merge search endpoint (used by product detail page)
   const search = url.searchParams.get("search");
   if (search !== null) {
-    const term = search.trim();
+    const term = search.slice(0, 200).trim();
     const exclude = url.searchParams.get("exclude") ?? "";
     if (!term) return Response.json({ products: [] });
 

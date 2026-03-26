@@ -31,17 +31,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     if (intent === "create") {
-      const name = (formData.get("name") as string ?? "").trim();
-      const email = (formData.get("email") as string ?? "").trim().toLowerCase();
-      const feeRatePercent = parseFloat(formData.get("feeRate") as string);
+      const { createConsignorSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(createConsignorSchema, formData);
 
-      if (!name) return { error: "Name is required", intent };
-      if (!email) return { error: "Email is required", intent };
-      if (isNaN(feeRatePercent) || feeRatePercent < 0 || feeRatePercent > 100) {
-        return { error: "Fee rate must be between 0 and 100", intent };
-      }
-
-      await createConsignor({ name, email, feeRate: feeRatePercent / 100 });
+      await createConsignor({ name: data.name, email: data.email, feeRate: data.feeRate / 100 });
       return { success: true, intent };
     }
     throw new Error("Invalid intent");

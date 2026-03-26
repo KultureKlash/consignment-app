@@ -83,28 +83,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (intent === "quick-add") {
-      const title = formData.get("title") as string;
-      const size = formData.get("size") as string;
-      const price = Number(formData.get("price"));
-      const consignorId = formData.get("consignorId") as string;
-      if (!title || !size || !price || !consignorId) {
-        throw new Error("Missing required fields");
-      }
-      const quantity = Math.max(1, Math.min(50, Number(formData.get("quantity")) || 1));
+      const { quickAddListingSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(quickAddListingSchema, formData);
       const listing = await createListing({
         admin,
-        title,
-        brand: (formData.get("brand") as string) || undefined,
-        category: (formData.get("category") as string) || undefined,
-        styleId: (formData.get("styleId") as string) || undefined,
-        size,
-        gtin: (formData.get("gtin") as string) || undefined,
-        price,
-        count: quantity,
-        consignorId,
-        cost: formData.get("cost") ? Number(formData.get("cost")) : undefined,
+        title: data.title,
+        brand: data.brand,
+        category: data.category,
+        styleId: data.styleId,
+        size: data.size,
+        gtin: data.gtin,
+        price: data.price,
+        count: data.quantity,
+        consignorId: data.consignorId,
+        cost: data.cost,
       });
-      return { listing, intent, quantity };
+      return { listing, intent, quantity: data.quantity };
     }
 
     if (intent === "approve") {
@@ -114,10 +108,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (intent === "reject") {
-      const listingId = formData.get("listingId") as string;
-      const reason = (formData.get("reason") as string) ?? "";
-      if (!reason.trim()) throw new Error("Rejection reason is required");
-      await rejectListing({ listingId, reason: reason.trim() });
+      const { rejectListingSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(rejectListingSchema, formData);
+      await rejectListing({ listingId: data.listingId, reason: data.reason });
       return { intent };
     }
 
@@ -128,35 +121,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (intent === "admin-edit-approve") {
-      const listingId = formData.get("listingId") as string;
+      const { adminEditListingSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(adminEditListingSchema, formData);
       await adminEditAndApprove({
-        listingId,
-        title: (formData.get("title") as string) || undefined,
-        brand: (formData.get("brand") as string) || undefined,
-        category: (formData.get("category") as string) || undefined,
-        styleId: (formData.get("styleId") as string) || undefined,
-        size: (formData.get("size") as string) || undefined,
-        gtin: (formData.get("gtin") as string) || undefined,
-        price: formData.get("price") ? Number(formData.get("price")) : undefined,
-        imageData: (formData.get("imageData") as string) || undefined,
+        listingId: data.listingId,
+        title: data.title,
+        brand: data.brand,
+        category: data.category,
+        styleId: data.styleId,
+        size: data.size,
+        gtin: data.gtin,
+        price: data.price,
+        imageData: data.imageData,
       });
       return { intent };
     }
 
     if (intent === "admin-edit") {
-      const listingId = formData.get("listingId") as string;
+      const { adminEditListingSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(adminEditListingSchema, formData);
       await adminEditListing({
         admin,
-        listingId,
-        title: (formData.get("title") as string) || undefined,
-        brand: (formData.get("brand") as string) || undefined,
-        category: (formData.get("category") as string) || undefined,
-        styleId: (formData.get("styleId") as string) || undefined,
-        size: (formData.get("size") as string) || undefined,
-        gtin: (formData.get("gtin") as string) || undefined,
-        price: formData.get("price") ? Number(formData.get("price")) : undefined,
-        cost: formData.has("cost") ? (formData.get("cost") ? Number(formData.get("cost")) : null) : undefined,
-        imageData: (formData.get("imageData") as string) || undefined,
+        listingId: data.listingId,
+        title: data.title,
+        brand: data.brand,
+        category: data.category,
+        styleId: data.styleId,
+        size: data.size,
+        gtin: data.gtin,
+        price: data.price,
+        cost: data.cost,
+        imageData: data.imageData,
       });
       return { intent };
     }

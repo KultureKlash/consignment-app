@@ -218,3 +218,13 @@ model ReassignmentLog {
   reason                String   // "post_payout_refund"
   createdAt             DateTime @default(now())
 }
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}

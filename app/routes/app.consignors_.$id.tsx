@@ -25,16 +25,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   try {
     if (intent === "update") {
-      const name = (formData.get("name") as string ?? "").trim();
-      const email = (formData.get("email") as string ?? "").trim();
-      const feeRate = parseFloat(formData.get("feeRate") as string);
-      const storeOwned = formData.get("storeOwned") === "true";
+      const { updateConsignorSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(updateConsignorSchema, formData);
 
-      if (!name) return { error: "Name is required", intent };
-      if (!email) return { error: "Email is required", intent };
-      if (isNaN(feeRate)) return { error: "Invalid fee rate", intent };
-
-      await updateConsignor(id, { name, email, feeRate, storeOwned });
+      await updateConsignor(id, { name: data.name, email: data.email, feeRate: data.feeRate, storeOwned: data.storeOwned ?? false });
       return { success: true, intent };
     }
     if (intent === "suspend") {

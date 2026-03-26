@@ -1,11 +1,37 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "~/db.server";
 
 const COOKIE_NAME = "__portal_session";
-const DEV_PASSWORD = "konsign";
-const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+// Cookie signing secret — uses env var in prod, falls back to dev default
+const COOKIE_SECRET = process.env.COOKIE_SECRET || "dev-cookie-secret-change-in-prod";
+
+const isProd = process.env.NODE_ENV === "production";
+
+// ── Cookie signing ──
+
+function sign(value: string): string {
+  const signature = createHmac("sha256", COOKIE_SECRET).update(value).digest("base64url");
+  return `${value}.${signature}`;
+}
+
+function unsign(signed: string): string | null {
+  const idx = signed.lastIndexOf(".");
+  if (idx === -1) return null;
+  const value = signed.slice(0, idx);
+  const sig = signed.slice(idx + 1);
+  const expected = createHmac("sha256", COOKIE_SECRET).update(value).digest("base64url");
+  try {
+    if (timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return value;
+  } catch {
+    // Length mismatch — invalid signature
+  }
+  return null;
+}
 
 /**
- * Authenticate a portal request by reading the session cookie.
+ * Authenticate a portal request by reading the signed session cookie.
  * Returns the consignor or null.
  */
 export async function authenticatePortal(request: Request) {
@@ -13,7 +39,9 @@ export async function authenticatePortal(request: Request) {
   const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
   if (!match) return null;
 
-  const consignorId = match[1];
+  const consignorId = unsign(decodeURIComponent(match[1]));
+  if (!consignorId) return null;
+
   const consignor = await prisma.consignor.findUnique({
     where: { id: consignorId },
   });
@@ -25,40 +53,29 @@ export async function authenticatePortal(request: Request) {
   return consignor;
 }
 
-/**
- * Validate login credentials (dev: password is "konsign" for all consignors).
- * Returns { consignor } on success or { error } on failure.
- */
-export async function loginPortal(email: string, password: string) {
-  if (!email) return { error: "Please enter your email address." };
-  if (!password) return { error: "Please enter your password." };
-
-  // Dev auth — TODO: replace with magic link for production
-  if (password !== DEV_PASSWORD) {
-    return { error: "Invalid email or password." };
-  }
-
-  const consignor = await prisma.consignor.findUnique({
-    where: { email: email.trim().toLowerCase() },
-  });
-
-  if (!consignor) {
-    return { error: "Invalid email or password." };
-  }
-
-  if (consignor.status === "suspended") {
-    return { error: "Your account has been suspended. Please contact the store for more information." };
-  }
-
-  return { consignor };
-}
-
-/** Build a Set-Cookie header to create a portal session. */
+/** Build a Set-Cookie header to create a signed portal session. */
 export function createSessionCookie(consignorId: string): string {
-  return `${COOKIE_NAME}=${consignorId}; Path=/portal; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}`;
+  const signedValue = sign(consignorId);
+  const flags = [
+    `${COOKIE_NAME}=${encodeURIComponent(signedValue)}`,
+    "Path=/portal",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${MAX_AGE}`,
+    ...(isProd ? ["Secure"] : []),
+  ];
+  return flags.join("; ");
 }
 
 /** Build a Set-Cookie header to destroy a portal session. */
 export function destroySessionCookie(): string {
-  return `${COOKIE_NAME}=; Path=/portal; HttpOnly; SameSite=Lax; Max-Age=0`;
+  const flags = [
+    `${COOKIE_NAME}=`,
+    "Path=/portal",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=0",
+    ...(isProd ? ["Secure"] : []),
+  ];
+  return flags.join("; ");
 }

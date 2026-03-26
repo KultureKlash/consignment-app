@@ -42,40 +42,35 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const { portalFormRateLimit } = await import("~/lib/rate-limit.server");
+  const limited = portalFormRateLimit(request);
+  if (limited) return { error: "Too many requests. Please slow down." };
+
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
   const form = await request.formData();
 
-  const title = (form.get("title") as string ?? "").trim();
-  const brand = (form.get("brand") as string ?? "").trim() || undefined;
-  const mainCategory = (form.get("mainCategory") as string ?? "").trim();
-  const subCategory = (form.get("subCategory") as string ?? "").trim();
-  const category = mainCategory ? buildCategory(mainCategory, subCategory || undefined) : undefined;
-  const styleId = (form.get("styleId") as string ?? "").trim() || undefined;
-  const size = (form.get("size") as string ?? "").trim();
-  const gtin = (form.get("gtin") as string ?? "").trim() || undefined;
-  const price = parseFloat(form.get("price") as string);
-  const count = parseInt(form.get("quantity") as string) || 1;
-  if (!title) return { error: "Product name is required" };
-  if (!size) return { error: "Size is required" };
-  if (isNaN(price) || price <= 0) return { error: "Valid price is required" };
-  if (count < 1 || count > 50) return { error: "Quantity must be 1-50" };
-
-  // GTIN required for footwear
-  const catStr = category ?? "";
-  if (isFootwear(catStr) && !gtin) return { error: "GTIN is required for footwear" };
+  const { submitListingSchema, parseForm } = await import("~/lib/validation");
 
   try {
+    const data = parseForm(submitListingSchema, form);
+    const category = data.mainCategory ? buildCategory(data.mainCategory, data.subCategory) : undefined;
+
+    // GTIN required for footwear
+    if (isFootwear(category ?? "") && !data.gtin) {
+      return { error: "GTIN is required for footwear" };
+    }
+
     await submitListing({
       consignorId: consignor.id,
-      title,
-      brand,
+      title: data.title,
+      brand: data.brand,
       category,
-      styleId,
-      size,
-      gtin,
-      price,
-      count,
+      styleId: data.styleId,
+      size: data.size,
+      gtin: data.gtin,
+      price: data.price,
+      count: data.quantity,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {
