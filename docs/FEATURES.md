@@ -34,7 +34,7 @@ The system supports three user roles:
 Logs in through Shopify Admin and manages the marketplace through the embedded Shopify app.
 
 **Consignors / Resellers**
-Log into the marketplace dashboard inside the application.
+Log into the consignor portal via password authentication.
 
 **Customers**
 Purchase products through the Shopify storefront.
@@ -75,10 +75,12 @@ Purchase products through the Shopify storefront.
 [x] Fee rate model (e.g. 15% fee = marketplace keeps 15%, consignor gets 85%)
 [x] Default fee rate: 15%
 [x] Consignor balance tracking (sum transactions minus payouts)
-[ ] Consignor login system
-[ ] Consignor authentication (email / magic link)
-[ ] Consignor profile management
-[ ] Consignor dashboard base
+[x] Consignor login system (password-based dev auth via portal-auth.server.ts)
+[x] Consignor authentication (cookie-based session)
+[x] Consignor profile management (name, email, phone, tax status, province, GST/QST, avatar color)
+[x] Consignor dashboard (stats, earnings chart, recent sales, listing breakdown, notifications)
+[x] Store-owned consignor flag (storeOwned — separate profit tracking, no payouts)
+[x] Individual vs business tax status (affects payout invoice flow)
 
 ---
 
@@ -89,8 +91,8 @@ Purchase products through the Shopify storefront.
 [x] Listing price input
 [x] Listing cancellation with inventory re-sync
 [x] Bulk listing cancellation with batched DB updates and per-variant Shopify sync with retry
-[x] Lifecycle timestamps (createdAt, receivedAt, authenticatedAt, listedAt, soldAt, withdrawnAt)
-[x] Listing statuses: active, pending_sale, sold, cancelled
+[x] Lifecycle timestamps (createdAt, submittedAt, approvedAt, rejectedAt, receivedAt, authenticatedAt, listedAt, soldAt, withdrawnAt, withdrawalApprovedAt)
+[x] Listing statuses: submitted, approved_awaiting_dropoff, active, paused, pending_sale, sold, cancelled, rejected, withdrawal_requested, pending_pickup, withdrawn
 [x] Composite index on [variantId, status, price, createdAt] for allocation queries
 [x] Composite index on [consignorId, status, createdAt] for filtering
 
@@ -183,10 +185,11 @@ These features enable multi-seller marketplace functionality.
 [x] PayoutItem join table (Payout ↔ Transaction, per-item tracking)
 [x] Balance calculation respects completed payouts
 [x] Create payout from selected transactions (validates ownership, prevents double-payout)
-[x] Mark payout as paid
+[x] Mark payout as invoiced (business consignors)
+[x] Mark payout as paid (business: requires invoiced first; individual: can skip invoice)
 [x] Cancel pending payout (cascade-deletes items, frees transactions)
 [x] Payout page data loader (unpaid grouped by consignor, history, stats)
-[ ] Consignor invoice request flow (future consignor portal)
+[x] Consignor invoice sent flow (consignor self-reports via portal)
 
 ---
 
@@ -203,14 +206,18 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] Listings page (all listings)
 [x] Orders page
 [x] Consignors page
+[x] Payouts page
+[x] Activity feed page (full history)
 
 ---
 
 ## Admin Dashboard (Home)
 
-[x] Stats cards (active listings, consignors, etc.)
+[x] Stats cards: Total Revenue, Consignment Fees, Store Profit, Total Earnings, Total Orders, Inventory Value
 [x] Recent activity feed (5 items, expandable to 15)
-[x] Quick action items
+[x] Quick action items (awaiting approval, awaiting drop-off, withdrawal requests)
+[x] Last updated timestamp
+[x] Staggered entry animations
 
 ---
 
@@ -226,6 +233,7 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] Footwear size validation (1-99, .5 increments only)
 [x] Auto-fill O/S size for Accessories and Headwear categories
 [x] Price input with validation
+[x] Cost input for store-owned consignors
 [x] Quantity selector (creates N individual listings)
 [x] 10 most recent listings table (flat view)
 [x] "View all" link to full listings page
@@ -235,7 +243,7 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 ## Listings Page
 
 [x] Server-side search (product title, styleId, brand, consignor name/email)
-[x] Status filter (All, Active, Pending, Sold, Cancelled) — defaults to Active
+[x] Status filter (All, Active, Pending, Sold, Cancelled, Submitted, etc.)
 [x] Category filter with subcategory drill-down
 [x] Consignor filter
 [x] Sortable columns (date, price, status)
@@ -248,6 +256,17 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] Size-ordered child rows within product groups (numeric + clothing sizes)
 [x] Quick-add popover on product groups (add listings to existing products inline)
 [x] Bulk cancel with reliable Shopify sync (batched DB, per-variant retry)
+[x] Listing moderation: approve, reject (with reason), bulk approve, bulk activate
+[x] Edit & Approve modal for submitted listings
+[x] Admin edit modal for any non-terminal listing (title, brand, price, cost, GTIN, size)
+[x] Shopify re-sync on edit for active/pending_sale listings
+
+---
+
+## Orders Page
+
+[x] Order list (basic view)
+[x] Order detail page (items, allocated listings, consignor, payment status, timeline)
 
 ---
 
@@ -256,61 +275,126 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [x] Consignor list with name, email, fee rate, balance
 [x] Balance calculation per consignor
 [x] Clickable rows → navigate to consignor detail page
-[x] Consignor detail page (view/edit name, email, fee rate)
+[x] Consignor detail page (view/edit name, email, fee rate, store-owned flag)
 [x] Copy consignor ID to clipboard
 [x] Listing status counts (active, pending sale, sold, cancelled)
 [x] Link to payouts tab from consignor detail
+[x] Fee rate configuration per consignor
 
 ---
 
-## Orders Page
+## Payouts Page
 
-[x] Order list (basic view)
+[x] Unpaid balances grouped by consignor with expandable transaction list
+[x] Transaction selection (checkbox per item, select all)
+[x] Create payout from selected transactions
+[x] Pending payouts section with status badges
+[x] Mark invoiced (business) / Mark paid (individual or invoiced)
+[x] Cancel payout
+[x] Payout history (paid)
+[x] Consignor filter and date range filter
+[x] Stats: Outstanding, Awaiting Invoice, Invoice Received, Paid Out
 
 ---
 
 ## Admin Tools (remaining)
 
-[ ] Marketplace overview dashboard (charts, metrics)
-[ ] Product catalog management
-[ ] Listing moderation (approve / reject)
-[ ] Order detail view
-[ ] Consignor account freeze / suspension
-[ ] Ledger inspection view
-[x] Payout management UI (select items per consignor, create/mark paid/cancel payouts)
-[ ] Fee rate configuration per consignor (UI)
+[~] Marketplace overview dashboard (has stats, missing trend charts)
+[x] Product catalog management (edit/merge existing products)
+[x] Consignor account freeze / suspension
+[ ] Ledger inspection view (browse all transactions)
 
 ---
 
-# Phase 4 — Consignor Experience
+# Phase 4 — Consignor Portal
 
-Improves usability for sellers.
-
----
-
-## Consignor Dashboard
-
-[ ] Inventory overview
-[ ] Sales history
-[ ] Earnings summary
-[ ] Listing management
+Consignor-facing portal for managing listings, sales, and payouts.
 
 ---
 
-## Product Search
+## Portal Authentication
 
-[ ] Catalog search
-[ ] Product filters
-[ ] Variant selection
+[x] Password-based login (dev auth — "konsign" for all consignors)
+[x] Cookie-based session management
+[x] Auth guard on all portal routes
+[ ] Production auth (email magic link or OAuth)
 
 ---
 
-## Listing Creation UI
+## Portal Dashboard
 
-[ ] Search product
-[ ] Scan barcode
-[ ] Enter price
-[ ] Enter quantity
+[x] Stats cards: Total Earnings, Active Listings (with inventory value), Items Sold, Total Sales
+[x] Store-owned variant: Total Profit, Revenue, Cost breakdown
+[x] Monthly earnings chart (6-month Recharts line chart)
+[x] Payout breakdown (unbatched, awaiting invoice, invoice sent)
+[x] Listing status breakdown (visual progress bars)
+[x] Recent sales table (desktop)
+[x] Notification bell with unread count
+
+---
+
+## Portal Listings
+
+[x] Listing list with status filters (submitted, active, sold, cancelled, etc.)
+[x] Search by product name, brand, styleId, size
+[x] Lowest active price display per variant
+[x] Inline price editing for active listings
+[x] Withdrawal request workflow
+[x] Status badges with color coding
+
+---
+
+## Portal Listing Creation
+
+[x] Product search (debounced, searches existing catalog)
+[x] New product creation (title, brand, category, size, GTIN)
+[x] Brand autocomplete API
+[x] Price input with validation
+[x] Image upload (base64)
+[x] Category/subcategory selection
+[x] Edit submitted listings
+[x] Delete submitted listings
+
+---
+
+## Portal Sales
+
+[x] Sales history with order number, product, size, sale price, fee, payout
+[x] Filter by status (sold, refunded)
+[x] Search by order number or product name
+[x] Payout status per item (unbatched, pending, paid)
+
+---
+
+## Portal Payouts
+
+[x] Summary stats: Unbatched, Awaiting Invoice / Pending, Paid Out
+[x] Unbatched sales section (expandable, itemized)
+[x] Active payouts with item breakdown
+[x] Mark Invoice Sent button (business consignors only)
+[x] Individual consignors: invoice UI hidden, status shows "Processing"
+[x] Payout history (paid)
+[x] Mobile-responsive card layout + desktop table layout
+[x] Store-owned consignors: "Not applicable" message
+
+---
+
+## Portal Profile
+
+[x] Edit name, email, phone
+[x] Tax status (individual / business)
+[x] Province, GST number, QST number (business)
+[x] Avatar color customization (11 options)
+[x] Notification preferences toggle
+
+---
+
+## Portal Notifications
+
+[x] Notification types: sale, payout, approved, rejected, withdrawal, pickup ready, withdrawn
+[x] Bell icon with unread count in header
+[x] Dismissible notifications (mark all as read)
+[x] Notification preferences per consignor
 
 ---
 
@@ -330,14 +414,6 @@ These features enhance the platform after the core system is stable.
 
 ---
 
-## Financial Admin
-
-[ ] Ledger inspection
-[ ] Payout management
-[ ] Fee rate configuration per consignor (UI)
-
----
-
 ## Pricing Intelligence
 
 [ ] Market price tracking
@@ -348,18 +424,9 @@ These features enhance the platform after the core system is stable.
 
 ## Analytics
 
-[ ] Sales analytics
+[ ] Sales analytics (trends, charts)
 [ ] Product performance
 [ ] Seller performance
-
----
-
-## Notifications
-
-[ ] Listing sold notification
-[ ] Payout processed notification
-[ ] Low inventory alerts
-[ ] Approval/rejection notifications for consignors
 
 ---
 
@@ -369,8 +436,12 @@ Final polish and design.
 
 ---
 
+[x] Admin dashboard UI modernization (StatsCard, ActionItem, ActivityItem redesign)
+[x] Consistent currency formatting ($1,000.00) across all pages
+[x] Portal dark theme with glass morphism
+[x] Mobile-responsive portal pages
+[x] Staggered animations and hover effects
 [ ] Implement Lovable UI design
-[ ] Custom dashboard components
 [ ] Product card layouts
 [ ] Seller statistics visualization
 
@@ -381,7 +452,7 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 221 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts)
+[x] Vitest test suite — 297 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts, submission, listing-management, products)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
 [x] Comprehensive seed data (8 consignors incl. 2 shop consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)
@@ -394,7 +465,14 @@ Future expansion ideas.
 
 ---
 
+[ ] StockX API integration (product import by Style ID)
 [ ] Price history graphs
 [ ] Buy-now / bid marketplace model
 [ ] Multi-store marketplace
 [ ] Mobile app
+[ ] Production consignor auth (magic link / OAuth)
+[ ] Barcode scanner (camera + USB)
+[ ] Ledger inspection admin view
+[x] Product catalog management (edit/merge)
+[x] Consignor account suspension
+[ ] Sales analytics & charts

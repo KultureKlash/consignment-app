@@ -19,6 +19,7 @@ export async function getConsignorDetail(id: string) {
 
   const counts: Record<string, number> = {
     active: 0,
+    paused: 0,
     pending_sale: 0,
     sold: 0,
     cancelled: 0,
@@ -78,4 +79,74 @@ export async function updateConsignor(
       ...(data.storeOwned !== undefined ? { storeOwned: data.storeOwned } : {}),
     },
   });
+}
+
+/**
+ * Suspend a consignor account. Blocks portal access and new submissions.
+ * If pauseListings is true, all active listings are paused and Shopify inventory is synced to 0.
+ */
+export async function suspendConsignor(id: string, reason?: string, pauseListings = false) {
+  const consignor = await prisma.consignor.findUnique({ where: { id } });
+  if (!consignor) throw new Error("Consignor not found");
+  if (consignor.status === "suspended") throw new Error("Consignor is already suspended");
+
+  // Pause active listings if requested
+  let pausedCount = 0;
+  if (pauseListings) {
+    const result = await prisma.listing.updateMany({
+      where: { consignorId: id, status: "active" },
+      data: { status: "paused" },
+    });
+    pausedCount = result.count;
+  }
+
+  const updated = await prisma.consignor.update({
+    where: { id },
+    data: {
+      status: "suspended",
+      suspensionReason: reason || null,
+      suspendedAt: new Date(),
+    },
+  });
+
+  return { consignor: updated, pausedCount };
+}
+
+/**
+ * Get variant IDs that need Shopify inventory sync after a pause/unpause operation.
+ */
+export async function getConsignorVariantIds(consignorId: string, listingStatus: string) {
+  const variants = await prisma.listing.findMany({
+    where: { consignorId, status: listingStatus },
+    select: { variantId: true },
+    distinct: ["variantId"],
+  });
+  return variants.map((v) => v.variantId);
+}
+
+/**
+ * Unsuspend (reactivate) a consignor account.
+ * Automatically reactivates any paused listings and syncs inventory.
+ */
+export async function unsuspendConsignor(id: string) {
+  const consignor = await prisma.consignor.findUnique({ where: { id } });
+  if (!consignor) throw new Error("Consignor not found");
+  if (consignor.status !== "suspended") throw new Error("Consignor is not suspended");
+
+  // Reactivate paused listings
+  const result = await prisma.listing.updateMany({
+    where: { consignorId: id, status: "paused" },
+    data: { status: "active" },
+  });
+
+  const updated = await prisma.consignor.update({
+    where: { id },
+    data: {
+      status: "active",
+      suspensionReason: null,
+      suspendedAt: null,
+    },
+  });
+
+  return { consignor: updated, reactivatedCount: result.count };
 }

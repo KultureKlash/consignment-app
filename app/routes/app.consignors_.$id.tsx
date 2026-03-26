@@ -4,9 +4,11 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getConsignorDetail, updateConsignor } from "~/services/consignors.server";
+import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
+import { syncInventory } from "~/services/inventory.server";
+import prisma from "~/db.server";
 import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
-import { ArrowLeft, Copy, Check, User, BarChart3 } from "lucide-react";
+import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { fmt } from "~/lib/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -34,6 +36,48 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
       await updateConsignor(id, { name, email, feeRate, storeOwned });
       return { success: true, intent };
+    }
+    if (intent === "suspend") {
+      const { admin } = await authenticate.admin(request);
+      const reason = (formData.get("reason") as string ?? "").trim();
+      const pauseListings = formData.get("pauseListings") === "true";
+
+      // Get affected variant IDs before pausing (for Shopify sync)
+      const variantIds = pauseListings ? await getConsignorVariantIds(id, "active") : [];
+
+      const { pausedCount } = await suspendConsignor(id, reason || undefined, pauseListings);
+
+      // Sync affected variants to Shopify (inventory drops to 0)
+      for (const variantId of variantIds) {
+        try {
+          const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+          await syncInventory({ admin, variant });
+        } catch (err) {
+          console.error(`Shopify sync failed for variant ${variantId}:`, err);
+        }
+      }
+
+      return { success: true, intent, pausedCount };
+    }
+    if (intent === "unsuspend") {
+      const { admin } = await authenticate.admin(request);
+
+      // Get variant IDs of paused listings before reactivating (for Shopify sync)
+      const variantIds = await getConsignorVariantIds(id, "paused");
+
+      const { reactivatedCount } = await unsuspendConsignor(id);
+
+      // Re-sync variants to Shopify (inventory goes back up)
+      for (const variantId of variantIds) {
+        try {
+          const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+          await syncInventory({ admin, variant });
+        } catch (err) {
+          console.error(`Shopify sync failed for variant ${variantId}:`, err);
+        }
+      }
+
+      return { success: true, intent, reactivatedCount };
     }
     throw new Error("Invalid intent");
   } catch (err) {
@@ -95,6 +139,9 @@ export default function ConsignorDetail() {
   const [email, setEmail] = useState(consignor.email);
   const [feeRatePercent, setFeeRatePercent] = useState(String(Math.round(consignor.feeRate * 100)));
   const [storeOwned, setStoreOwned] = useState(consignor.storeOwned);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [suspensionReason, setSuspensionReason] = useState("");
+  const [pauseListings, setPauseListings] = useState(true);
 
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
 
@@ -111,7 +158,18 @@ export default function ConsignorDetail() {
     if (data.error) {
       shopify.toast.show(data.error as string);
     } else if (data.success) {
-      shopify.toast.show("Consignor updated");
+      if (data.intent === "suspend") {
+        const pc = data.pausedCount as number;
+        shopify.toast.show(pc > 0 ? `Consignor suspended — ${pc} listing${pc !== 1 ? "s" : ""} paused` : "Consignor suspended");
+        setShowSuspendModal(false);
+        setSuspensionReason("");
+        setPauseListings(true);
+      } else if (data.intent === "unsuspend") {
+        const rc = data.reactivatedCount as number;
+        shopify.toast.show(rc > 0 ? `Consignor reactivated — ${rc} listing${rc !== 1 ? "s" : ""} restored` : "Consignor reactivated");
+      } else {
+        shopify.toast.show("Consignor updated");
+      }
     }
   }, [fetcher.data, shopify]);
 
@@ -128,12 +186,25 @@ export default function ConsignorDetail() {
     );
   };
 
+  const handleSuspend = () => {
+    fetcher.submit(
+      { intent: "suspend", reason: suspensionReason, pauseListings: String(pauseListings) },
+      { method: "POST" },
+    );
+  };
+
+  const handleUnsuspend = () => {
+    fetcher.submit({ intent: "unsuspend" }, { method: "POST" });
+  };
+
+  const isSuspended = consignor.status === "suspended";
+
   const memberSince = new Date(consignor.createdAt).toLocaleDateString("en-US", {
     month: "short",
     year: "numeric",
   });
 
-  const totalListings = counts.active + counts.pending_sale + counts.sold + counts.cancelled;
+  const totalListings = counts.active + (counts.paused ?? 0) + counts.pending_sale + counts.sold + counts.cancelled;
 
   return (
     <s-page>
@@ -213,6 +284,54 @@ export default function ConsignorDetail() {
             </span>
           </div>
         </div>
+
+        {/* Suspension banner */}
+        {isSuspended && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "14px 20px",
+            marginBottom: "24px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "12px",
+          }}>
+            <ShieldAlert size={18} color="#dc2626" />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#991b1b", margin: 0 }}>
+                Account Suspended
+              </p>
+              {consignor.suspensionReason && (
+                <p style={{ fontSize: "12px", color: "#b91c1c", margin: "2px 0 0" }}>
+                  Reason: {consignor.suspensionReason}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleUnsuspend}
+              disabled={isSubmitting}
+              style={{
+                padding: "7px 16px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#065f46",
+                background: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#d1fae5"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#ecfdf5"; }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <ShieldCheck size={13} /> Reactivate
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Two-column layout */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
@@ -305,6 +424,15 @@ export default function ConsignorDetail() {
                 </span>
                 <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.active}</span>
               </div>
+              {(counts.paused ?? 0) > 0 && (
+                <div style={statRow}>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span style={statusDot("#dc2626")} />
+                    Paused
+                  </span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.paused}</span>
+                </div>
+              )}
               <div style={statRow}>
                 <span style={{ display: "flex", alignItems: "center" }}>
                   <span style={statusDot("#b86e00")} />
@@ -345,7 +473,149 @@ export default function ConsignorDetail() {
             </div>
           </div>
         </div>
+
+        {/* Suspend button (for active consignors only) */}
+        {!isSuspended && (
+          <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: "1px solid rgba(227,227,227,0.4)" }}>
+            <button
+              onClick={() => setShowSuspendModal(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#dc2626",
+                background: "transparent",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#fecaca"; }}
+            >
+              <ShieldAlert size={14} />
+              Suspend Account
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Suspend confirmation modal */}
+      {showSuspendModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+          onClick={() => setShowSuspendModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "14px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              width: "100%",
+              maxWidth: "440px",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
+              <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "#1a1a1a", display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={16} color="#dc2626" />
+                Suspend Consignor
+              </h2>
+              <button
+                onClick={() => setShowSuspendModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6d7175" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "20px" }}>
+              <p style={{ fontSize: "13px", color: "#374151", margin: "0 0 16px", lineHeight: 1.5 }}>
+                This will block <strong>{consignor.name}</strong> from logging into the portal, submitting listings, and making changes.
+              </p>
+              <div>
+                <label style={labelStyle}>Reason (optional)</label>
+                <input
+                  type="text"
+                  value={suspensionReason}
+                  onChange={(e) => setSuspensionReason(e.target.value)}
+                  onFocus={handleFocus}
+                  onBlur={handleBlurStyle}
+                  style={inputStyle}
+                  placeholder="e.g. Repeated policy violations"
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+                <input
+                  type="checkbox"
+                  id="pauseListings"
+                  checked={pauseListings}
+                  onChange={(e) => setPauseListings(e.target.checked)}
+                  style={{ width: "16px", height: "16px", accentColor: "#dc2626", cursor: "pointer" }}
+                />
+                <label htmlFor="pauseListings" style={{ fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer" }}>
+                  Pause active listings
+                </label>
+              </div>
+              <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0 26px" }}>
+                Paused listings are removed from the store and restored when the account is reactivated.
+              </p>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" }}>
+              <button
+                onClick={() => setShowSuspendModal(false)}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "#374151",
+                  background: "#f3f4f6",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSuspend}
+                disabled={isSubmitting}
+                style={{
+                  padding: "8px 20px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#fff",
+                  background: "#dc2626",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  opacity: isSubmitting ? 0.7 : 1,
+                  fontFamily: "inherit",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}
+              >
+                {isSubmitting ? "Suspending..." : "Suspend"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </s-page>
   );
 }
