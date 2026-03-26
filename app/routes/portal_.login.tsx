@@ -124,7 +124,7 @@ export default function PortalLogin() {
 
           {/* Step 1: Email */}
           {step === "email" && (
-            <Form method="post" reloadDocument className="space-y-4">
+            <Form method="post" className="space-y-4">
               <input type="hidden" name="intent" value="request-otp" />
               <div>
                 <label className="block text-sm text-muted-foreground mb-1.5">Email</label>

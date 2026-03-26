@@ -26,16 +26,25 @@ export default async function handleRequest(
   responseHeaders.set("X-Content-Type-Options", "nosniff");
   responseHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
   responseHeaders.set("X-DNS-Prefetch-Control", "off");
-  responseHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  responseHeaders.set(
+    "Permissions-Policy",
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+  );
+  responseHeaders.delete("Server");
+  responseHeaders.delete("X-Powered-By");
 
   // Portal-only headers (can't use X-Frame-Options or strict CSP on Shopify embedded routes)
   if (isPortal) {
     responseHeaders.set("X-Frame-Options", "DENY");
-    responseHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    responseHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
     responseHeaders.set(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     );
+    responseHeaders.set("Cross-Origin-Resource-Policy", "same-origin");
+    responseHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+    responseHeaders.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    responseHeaders.set("Pragma", "no-cache");
   }
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')

@@ -87,6 +87,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const { portalFormRateLimit } = await import("~/lib/rate-limit.server");
+  const limited = portalFormRateLimit(request);
+  if (limited) return limited;
+
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
   const formData = await request.formData();

@@ -4,6 +4,10 @@ import prisma from "~/db.server";
 import { authenticatePortal } from "~/services/portal-auth.server";
 
 export async function action({ request }: ActionFunctionArgs) {
+  const { portalApiRateLimit } = await import("~/lib/rate-limit.server");
+  const limited = portalApiRateLimit(request);
+  if (limited) return limited;
+
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
 

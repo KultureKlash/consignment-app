@@ -4,8 +4,11 @@ import prisma from "~/db.server";
 const COOKIE_NAME = "__portal_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-// Cookie signing secret — uses env var in prod, falls back to dev default
+// Cookie signing secret — MUST be set in production
 const COOKIE_SECRET = process.env.COOKIE_SECRET || "dev-cookie-secret-change-in-prod";
+if (process.env.NODE_ENV === "production" && !process.env.COOKIE_SECRET) {
+  throw new Error("COOKIE_SECRET environment variable is required in production");
+}
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -60,7 +63,7 @@ export function createSessionCookie(consignorId: string): string {
     `${COOKIE_NAME}=${encodeURIComponent(signedValue)}`,
     "Path=/portal",
     "HttpOnly",
-    "SameSite=Lax",
+    "SameSite=Strict",
     `Max-Age=${MAX_AGE}`,
     ...(isProd ? ["Secure"] : []),
   ];
@@ -73,7 +76,7 @@ export function destroySessionCookie(): string {
     `${COOKIE_NAME}=`,
     "Path=/portal",
     "HttpOnly",
-    "SameSite=Lax",
+    "SameSite=Strict",
     "Max-Age=0",
     ...(isProd ? ["Secure"] : []),
   ];
