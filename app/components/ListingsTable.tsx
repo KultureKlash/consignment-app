@@ -128,14 +128,78 @@ const qtyBadgeStyle: React.CSSProperties = {
 };
 
 const childRowStyle: React.CSSProperties = {
-  borderBottom: "1px solid #f3f4f6",
-  background: "#fcfcfd",
-  transition: "background 0.12s ease-out",
+  borderBottom: "1px solid #f0f1f3",
+  background: "#ffffff",
+  transition: "background 0.15s ease-out",
 };
 
 const childIndentTd: React.CSSProperties = {
   ...tdStyle,
   paddingLeft: "42px",
+};
+
+const childHeaderStyle: React.CSSProperties = {
+  borderBottom: "1px solid #e8eaed",
+  background: "#ffffff",
+};
+
+const childThStyle: React.CSSProperties = {
+  padding: "7px 8px",
+  fontSize: "10px",
+  fontWeight: 700,
+  color: "#8c9196",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  textAlign: "left" as const,
+};
+
+const childSortableThStyle: React.CSSProperties = {
+  ...childThStyle,
+  cursor: "pointer",
+  userSelect: "none",
+};
+
+const sizeBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: "32px",
+  padding: "2px 8px",
+  fontSize: "12px",
+  fontWeight: 600,
+  borderRadius: "5px",
+  background: "#eef0f3",
+  color: "#374151",
+  letterSpacing: "0.01em",
+};
+
+const priceCellStyle: React.CSSProperties = {
+  ...tdStyle,
+  fontWeight: 700,
+  fontSize: "13.5px",
+  fontVariantNumeric: "tabular-nums",
+  color: "#111827",
+};
+
+const consignorNameStyle: React.CSSProperties = {
+  fontSize: "13px",
+  fontWeight: 500,
+  color: "#1a1a1a",
+  lineHeight: 1.3,
+};
+
+const consignorEmailStyle: React.CSSProperties = {
+  fontSize: "11px",
+  color: "#9ca3af",
+  marginTop: "1px",
+  lineHeight: 1.3,
+};
+
+const dateCellStyle: React.CSSProperties = {
+  ...tdStyle,
+  fontSize: "12px",
+  color: "#9ca3af",
+  fontVariantNumeric: "tabular-nums",
 };
 
 const checkboxStyle: React.CSSProperties = {
@@ -198,18 +262,58 @@ function groupByProduct(listings: Listing[]): ProductGroup[] {
   return Array.from(map.values());
 }
 
-function statusSummary(listings: Listing[]): string {
+const statusCountColors: Record<string, { bg: string; color: string }> = {
+  submitted: { bg: "#fef3c7", color: "#92400e" },
+  approved: { bg: "#dbeafe", color: "#1e40af" },
+  active: { bg: "#d1fae5", color: "#065f46" },
+  sold: { bg: "#f3e8ff", color: "#6b21a8" },
+};
+
+function StatusCounts({ listings }: { listings: Listing[] }) {
   const submitted = listings.filter((l) => l.status === "submitted").length;
   const approved = listings.filter((l) => l.status === "approved_awaiting_dropoff").length;
   const active = listings.filter((l) => l.status === "active").length;
   const sold = listings.filter((l) => l.status === "sold").length;
-  const parts: string[] = [];
-  if (submitted) parts.push(`${submitted} submitted`);
-  if (approved) parts.push(`${approved} approved`);
-  if (active) parts.push(`${active} active`);
-  if (sold) parts.push(`${sold} sold`);
-  if (parts.length === 0) return `${listings.length} listing${listings.length !== 1 ? "s" : ""}`;
-  return parts.join(", ");
+  const counts = [
+    { label: "submitted", count: submitted },
+    { label: "approved", count: approved },
+    { label: "active", count: active },
+    { label: "sold", count: sold },
+  ].filter((c) => c.count > 0);
+
+  if (counts.length === 0) {
+    return (
+      <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+        {listings.length} listing{listings.length !== 1 ? "s" : ""}
+      </span>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+      {counts.map((c) => {
+        const colors = statusCountColors[c.label] ?? { bg: "#f3f4f6", color: "#6b7280" };
+        return (
+          <span
+            key={c.label}
+            style={{
+              display: "inline-block",
+              padding: "1px 7px",
+              fontSize: "11px",
+              fontWeight: 600,
+              borderRadius: "4px",
+              background: colors.bg,
+              color: colors.color,
+              lineHeight: "18px",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {c.count} {c.label}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Component ──
@@ -658,15 +762,25 @@ function GroupRows({
               </span>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span style={{ fontWeight: 600, fontSize: "13.5px", color: "#1a1a1a" }}>
-                {group.title}
-              </span>
-              <span style={{ fontSize: "12px", color: "#9ca3af" }}>
-                {group.styleId && <><strong style={{ fontWeight: 500 }}>Style:</strong> {group.styleId}</>}
-                {group.brand && ` / ${group.brand}`}
-                {" · "}{statusSummary(group.listings)}
-              </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontWeight: 600, fontSize: "13.5px", color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {group.title}
+                </span>
+                {group.brand && (
+                  <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {group.brand}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {group.styleId && (
+                  <span style={{ fontSize: "11px", color: "#9ca3af", fontFamily: "monospace", letterSpacing: "0.02em" }}>
+                    {group.styleId}
+                  </span>
+                )}
+                <StatusCounts listings={group.listings} />
+              </div>
             </div>
 
             <div style={{ marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -708,9 +822,9 @@ function GroupRows({
 
       {/* Column headers — only when expanded */}
       {isExpanded && (
-        <tr ref={scrollRef} style={{ borderBottom: "1px solid #e8eaed", background: "#f9fafb" }}>
+        <tr ref={scrollRef} style={childHeaderStyle}>
           {hasSelection && (
-            <td style={checkboxThStyle} onClick={(e) => e.stopPropagation()}>
+            <td style={{ ...childThStyle, width: "36px", paddingRight: "0" }} onClick={(e) => e.stopPropagation()}>
               {groupSelectableIds.length > 0 && (
                 <input
                   type="checkbox"
@@ -721,22 +835,22 @@ function GroupRows({
               )}
             </td>
           )}
-          <td style={{ ...thStyle, paddingLeft: "42px" }}>Size</td>
-          <td style={thStyle}>Barcode</td>
-          <td style={sortableThStyle} onClick={() => handleLocalSort("price")}>
+          <td style={{ ...childThStyle, paddingLeft: "42px" }}>Size</td>
+          <td style={childThStyle}>Barcode</td>
+          <td style={childSortableThStyle} onClick={() => handleLocalSort("price")}>
             Price
             <SortIndicator active={localSortKey === "price"} dir={localSortDir} />
           </td>
-          <td style={thStyle}>Consignor</td>
-          <td style={sortableThStyle} onClick={() => handleLocalSort("status")}>
+          <td style={childThStyle}>Consignor</td>
+          <td style={childSortableThStyle} onClick={() => handleLocalSort("status")}>
             Status
             <SortIndicator active={localSortKey === "status"} dir={localSortDir} />
           </td>
-          <td style={sortableThStyle} onClick={() => handleLocalSort("date")}>
+          <td style={childSortableThStyle} onClick={() => handleLocalSort("date")}>
             Created
             <SortIndicator active={localSortKey === "date"} dir={localSortDir} />
           </td>
-          {(onCancel || onApprove) && <td style={thStyle}>Actions</td>}
+          {(onCancel || onApprove) && <td style={childThStyle}>Actions</td>}
         </tr>
       )}
 
@@ -750,8 +864,8 @@ function GroupRows({
               ...childRowStyle,
               ...(i === sortedListings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f6f7f8")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#fcfcfd")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
           >
             {hasSelection && (
               <td style={checkboxTdStyle} onClick={(e) => e.stopPropagation()}>
@@ -768,22 +882,22 @@ function GroupRows({
               </td>
             )}
             <td style={childIndentTd}>
-              <span style={{ fontWeight: 500 }}>{l.variant.size}</span>
+              <span style={{ fontWeight: 600 }}>{l.variant.size}</span>
             </td>
-            <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#6d7175" }}>
+            <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#9ca3af", letterSpacing: "0.02em" }}>
               {l.variant.gtin || "—"}
             </td>
-            <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+            <td style={priceCellStyle}>
               ${fmt(Number(l.price))}
             </td>
             <td style={tdStyle}>
-              <div>{l.consignor.name}</div>
-              <div style={{ fontSize: "11px", color: "#6d7175", marginTop: "1px" }}>{l.consignor.email}</div>
+              <div style={consignorNameStyle}>{l.consignor.name}</div>
+              <div style={consignorEmailStyle}>{l.consignor.email}</div>
             </td>
             <td style={tdStyle}>
               <span style={statusBadge(l.status)}>{statusLabel(l.status)}</span>
             </td>
-            <td style={{ ...tdStyle, fontSize: "12px", color: "#6d7175" }}>
+            <td style={dateCellStyle}>
               {relativeTime(l.createdAt)}
             </td>
             {(onCancel || onApprove) && (
