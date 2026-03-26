@@ -387,6 +387,101 @@ export async function ensureShopifyProductAndVariant({
   }
 }
 
+/**
+ * Update the image on an existing Shopify product.
+ * Uploads base64 image via staged uploads, attaches to product, polls for CDN URL,
+ * and updates local product.imageUrl.
+ */
+export async function updateShopifyProductImage({
+  admin,
+  productId,
+  shopifyProductId,
+  imageData,
+}: {
+  admin: AdminApiContext;
+  productId: string;
+  shopifyProductId: string;
+  imageData: string;
+}): Promise<void> {
+  // 1. Delete all existing images first
+  const existingRes = await admin.graphql(
+    `#graphql
+    query productMedia($id: ID!) {
+      product(id: $id) {
+        media(first: 20) {
+          nodes { id }
+        }
+      }
+    }`,
+    { variables: { id: shopifyProductId } }
+  );
+  const existingData = await existingRes.json();
+  const existingMediaIds = existingData.data.product?.media?.nodes?.map((n: { id: string }) => n.id) ?? [];
+
+  if (existingMediaIds.length > 0) {
+    await admin.graphql(
+      `#graphql
+      mutation productDeleteMedia($productId: ID!, $mediaIds: [ID!]!) {
+        productDeleteMedia(productId: $productId, mediaIds: $mediaIds) {
+          deletedMediaIds
+          mediaUserErrors { field message }
+        }
+      }`,
+      {
+        variables: {
+          productId: shopifyProductId,
+          mediaIds: existingMediaIds,
+        },
+      }
+    );
+  }
+
+  // 2. Upload and attach new image
+  const stagedUrl = await uploadImageToShopify(admin, imageData);
+
+  await admin.graphql(
+    `#graphql
+    mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+      productCreateMedia(productId: $productId, media: $media) {
+        media { id }
+        mediaUserErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        productId: shopifyProductId,
+        media: [{ originalSource: stagedUrl, mediaContentType: "IMAGE" }],
+      },
+    }
+  );
+
+  // 3. Poll for processed image URL
+  let shopifyImageUrl: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const imgRes = await admin.graphql(
+      `#graphql
+      query productImages($id: ID!) {
+        product(id: $id) {
+          images(first: 1) { nodes { url } }
+        }
+      }`,
+      { variables: { id: shopifyProductId } }
+    );
+    const imgData = await imgRes.json();
+    shopifyImageUrl = imgData.data.product?.images?.nodes?.[0]?.url ?? null;
+    if (shopifyImageUrl) break;
+  }
+
+  // 4. Update local product with CDN URL (replacing base64)
+  if (shopifyImageUrl) {
+    await prisma.product.update({
+      where: { id: productId },
+      data: { imageUrl: shopifyImageUrl },
+    });
+  }
+}
+
 export async function backfillProductImages(admin: AdminApiContext): Promise<number> {
   const products = await prisma.product.findMany({
     where: { shopifyProductId: { not: null }, imageUrl: null },

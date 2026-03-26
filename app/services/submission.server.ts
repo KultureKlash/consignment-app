@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
-import { ensureShopifyProductAndVariant } from "~/services/shopify-products.server";
+import { ensureShopifyProductAndVariant, updateShopifyProductImage } from "~/services/shopify-products.server";
 import { syncInventory } from "~/services/inventory.server";
 import { generateBarcode, parseCategory } from "~/lib/categories";
 
@@ -217,6 +217,7 @@ export async function adminEditAndApprove({
   size,
   gtin,
   price,
+  imageData,
 }: {
   listingId: string;
   title?: string;
@@ -226,6 +227,7 @@ export async function adminEditAndApprove({
   size?: string;
   gtin?: string;
   price?: number;
+  imageData?: string;
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
@@ -274,6 +276,18 @@ export async function adminEditAndApprove({
     });
   }
 
+  // Store image on the resolved product if admin uploaded one
+  if (imageData) {
+    const resolvedVariant = await prisma.variant.findUniqueOrThrow({
+      where: { id: variantId },
+      select: { productId: true },
+    });
+    await prisma.product.update({
+      where: { id: resolvedVariant.productId },
+      data: { imageUrl: imageData },
+    });
+  }
+
   return prisma.listing.update({
     where: { id: listingId },
     data: {
@@ -301,6 +315,7 @@ export async function adminEditListing({
   gtin,
   price,
   cost,
+  imageData,
 }: {
   admin?: AdminApiContext;
   listingId: string;
@@ -312,6 +327,7 @@ export async function adminEditListing({
   gtin?: string;
   price?: number;
   cost?: number | null;
+  imageData?: string;
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
@@ -359,6 +375,18 @@ export async function adminEditListing({
     });
   }
 
+  // Store image on the resolved product if admin uploaded one
+  if (imageData) {
+    const resolvedVariant = await prisma.variant.findUniqueOrThrow({
+      where: { id: variantId },
+      select: { productId: true },
+    });
+    await prisma.product.update({
+      where: { id: resolvedVariant.productId },
+      data: { imageUrl: imageData },
+    });
+  }
+
   const updated = await prisma.listing.update({
     where: { id: listingId },
     data: {
@@ -372,9 +400,24 @@ export async function adminEditListing({
   // Re-sync to Shopify if the listing is live
   if (admin && ["active", "pending_sale"].includes(listing.status)) {
     try {
+      const freshProduct = await prisma.product.findUniqueOrThrow({
+        where: { id: updated.variant.product.id },
+      });
+
+      // Update image on existing Shopify product if admin uploaded a new one
+      const pendingImage = freshProduct.imageUrl?.startsWith("data:") ? freshProduct.imageUrl : undefined;
+      if (pendingImage && freshProduct.shopifyProductId) {
+        await updateShopifyProductImage({
+          admin,
+          productId: freshProduct.id,
+          shopifyProductId: freshProduct.shopifyProductId,
+          imageData: pendingImage,
+        });
+      }
+
       await ensureShopifyProductAndVariant({
         admin,
-        product: updated.variant.product,
+        product: freshProduct,
         variant: updated.variant,
       });
       await syncInventory({ admin, variant: updated.variant });

@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useFetcher, useNavigate } from "react-router";
 import { redirect } from "react-router";
-import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Camera, X, Plus, Package, Lightbulb } from "lucide-react";
-import { processProductImage } from "~/lib/image-processing";
+import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Plus, Package, Lightbulb } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { authenticatePortal } from "~/services/portal-auth.server";
@@ -57,8 +56,6 @@ export async function action({ request }: ActionFunctionArgs) {
   const gtin = (form.get("gtin") as string ?? "").trim() || undefined;
   const price = parseFloat(form.get("price") as string);
   const count = parseInt(form.get("quantity") as string) || 1;
-  const imageData = (form.get("imageData") as string ?? "").trim() || undefined;
-
   if (!title) return { error: "Product name is required" };
   if (!size) return { error: "Size is required" };
   if (isNaN(price) || price <= 0) return { error: "Valid price is required" };
@@ -79,7 +76,6 @@ export async function action({ request }: ActionFunctionArgs) {
       gtin,
       price,
       count,
-      imageData,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {
@@ -122,7 +118,6 @@ export default function PortalListingNew() {
   const [gtin, setGtin] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [imageData, setImageData] = useState("");
   const [newSize, setNewSize] = useState(false);
 
   // Validation errors
@@ -260,23 +255,10 @@ export default function PortalListingNew() {
     setGtin("");
     setPrice("");
     setQuantity("1");
-    setImageData("");
     setSelectedVariantId("");
     setNewSize(false);
     setMarketData(null);
   };
-
-  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert("Image must be under 10MB"); return; }
-    try {
-      const processed = await processProductImage(file);
-      setImageData(processed);
-    } catch {
-      alert("Failed to process image");
-    }
-  }, []);
 
   // Auto-fill GTIN when typed size matches an existing variant
   useEffect(() => {
@@ -333,7 +315,6 @@ export default function PortalListingNew() {
           <input type="hidden" name="mainCategory" value={mainCategory} />
           <input type="hidden" name="subCategory" value={subCategory} />
           <input type="hidden" name="styleId" value={styleId} />
-          <input type="hidden" name="imageData" value={imageData} />
 
           {/* Step 1: Product Search */}
           {showSearch && (
@@ -493,33 +474,6 @@ export default function PortalListingNew() {
                         disabled={!mainCategory}
                       />
                     </div>
-                  </div>
-                  {/* Photo upload */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">Photo</label>
-                    {imageData ? (
-                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-[rgba(255,255,255,0.1)]">
-                        <img src={imageData} alt="Product" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setImageData("")}
-                          className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl glass-input cursor-pointer hover:bg-white/[0.08] transition-colors text-sm text-muted-foreground">
-                        <Camera className="w-4 h-4" />
-                        Upload photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1.5">Style ID <span className="text-muted-foreground/60 font-normal">(optional)</span></label>

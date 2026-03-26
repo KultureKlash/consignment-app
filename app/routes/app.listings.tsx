@@ -138,6 +138,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         size: (formData.get("size") as string) || undefined,
         gtin: (formData.get("gtin") as string) || undefined,
         price: formData.get("price") ? Number(formData.get("price")) : undefined,
+        imageData: (formData.get("imageData") as string) || undefined,
       });
       return { intent };
     }
@@ -155,6 +156,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         gtin: (formData.get("gtin") as string) || undefined,
         price: formData.get("price") ? Number(formData.get("price")) : undefined,
         cost: formData.has("cost") ? (formData.get("cost") ? Number(formData.get("cost")) : null) : undefined,
+        imageData: (formData.get("imageData") as string) || undefined,
       });
       return { intent };
     }

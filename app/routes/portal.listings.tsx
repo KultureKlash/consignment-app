@@ -303,17 +303,6 @@ export default function PortalListings() {
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  // Auto-expand single-item groups when listings/filters change
-  useEffect(() => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      for (const g of groups) {
-        if (g.listings.length === 1) next.add(g.productId);
-      }
-      return next;
-    });
-  }, [listings]);
-
   const toggleGroup = (productId: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);

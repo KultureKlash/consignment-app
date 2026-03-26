@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
+import { Package, ChevronRight, Plus, Check, X, Zap, Pencil, Camera } from "lucide-react";
+import { processProductImage } from "~/lib/image-processing";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
 import { compareSizes } from "~/lib/size-order";
 import { fmt } from "~/lib/currency";
@@ -27,6 +28,7 @@ export type EditApproveFields = {
   gtin: string;
   price: string;
   cost?: string;
+  imageData?: string;
 };
 
 type SortKey = "date" | "price" | "status";
@@ -339,9 +341,6 @@ export default function ListingsTable({
                     onQuickAdd={onQuickAdd}
                     isLoading={isLoading}
                     colCount={colCount}
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onSortChange={onSortChange}
                     hasSelection={hasSelection}
                     selectedIds={selectedIds}
                     onToggleId={toggleId}
@@ -552,9 +551,6 @@ function GroupRows({
   onQuickAdd,
   isLoading,
   colCount,
-  sortBy,
-  sortDir = "desc",
-  onSortChange,
   hasSelection,
   selectedIds,
   onToggleId,
@@ -574,14 +570,33 @@ function GroupRows({
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   colCount: number;
-  sortBy?: SortKey;
-  sortDir?: "asc" | "desc";
-  onSortChange?: (sortBy: SortKey) => void;
   hasSelection: boolean;
   selectedIds?: Set<string>;
   onToggleId: (id: string) => void;
   onToggleGroup: (ids: string[]) => void;
 }) {
+  const [localSortKey, setLocalSortKey] = useState<SortKey | null>(null);
+  const [localSortDir, setLocalSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleLocalSort = (key: SortKey) => {
+    if (localSortKey === key) {
+      setLocalSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setLocalSortKey(key);
+      setLocalSortDir("asc");
+    }
+  };
+
+  const sortedListings = localSortKey
+    ? [...group.listings].sort((a, b) => {
+        let cmp = 0;
+        if (localSortKey === "price") cmp = Number(a.price) - Number(b.price);
+        else if (localSortKey === "status") cmp = a.status.localeCompare(b.status);
+        else if (localSortKey === "date") cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return localSortDir === "asc" ? cmp : -cmp;
+      })
+    : group.listings;
+
   const groupSelectableIds = group.listings.filter((l) => ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status)).map((l) => l.id);
   const allGroupSelected = hasSelection && groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedIds?.has(id));
 
@@ -708,32 +723,32 @@ function GroupRows({
           )}
           <td style={{ ...thStyle, paddingLeft: "42px" }}>Size</td>
           <td style={thStyle}>Barcode</td>
-          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("price")}>
+          <td style={sortableThStyle} onClick={() => handleLocalSort("price")}>
             Price
-            {onSortChange && <SortIndicator active={sortBy === "price"} dir={sortDir} />}
+            <SortIndicator active={localSortKey === "price"} dir={localSortDir} />
           </td>
           <td style={thStyle}>Consignor</td>
-          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("status")}>
+          <td style={sortableThStyle} onClick={() => handleLocalSort("status")}>
             Status
-            {onSortChange && <SortIndicator active={sortBy === "status"} dir={sortDir} />}
+            <SortIndicator active={localSortKey === "status"} dir={localSortDir} />
           </td>
-          <td style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("date")}>
+          <td style={sortableThStyle} onClick={() => handleLocalSort("date")}>
             Created
-            {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
+            <SortIndicator active={localSortKey === "date"} dir={localSortDir} />
           </td>
           {(onCancel || onApprove) && <td style={thStyle}>Actions</td>}
         </tr>
       )}
 
       {/* Child listing rows */}
-      {isExpanded && group.listings.map((l, i) => {
+      {isExpanded && sortedListings.map((l, i) => {
         const isSelectable = ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status);
         return (
           <tr
             key={l.id}
             style={{
               ...childRowStyle,
-              ...(i === group.listings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
+              ...(i === sortedListings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f6f7f8")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "#fcfcfd")}
@@ -1054,6 +1069,8 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
   const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
   const [price, setPrice] = useState(String(fmt(Number(listing.price))));
   const [cost, setCost] = useState(listing.cost != null ? String(listing.cost) : "");
+  const [imageData, setImageData] = useState("");
+  const currentImageUrl = listing.variant.product.imageUrl ?? null;
   const isStoreOwned = listing.consignor.storeOwned ?? false;
 
   const canSubmit = title.trim() && size.trim() && Number(price) > 0;
@@ -1065,6 +1082,18 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     e.currentTarget.style.borderColor = "#d1d5db";
     e.currentTarget.style.boxShadow = "none";
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert("Image must be under 10MB"); return; }
+    try {
+      const processed = await processProductImage(file);
+      setImageData(processed);
+    } catch {
+      alert("Failed to process image");
+    }
   };
 
   return (
@@ -1105,6 +1134,57 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {/* Product Image */}
+          <div>
+            <label style={editLabelStyle}>Product Image</label>
+            {imageData ? (
+              <div style={{ position: "relative", width: "96px", height: "96px" }}>
+                <img src={imageData} alt="Product" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
+                <button
+                  type="button"
+                  onClick={() => setImageData("")}
+                  style={{
+                    position: "absolute", top: "4px", right: "4px",
+                    width: "20px", height: "20px", borderRadius: "50%",
+                    background: "rgba(0,0,0,0.6)", color: "#fff",
+                    border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: 0,
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : currentImageUrl && !currentImageUrl.startsWith("data:") ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <img src={currentImageUrl} alt="Current" style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
+                <label style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  padding: "6px 12px", borderRadius: "8px",
+                  border: "1px solid #d1d5db", background: "#fff",
+                  fontSize: "12px", fontWeight: 500, color: "#6d7175",
+                  cursor: "pointer",
+                }}>
+                  <Camera size={14} />
+                  Replace
+                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+                </label>
+              </div>
+            ) : (
+              <label style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "8px 12px", borderRadius: "8px",
+                border: "1px dashed #d1d5db", background: "#f9fafb",
+                fontSize: "13px", color: "#6d7175",
+                cursor: "pointer",
+              }}>
+                <Camera size={14} />
+                Upload photo
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+              </label>
+            )}
+          </div>
+
           <div>
             <label style={editLabelStyle}>Product Title</label>
             <input
@@ -1234,6 +1314,7 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
               title: title.trim(), brand: brand.trim(), category: category.trim(), styleId: styleId.trim(),
               size: size.trim(), gtin: gtin.trim(), price,
               ...(isStoreOwned ? { cost: cost.trim() } : {}),
+              ...(imageData ? { imageData } : {}),
             })}
             disabled={!canSubmit}
             style={{
