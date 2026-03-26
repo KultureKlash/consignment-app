@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { getConsignorDetail, updateConsignor } from "~/services/consignors.server";
+import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor } from "~/services/consignors.server";
 
 async function setupConsignorWithListings() {
   const consignor = await createTestConsignor({ name: "Alice", email: "alice@test.com", feeRate: 0.15 });
@@ -145,5 +145,202 @@ describe("consignors.server — updateConsignor", () => {
   it("rejects fee rate above 100%", async () => {
     const consignor = await createTestConsignor();
     await expect(updateConsignor(consignor.id, { feeRate: 1.01 })).rejects.toThrow("Fee rate must be between 0% and 100%");
+  });
+});
+
+describe("consignors.server — suspendConsignor / unsuspendConsignor", () => {
+  it("suspends an active consignor", async () => {
+    const consignor = await createTestConsignor();
+    const { consignor: suspended } = await suspendConsignor(consignor.id, "Policy violation");
+
+    expect(suspended.status).toBe("suspended");
+    expect(suspended.suspensionReason).toBe("Policy violation");
+    expect(suspended.suspendedAt).toBeTruthy();
+  });
+
+  it("suspends without a reason", async () => {
+    const consignor = await createTestConsignor();
+    const { consignor: suspended } = await suspendConsignor(consignor.id);
+
+    expect(suspended.status).toBe("suspended");
+    expect(suspended.suspensionReason).toBeNull();
+    expect(suspended.suspendedAt).toBeTruthy();
+  });
+
+  it("throws when suspending an already-suspended consignor", async () => {
+    const consignor = await createTestConsignor();
+    await suspendConsignor(consignor.id);
+
+    await expect(suspendConsignor(consignor.id)).rejects.toThrow("already suspended");
+  });
+
+  it("throws for non-existent consignor", async () => {
+    await expect(suspendConsignor("nonexistent")).rejects.toThrow("Consignor not found");
+  });
+
+  it("unsuspends a suspended consignor", async () => {
+    const consignor = await createTestConsignor();
+    await suspendConsignor(consignor.id, "Temp ban");
+    const { consignor: reactivated } = await unsuspendConsignor(consignor.id);
+
+    expect(reactivated.status).toBe("active");
+    expect(reactivated.suspensionReason).toBeNull();
+    expect(reactivated.suspendedAt).toBeNull();
+  });
+
+  it("throws when unsuspending an active consignor", async () => {
+    const consignor = await createTestConsignor();
+    await expect(unsuspendConsignor(consignor.id)).rejects.toThrow("not suspended");
+  });
+
+  it("throws for non-existent consignor on unsuspend", async () => {
+    await expect(unsuspendConsignor("nonexistent")).rejects.toThrow("Consignor not found");
+  });
+
+  it("pauses active listings when pauseListings=true", async () => {
+    const consignor = await createTestConsignor();
+    const product = await prisma.product.create({ data: { title: "Test Shoe" } });
+    const variant = await prisma.variant.create({ data: { productId: product.id, size: "10" } });
+
+    // Create listings in various statuses
+    await prisma.listing.createMany({
+      data: [
+        { consignorId: consignor.id, variantId: variant.id, price: 100, status: "active" },
+        { consignorId: consignor.id, variantId: variant.id, price: 120, status: "active" },
+        { consignorId: consignor.id, variantId: variant.id, price: 150, status: "submitted" },
+        { consignorId: consignor.id, variantId: variant.id, price: 200, status: "sold" },
+      ],
+    });
+
+    const { pausedCount } = await suspendConsignor(consignor.id, "Test", true);
+
+    expect(pausedCount).toBe(2); // only active listings paused
+
+    const listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
+    const paused = listings.filter((l) => l.status === "paused");
+    const submitted = listings.filter((l) => l.status === "submitted");
+    const sold = listings.filter((l) => l.status === "sold");
+
+    expect(paused).toHaveLength(2);
+    expect(submitted).toHaveLength(1); // not touched
+    expect(sold).toHaveLength(1); // not touched
+  });
+
+  it("does NOT pause listings when pauseListings=false", async () => {
+    const consignor = await createTestConsignor();
+    const product = await prisma.product.create({ data: { title: "Test Shoe" } });
+    const variant = await prisma.variant.create({ data: { productId: product.id, size: "10" } });
+
+    await prisma.listing.create({
+      data: { consignorId: consignor.id, variantId: variant.id, price: 100, status: "active" },
+    });
+
+    const { pausedCount } = await suspendConsignor(consignor.id, "Test", false);
+    expect(pausedCount).toBe(0);
+
+    const listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
+    expect(listings[0].status).toBe("active");
+  });
+
+  it("unsuspend reactivates paused listings", async () => {
+    const consignor = await createTestConsignor();
+    const product = await prisma.product.create({ data: { title: "Test Shoe" } });
+    const variant = await prisma.variant.create({ data: { productId: product.id, size: "10" } });
+
+    await prisma.listing.createMany({
+      data: [
+        { consignorId: consignor.id, variantId: variant.id, price: 100, status: "active" },
+        { consignorId: consignor.id, variantId: variant.id, price: 120, status: "active" },
+      ],
+    });
+
+    // Suspend with pause
+    await suspendConsignor(consignor.id, "Test", true);
+
+    // Verify paused
+    let listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
+    expect(listings.every((l) => l.status === "paused")).toBe(true);
+
+    // Unsuspend — should reactivate
+    const { reactivatedCount } = await unsuspendConsignor(consignor.id);
+    expect(reactivatedCount).toBe(2);
+
+    listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
+    expect(listings.every((l) => l.status === "active")).toBe(true);
+  });
+});
+
+describe("suspension — blocks portal submissions", () => {
+  it("submitListing rejects suspended consignor", async () => {
+    const consignor = await createTestConsignor();
+    await suspendConsignor(consignor.id);
+
+    await expect(
+      (await import("~/services/submission.server")).submitListing({
+        consignorId: consignor.id,
+        title: "Test Shoe",
+        size: "10",
+        price: 100,
+      }),
+    ).rejects.toThrow("suspended");
+  });
+
+  it("deleteSubmittedListing rejects suspended consignor", async () => {
+    const consignor = await createTestConsignor();
+
+    // Create a submitted listing before suspension
+    const listing = await prisma.listing.create({
+      data: {
+        consignorId: consignor.id,
+        variantId: (
+          await prisma.variant.create({
+            data: {
+              productId: (await prisma.product.create({ data: { title: "Shoe" } })).id,
+              size: "10",
+            },
+          })
+        ).id,
+        price: 100,
+        status: "submitted",
+      },
+    });
+
+    await suspendConsignor(consignor.id);
+
+    await expect(
+      (await import("~/services/submission.server")).deleteSubmittedListing({
+        listingId: listing.id,
+        consignorId: consignor.id,
+      }),
+    ).rejects.toThrow("suspended");
+  });
+
+  it("requestWithdrawal rejects suspended consignor", async () => {
+    const consignor = await createTestConsignor();
+
+    const listing = await prisma.listing.create({
+      data: {
+        consignorId: consignor.id,
+        variantId: (
+          await prisma.variant.create({
+            data: {
+              productId: (await prisma.product.create({ data: { title: "Shoe" } })).id,
+              size: "10",
+            },
+          })
+        ).id,
+        price: 100,
+        status: "active",
+      },
+    });
+
+    await suspendConsignor(consignor.id);
+
+    await expect(
+      (await import("~/services/submission.server")).requestWithdrawal({
+        listingId: listing.id,
+        consignorId: consignor.id,
+      }),
+    ).rejects.toThrow("suspended");
   });
 });

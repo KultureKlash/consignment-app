@@ -20,6 +20,7 @@ const STATUS_OPTIONS = [
   { label: "Submitted", value: "submitted" },
   { label: "Awaiting Drop-off", value: "approved_awaiting_dropoff" },
   { label: "Active", value: "active" },
+  { label: "Paused", value: "paused" },
   { label: "Pending", value: "pending_sale" },
   { label: "Sold", value: "sold" },
   { label: "Rejected", value: "rejected" },

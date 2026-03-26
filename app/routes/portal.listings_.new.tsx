@@ -580,21 +580,27 @@ export default function PortalListingNew() {
                 {size && <input type="hidden" name="size" value={size} />}
               </div>
 
-              {/* GTIN */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                  GTIN / Barcode
-                </label>
-                <input
-                  type="text"
-                  name="gtin"
-                  value={gtin}
-                  onChange={(e) => { setGtin(e.target.value); clearError("gtin"); }}
-                  className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("gtin")}`}
-                  placeholder="e.g. 194500787612"
-                  readOnly={!!(selectedProduct && size && !newSize && gtin)}
-                />
-              </div>
+              {/* GTIN — only shown for footwear; non-footwear gets auto-generated */}
+              {isFootwearCategory ? (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    GTIN / Barcode
+                  </label>
+                  <input
+                    type="text"
+                    name="gtin"
+                    value={gtin}
+                    onChange={(e) => { setGtin(e.target.value); clearError("gtin"); }}
+                    className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("gtin")}`}
+                    placeholder="e.g. 194500787612"
+                    readOnly={!!(selectedProduct && size && !newSize && gtin)}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center pt-6">
+                  <p className="text-xs text-muted-foreground">Barcode will be auto-generated.</p>
+                </div>
+              )}
             </div>
           )}
 

@@ -5,6 +5,15 @@ import { ensureShopifyProductAndVariant } from "~/services/shopify-products.serv
 import { syncInventory } from "~/services/inventory.server";
 import { generateBarcode, parseCategory } from "~/lib/categories";
 
+/** Throws if the consignor account is suspended. Used by all portal-facing functions. */
+async function requireActiveConsignor(consignorId: string) {
+  const consignor = await prisma.consignor.findUniqueOrThrow({ where: { id: consignorId } });
+  if (consignor.status === "suspended") {
+    throw new Error("Your account has been suspended. You cannot perform this action.");
+  }
+  return consignor;
+}
+
 // ── Portal: Consignor submits listing(s) for review ──
 
 export async function submitListing({
@@ -30,6 +39,8 @@ export async function submitListing({
   count?: number;
   imageData?: string;
 }) {
+  await requireActiveConsignor(consignorId);
+
   // Find or create product + variant (reuses existing catalog dedup logic)
   const product = await findOrCreateProduct({ styleId, title, brand, category });
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
@@ -80,6 +91,8 @@ export async function updateSubmittedListing({
   size?: string;
   gtin?: string;
 }) {
+  await requireActiveConsignor(consignorId);
+
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
     include: { variant: { include: { product: true } } },
@@ -132,6 +145,8 @@ export async function deleteSubmittedListing({
   listingId: string;
   consignorId: string;
 }) {
+  await requireActiveConsignor(consignorId);
+
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
   });
@@ -501,6 +516,7 @@ export async function updateActiveListingPrice({
   consignorId: string;
   price: number;
 }) {
+  await requireActiveConsignor(consignorId);
   if (price <= 0) throw new Error("Price must be greater than zero");
 
   const listing = await prisma.listing.findUniqueOrThrow({
@@ -552,6 +568,8 @@ export async function requestWithdrawal({
   listingId: string;
   consignorId: string;
 }) {
+  await requireActiveConsignor(consignorId);
+
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
     include: { variant: true },

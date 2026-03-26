@@ -17,6 +17,11 @@ export async function authenticatePortal(request: Request) {
   const consignor = await prisma.consignor.findUnique({
     where: { id: consignorId },
   });
+  if (!consignor) return null;
+
+  // Suspended accounts cannot access the portal
+  if (consignor.status === "suspended") return null;
+
   return consignor;
 }
 
@@ -39,6 +44,10 @@ export async function loginPortal(email: string, password: string) {
 
   if (!consignor) {
     return { error: "Invalid email or password." };
+  }
+
+  if (consignor.status === "suspended") {
+    return { error: "Your account has been suspended. Please contact the store for more information." };
   }
 
   return { consignor };

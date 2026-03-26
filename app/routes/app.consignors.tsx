@@ -178,6 +178,22 @@ export default function Consignors() {
                         Store
                       </span>
                     )}
+                    {c.status === "suspended" && (
+                      <span style={{
+                        marginLeft: "8px",
+                        padding: "2px 8px",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        color: "#dc2626",
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: "9999px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.03em",
+                      }}>
+                        Suspended
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "6px" }}>{c.email}</td>
                   <td style={{ padding: "6px" }}>{(c.feeRate * 100).toFixed(0)}%</td>

@@ -1,0 +1,3770 @@
+{
+  "version": 1,
+  "skills": {
+    "acquiring-disk-image-with-dd-and-dcfldd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2e08a5178cacba8ac8fcdf00b73e0754217c8d210391fb375aa6eb4a8fb593c4"
+    },
+    "analyzing-active-directory-acl-abuse": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "87d789ed3fa80f6a4896874d6d600b0594238c8c5b32f7222bb5725db1d390ba"
+    },
+    "analyzing-android-malware-with-apktool": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "923c286cbe7b937aac26a6baa917109b1c86e9ecfefa8e65b14a5bcb7e435396"
+    },
+    "analyzing-api-gateway-access-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a4e0e81114d98f9128851a445722538ea52e440a2b9d6c45e14b564c83d1bd1d"
+    },
+    "analyzing-apt-group-with-mitre-navigator": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0355c257d05922586ea629955f940b8be29235d12efa75fe7284171b064cba72"
+    },
+    "analyzing-azure-activity-logs-for-threats": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1115776287fb526c0c2bec64118826de657f7ab245160d354757e402eb85c3f8"
+    },
+    "analyzing-bootkit-and-rootkit-samples": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8a262df84e7c84b1d918cdb89c9e32b05fac66115aa581d07e6497dffd9b0321"
+    },
+    "analyzing-browser-forensics-with-hindsight": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2f3ac0d91d68f39176b5d4475f0c0ee7f4f71cda2759c512b895bcab7ee4f192"
+    },
+    "analyzing-campaign-attribution-evidence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c06c503ddd9894638f0fce00271c002c0353af26ac5a45c3dffd368334393914"
+    },
+    "analyzing-certificate-transparency-for-phishing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3c3d0a23e16506427680fd0e62a7db3a886359accd158051a7d52197a569163a"
+    },
+    "analyzing-cloud-storage-access-patterns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8014dcfb7e1b007b1e60a6c18f17c19644c68ec24ca1eb91b8ef4b6c1308840b"
+    },
+    "analyzing-cobalt-strike-beacon-configuration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5ed38f217d51c7a63a232272326c4fb2204a60b4cc7ff8b1542b4455224dc396"
+    },
+    "analyzing-cobaltstrike-malleable-c2-profiles": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1c4b0815b6ceb2428e8d571bb3ed235a421ff022a5c830f69acb358ccc5d011a"
+    },
+    "analyzing-command-and-control-communication": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c010bb9befeb4d94a9b45436841ef9a7d45b2aa8eb1bfdc6cbb300b34ff5ca3b"
+    },
+    "analyzing-cyber-kill-chain": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3b91bf3bdcdff3f8f6fc4a72eb55bd366d41f6e2bf4067cb53b4cdc83ba134a5"
+    },
+    "analyzing-disk-image-with-autopsy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "07e1900fd30d5be8040e3d9d73c8ba571d42772d1fe4fd902be26d9af69ee9b9"
+    },
+    "analyzing-dns-logs-for-exfiltration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d5e727ac386f06617cc5dba300f717bcc680bb62e3bb1f2a810650cf392ee5fe"
+    },
+    "analyzing-docker-container-forensics": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0c5e7ce52e75e11af3e8006d4d5ec2f739edda34cfe72b5290de1a78632ed493"
+    },
+    "analyzing-email-headers-for-phishing-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2d89cf2d46b0d885e3cd93609fe1c8fde9bc61baf328c0fea1fd8e4daa8c9fc8"
+    },
+    "analyzing-ethereum-smart-contract-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f6813fd155dc1afa27661c824c0093ef5d39293947da5876f01c2ba9e8850046"
+    },
+    "analyzing-golang-malware-with-ghidra": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fbb502ebec44ae9a4819ce4af364899607e381e9f6c601be079fee991517d6bb"
+    },
+    "analyzing-heap-spray-exploitation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "131bbf48ba912ea0d624c735f18cf5ef66f7234899afb5efe94c3910d15519af"
+    },
+    "analyzing-indicators-of-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "470e36febffa040707376244afcd0cf3fa4a43a5b5e4ecb5c67f4f12130f3630"
+    },
+    "analyzing-ios-app-security-with-objection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1abbea21cb4bbcdc1a4df725958a697ed747eb7d62643b1937848a9ebf89c8d7"
+    },
+    "analyzing-kubernetes-audit-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8e65cff0b53c04c588c75538fa13c974d81f0a4b065202bfc9b4575c0d8781d9"
+    },
+    "analyzing-linux-audit-logs-for-intrusion": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8f6aa0cc4a4875ac6b729d6d009c4bf03cdeecbc8ecbd1f391900f377be200a1"
+    },
+    "analyzing-linux-elf-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "154099c01b98c1ff2838fb7b94375673e144f035883d7d6b970a3bf1b6a25e6b"
+    },
+    "analyzing-linux-kernel-rootkits": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9a013f8faefaf9ce8c04ba6166d20958e0a349ddb13793189a27b7f7b2d13d87"
+    },
+    "analyzing-linux-system-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cc87103b59107a3db12815bff75d190f4c1dda0ab653ffa815b6faa3dfef0755"
+    },
+    "analyzing-lnk-file-and-jump-list-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2812da5deede38f73cd98db45610fe49dc07f9886df0036ddace6e2d12932bb4"
+    },
+    "analyzing-macro-malware-in-office-documents": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "17d1417ce268c7b996b8e315ad97d828ffc222746002462241ba74da20666da9"
+    },
+    "analyzing-malicious-pdf-with-peepdf": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "593f0a5e58c3ad4ef883c4f94ae9d61bdc446dcb736540f333db1825635e1bf0"
+    },
+    "analyzing-malicious-url-with-urlscan": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "19dfb8e11ab62c8855f2d04ec105cd3425a4c5d6cab2899e073ce627c1ccda76"
+    },
+    "analyzing-malware-behavior-with-cuckoo-sandbox": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d3343a74de61c0dd805a20eaac661284e042df662b79b53651442d3babd20430"
+    },
+    "analyzing-malware-family-relationships-with-malpedia": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "64f8b266c953e0f2f611f336a12d13bf6137f8bf75e9044a8b205bafc8738ce0"
+    },
+    "analyzing-malware-persistence-with-autoruns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a867fd8db4ca9c05ecdc09b5626eb80b5368fff2e6756df6c340f69fee2f6e98"
+    },
+    "analyzing-malware-sandbox-evasion-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ae93284f562ae686f8b0e3b45758e659c6eadb335bfc4a130ea81c0d7e4116e9"
+    },
+    "analyzing-memory-dumps-with-volatility": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "76c5407c93e1bfa00aaa089893e5373a104baa0b231ffeaf096b62fbf047b853"
+    },
+    "analyzing-memory-forensics-with-lime-and-volatility": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3242b196a2028bc04fa1cf0d5173ee30b4140d8d1a1fc3c0b13910a3469827eb"
+    },
+    "analyzing-mft-for-deleted-file-recovery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3c2ba56ac800f9de30537e62a065e3104fe71739b8846b45d0793e27ba380bdc"
+    },
+    "analyzing-network-covert-channels-in-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f850ac74568213c7ccf4f4b48486d343783876181c71d3f52f798845f40acdd6"
+    },
+    "analyzing-network-flow-data-with-netflow": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d6db55d63c573b956e4d308893f246abc6a972f9496d1807c2cb116a9309cfe4"
+    },
+    "analyzing-network-packets-with-scapy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ebbb89178f781e63e45d79961473293f8db2f6f2ad1f9acd214a0bcc6a40af02"
+    },
+    "analyzing-network-traffic-for-incidents": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b998fcf47295798dc91f3a3cfa94e1a800ca0c5edfeb490f7f97ff095295cb96"
+    },
+    "analyzing-network-traffic-of-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "441e6bf159fe9e1ce625b3f76b285627e70df488fdc83a2bfd2b400791dc2212"
+    },
+    "analyzing-network-traffic-with-wireshark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8b36ba363517885f4b2b91b8c3946d5ebc06d9babc1c280bad9103cf8e0ecfd7"
+    },
+    "analyzing-office365-audit-logs-for-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d08ba937d1acdb038b4b75451dedf8a7a18c466f6ea3465c97d6fc6b75d6feee"
+    },
+    "analyzing-outlook-pst-for-email-forensics": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e6a05111c61ae02101a591cfc17dda2e8da097f265b69fcec72b934faadc3fc0"
+    },
+    "analyzing-packed-malware-with-upx-unpacker": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7d915292f0283907285630e67417681e8b7964991c67b48f4aa0c847b0a19731"
+    },
+    "analyzing-pdf-malware-with-pdfid": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bf931114dafe655ba5dc0181ffd9738570d87119e845607a9fbe1a1268f9ad10"
+    },
+    "analyzing-persistence-mechanisms-in-linux": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f82a26b118dc3c8dfb77acae11b3ab5147ed6f468ece70187734f48019467364"
+    },
+    "analyzing-powershell-empire-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6bf62eafe699b188f76b6b54cc00945d8fa1cae4d8b4bf46ce6dd9bb2052ae83"
+    },
+    "analyzing-powershell-script-block-logging": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "805cbcd6c59129746fa7d45a9e09c064c9666c24f95a35d9c88a039953edb3cf"
+    },
+    "analyzing-prefetch-files-for-execution-history": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "caaab013b7d2c9065227ac9944262382be91cb811c5c2ac4d750ea5be139f63b"
+    },
+    "analyzing-ransomware-encryption-mechanisms": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5ca24b197f3581e462bcea41220aaaaf4a15033eaefffa67ee0ec9700ae3314b"
+    },
+    "analyzing-ransomware-leak-site-intelligence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "667ee9bd5cef3fa2269da29f98da419711337156729aff46c547d49952f22185"
+    },
+    "analyzing-ransomware-network-indicators": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4b3f2ae700ee32526078fee2a801566e9c169713e55319a92e2619343f49a591"
+    },
+    "analyzing-ransomware-payment-wallets": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8315777e65ad68094bd4fb4bb15b73f84a2ba778eee982b6d15a040482c73b4e"
+    },
+    "analyzing-sbom-for-supply-chain-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "12bf31ee79b2177bc44367a8637513154ffae843273972fc788e0521a6bcd8e4"
+    },
+    "analyzing-security-logs-with-splunk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "75e6f58295304766a4770816056ce37e1b5392ff16380556b54bb2735449a788"
+    },
+    "analyzing-slack-space-and-file-system-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6e738698332e1d67ecb69e43a70a32a6ad855d28fa68e0a9661c04e3918eaf65"
+    },
+    "analyzing-supply-chain-malware-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bfe9f4439f75289a734999c4828809b1e81b0e6b60b0c3fb8b62de2c8db1f66d"
+    },
+    "analyzing-threat-actor-ttps-with-mitre-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b74b7d33234e7a3bd4f2849b2f4e6015d8e27133f202bbebda7077db912c224a"
+    },
+    "analyzing-threat-actor-ttps-with-mitre-navigator": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b8ba20dd3af36b02b07ece1446b879edef59de0337d65266fe0a90038ede8cc7"
+    },
+    "analyzing-threat-intelligence-feeds": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d9e881de86e07639ac345b2dc160e7a1bd88e2d9fab07b86b388e1ebc018d030"
+    },
+    "analyzing-threat-landscape-with-misp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a507defdfa6b7f5e42f20341687dc0ccd7eb2108a9583c7508b1f272288ac403"
+    },
+    "analyzing-tls-certificate-transparency-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "028262850920281141a77b7bf9f8a0e6e059688ebb8104840379a113e19fc8b0"
+    },
+    "analyzing-typosquatting-domains-with-dnstwist": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6c236b2013f314dc673b547513e0099d255e3b4bf89c213ab38fd7b728994566"
+    },
+    "analyzing-uefi-bootkit-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "28be6b29c39afa7a9029299d607ced8918884207ccdffc0403d90eb9739b4cb2"
+    },
+    "analyzing-usb-device-connection-history": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b0cc04244378de91fc4f17abe02d9e580f4b88c3a559cca6198479a10faef88d"
+    },
+    "analyzing-web-server-logs-for-intrusion": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fa6fc15e3c4b89499fd1023a53934f3d26da513ed0799d71af170bbcfdd24e25"
+    },
+    "analyzing-windows-amcache-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6d283325156b819b4e4fd92ebb6701a078ce141ea79b86b455ef0227e465f6fa"
+    },
+    "analyzing-windows-event-logs-in-splunk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e6019e0f965a47215fbda80091a59bf83b109edfd46b6e8248c2416c292dc56a"
+    },
+    "analyzing-windows-lnk-files-for-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cde1cbce0658fb4876daa878f4071c33dfc687d44d1214534f2f5b6a8ac00da1"
+    },
+    "analyzing-windows-prefetch-with-python": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "61ed78cd8cb0c57a9755ce00e5d770bce3ffc2c5534b1a66a4c1767e7dca9043"
+    },
+    "analyzing-windows-registry-for-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "42bfd8e272f8bb7edabb8d2c92e7d99edf57279e4ec50dcbf39979e1d566bb0f"
+    },
+    "analyzing-windows-shellbag-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7ed82efba698e664548504d91fc0dec87eb17e882d0ea1d7bed40e3c8319edd4"
+    },
+    "auditing-aws-s3-bucket-permissions": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a7b38eb546b8b9ecbc2610d965f7cf5df7ea6cebdff7a1eff0f19a4068950da4"
+    },
+    "auditing-azure-active-directory-configuration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "86579384c731eb0ffc028efc975f0e9007e99c1fa8d82fbaf5aff310c947ad82"
+    },
+    "auditing-cloud-with-cis-benchmarks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4a38afc84a2b63ac90cc4c49a1994281b7451ac1a6c41ae8d27e42bb7985e3a9"
+    },
+    "auditing-gcp-iam-permissions": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9bc0d9081f7897cbb040107f6c73e39cef6a5fe6dbc6ca7f1c8f7ce64c39f3e3"
+    },
+    "auditing-kubernetes-cluster-rbac": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "be349b2f6b8457309af1613d76a69d326754bbd5da525cf50f6ba60585c20db0"
+    },
+    "auditing-terraform-infrastructure-for-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "807a6b67952d0da41cfc8303d4eef1aee1a3b557cd7009ace41dc5c71699ae58"
+    },
+    "auditing-tls-certificate-transparency-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2a74b93c090f29437e2dffd991b72a55998e51bf2441629d2caee87385ae1ca5"
+    },
+    "automating-ioc-enrichment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c03e49a71045310b305e83b1a738efeeb547b6747fe77835ab18d134602f1bcb"
+    },
+    "building-adversary-infrastructure-tracking-system": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "56ccf16a5aa21af0b8e8e4777a5f5a51981ae5463845aa26ae4985c04759d5cd"
+    },
+    "building-attack-pattern-library-from-cti-reports": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0e61a970fd001ddcba91fbfc569b9930ffd0cf7798935b54d947f61202b99349"
+    },
+    "building-automated-malware-submission-pipeline": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bd128d56c3ff4fe357ef824173c9088eacb8fd588344a233299f445bc26f2443"
+    },
+    "building-c2-infrastructure-with-sliver-framework": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b6f54dafc5c0cddc165f0c2d5e21a49d4d9c64f29fb7b3b2ab62c3fd95bd1579"
+    },
+    "building-cloud-siem-with-sentinel": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bee653030bde63355866687a1f26febb8019d766249010739bdec4690ca8919e"
+    },
+    "building-detection-rule-with-splunk-spl": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "176ca40bf2ba4c0d078912ed7b33a85ea49525b3e4be5bafd57c786cd058818d"
+    },
+    "building-detection-rules-with-sigma": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0398b751fe3cdb0d6dcf900ddea9bd6bfee3b17de1e35f23f5a7c9111118f1ce"
+    },
+    "building-devsecops-pipeline-with-gitlab-ci": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "43de73b021a57e49bc9ba7f21d8a7d90f73b74ca8f8e6da11efbc83983d7a1b2"
+    },
+    "building-identity-federation-with-saml-azure-ad": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "549bc8473575b71b213cac0a4c3084dbb0ae848b93d9d8d91991b151593e5873"
+    },
+    "building-identity-governance-lifecycle-process": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9ee8d01d6e8d813a42860ef598d658889cfff740fe490a5a7518c149cb292f8b"
+    },
+    "building-incident-response-dashboard": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2674ab97f9accc5165df67b0e7ba9ada7d992da04a63c92cd6337e933569c1ea"
+    },
+    "building-incident-response-playbook": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e8cf86000bd6788eddca9853b4f2fe0b33cc95336c61c040d79eeab5553afd99"
+    },
+    "building-incident-timeline-with-timesketch": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "db33db87f4cb4c780ae5d15f19d61914311c44f02bd359c967af7007abac35bb"
+    },
+    "building-ioc-defanging-and-sharing-pipeline": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fc7e0f4145fdedd73a4d1114ed839d119dd51996037b894ab8433ae160a1ae12"
+    },
+    "building-ioc-enrichment-pipeline-with-opencti": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "581fbf633ad326439f86b39b568a5d7cf118effde305d8d354baae8ac6d4fc06"
+    },
+    "building-malware-incident-communication-template": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7061ecea0caa8851bd92cf1954eff1d3e454c48dc14766415b3cdee917eda893"
+    },
+    "building-patch-tuesday-response-process": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "783a22789485f18fe6adbd319225f9179d4f5532dc0fa2eba7693d7ac8a34a12"
+    },
+    "building-phishing-reporting-button-workflow": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bb4428321b649d4511576c59540b3550d014ae5e8e82abec9bf5d0c465d61e1d"
+    },
+    "building-ransomware-playbook-with-cisa-framework": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8186cdb761cf5413d7c0321818049665f877edbd14bfb51ef3bd735190e5d1a0"
+    },
+    "building-red-team-c2-infrastructure-with-havoc": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b75d61c4c93d9c8eebf47bddb82c1d00efda08e6edb547f272686a6d266aa079"
+    },
+    "building-role-mining-for-rbac-optimization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bfa944353fa8d53166c0ea438f1b56769b74f2a2383e6f581089e1b3817be924"
+    },
+    "building-soc-escalation-matrix": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5ccbac11845d8f03adb5ecebf4563e713dbb5bc31c1f0d9c44edfd73ec6d4c5f"
+    },
+    "building-soc-metrics-and-kpi-tracking": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fbced234743ca8f5ebeb3b1992c219c9eca811bf8a8fbe3574f3babba86e000b"
+    },
+    "building-soc-playbook-for-ransomware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f27f456b75d35e6f1bc50f3306b21b8edf32933d68c54714019450dd402774b8"
+    },
+    "building-threat-actor-profile-from-osint": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5a1cdb5b4bfc56e623c7ca5617084c59ecec4e494fb3bac3d9b29536c8a4354a"
+    },
+    "building-threat-feed-aggregation-with-misp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1ec3dc85e2963f0f2a13e9dec139deee66a2002bba01fafbdfc3aa3cc81d5b5f"
+    },
+    "building-threat-hunt-hypothesis-framework": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "11f70c01dd8ce9ba3751e8b47961b1afba1f441a586d7ccbf3163ceac9f5c0b8"
+    },
+    "building-threat-intelligence-enrichment-in-splunk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "77eba8f1a52b1bd3de5184ba86c2dc14309e4f6c80cd41f4a092c1e66d814b40"
+    },
+    "building-threat-intelligence-feed-integration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ee85a13890e6031ac49c0ba4814a07c71d530e3344b1717a27423f8a2867a62a"
+    },
+    "building-threat-intelligence-platform": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8e47b4899404af6397b30ba05fad0aed31ba35f510bca1cccf811910645298f1"
+    },
+    "building-vulnerability-aging-and-sla-tracking": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "14bf9e4a740771df4a50a144f77d4fbe1dba041d400edb130884f532ba3f6f97"
+    },
+    "building-vulnerability-dashboard-with-defectdojo": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ca6915183b61b58b1cc767433469834660dc1aa2ef6980e66fa9db9c1fad2b5f"
+    },
+    "building-vulnerability-exception-tracking-system": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3f75a12244d3fb5be245e9d4d08cdfdd129ef2156ad0b7ae3c4e6a890f07f97c"
+    },
+    "building-vulnerability-scanning-workflow": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f46d0084e21c25024d0e592fe4934f32746775f79d56168458e7f5193f09f1c2"
+    },
+    "bypassing-authentication-with-forced-browsing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cc123811a5e324517d63aae1f21a83ffd6f9c01bca1cb77848605fd69504bc35"
+    },
+    "collecting-indicators-of-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3a5b153dbfba163ac2535d5e4ac5679ce2723afe85bd5944b1efa8e9501bd138"
+    },
+    "collecting-open-source-intelligence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "67fc0402659f5e0b2b1d7942a4958912e0c50db2b2d84a30ca7e81775cd93a24"
+    },
+    "collecting-threat-intelligence-with-misp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d655c1edc08aca5be8eabe199689ababef182754fa12a5965be740c33c0f7412"
+    },
+    "collecting-volatile-evidence-from-compromised-host": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "92fa3b65f66300b04c007c61cf43942a493889af412449c019054d0661c512f4"
+    },
+    "conducting-api-security-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1eedff0df59ec364bc2b5bc03532b66ebfa2b694ecdb3f0a1ca990e05689049c"
+    },
+    "conducting-cloud-incident-response": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1167c855fd3ef7312f0357553ddcaace03ae85b0f647e1ac3f78b65c86cf3aae"
+    },
+    "conducting-cloud-penetration-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f3735517b78094e9c6528be7c4ed39eb8db1ebf746770b475974871d13cf6a32"
+    },
+    "conducting-domain-persistence-with-dcsync": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dd9abf15f8f5641cb8171975e41d3f5062a393670cb47a2bb72e0da1e24fe97d"
+    },
+    "conducting-external-reconnaissance-with-osint": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9286b8c776f05d2cbec883538ed5abe21ac27c03b26d0869e4eec2995c4a0d5f"
+    },
+    "conducting-full-scope-red-team-engagement": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4f476bd77d610469f2ba5e4d48b6e6f696baf614714ecd56edc3af400405b961"
+    },
+    "conducting-internal-network-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8da067e080df4ca525846bc7ac3f5c156ca70c4b522b4d87960753deb6867a45"
+    },
+    "conducting-internal-reconnaissance-with-bloodhound-ce": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "46ae26f4130e3591564cb3f3739456d2d8d5890450c9df00faa48a7b7695307e"
+    },
+    "conducting-malware-incident-response": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "19096aa5d50ac8c0bb93c16f88ea6118c44a339109694fd268da920281f50764"
+    },
+    "conducting-man-in-the-middle-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0c90d888d6de7dd76cb4a1a866d987030dd18a8aba3359ce605cfa7d9d087fe8"
+    },
+    "conducting-memory-forensics-with-volatility": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c04467660a027fe636f97fd35aad6daf749860821169b26cc0928dd9cb77eb17"
+    },
+    "conducting-mobile-app-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2a2e1a6bc0bbbf2d054fb0fd4f65bb7005a4fb0b04ed94fc3ca0492c73db54bb"
+    },
+    "conducting-network-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0ea17d63d9e1c309cc20627307655c2521001760aa593d308cb4ff0b86e48777"
+    },
+    "conducting-pass-the-ticket-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c89b85aef7ae1282de79d44a554dced3c3ecb76d4e507bbab2d4fc2ad9189d31"
+    },
+    "conducting-phishing-incident-response": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "210843f928583c1b3caa571e59eac1c8b082d54c2342b60df8e06cd9b8f1a764"
+    },
+    "conducting-post-incident-lessons-learned": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c80e5229fb1046bf4aaa370ce4db753cddf53cca23ffab165d29ea94cc566637"
+    },
+    "conducting-social-engineering-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "608fcfa214000541c327bde120ea4e265951804a7fd62d02846c2ec4dd527547"
+    },
+    "conducting-social-engineering-pretext-call": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "375546a3a8ee425eb10294e3916fc0057929f229e36b85af9fc2b1bf87f48cbe"
+    },
+    "conducting-spearphishing-simulation-campaign": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dcf7d92b120bf4296a403ffce8ce85ab735fc902ec7cd6120876bc3af8a6c470"
+    },
+    "conducting-wireless-network-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e52e9df188a2d3315ce1c4ec25e35639112bc80a320ff4345538a6388b7f8bae"
+    },
+    "configuring-active-directory-tiered-model": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f188414e71a37dcec9f3c65b024f0f597f0862d0ab004cca74dc4dd82c159b5b"
+    },
+    "configuring-aws-verified-access-for-ztna": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8dd000c8c4f057855335d072c5722428846aecdb9225108d2fdfd70095243ab4"
+    },
+    "configuring-certificate-authority-with-openssl": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e9cc2ac97208d3cedf37c4ac7bacd04bba5266c4b0f91fca0bb35f90cfc21ab8"
+    },
+    "configuring-host-based-intrusion-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2b19841d36bec1aa8ebee7b7307e0f7be0c22d4c67d021f23aec8b6744cdca68"
+    },
+    "configuring-hsm-for-key-storage": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a4876cd7f30fc632ede051ea898723094895b0d1741ea75a7ed73007d2f3727b"
+    },
+    "configuring-identity-aware-proxy-with-google-iap": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "45cdcb9bd803f80a0d9bb84c22b9396d7a180f1dbe1a72565e6c16b32f9f443c"
+    },
+    "configuring-ldap-security-hardening": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0092ec34c3d0ef7d1c6abbe2e345bfd8d3adfc44a54118616f7761d31802f217"
+    },
+    "configuring-microsegmentation-for-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "23ebd9f5892501b1f629253894c45fb8be2e627ed41097be3d1904a6f6627914"
+    },
+    "configuring-multi-factor-authentication-with-duo": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d5a2c909e46ed7fa02abb694301181da9b0c32867654c83762f371dcfbf23a28"
+    },
+    "configuring-network-segmentation-with-vlans": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c9f7f22eed6f070778e2ab1c1e3bd827e221552cf32382d17ef7aa3201830524"
+    },
+    "configuring-oauth2-authorization-flow": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e1a57a4036696d631da5323b3d4d5e9e24bcc580ebd0b15c03852b9f3ade4cc7"
+    },
+    "configuring-pfsense-firewall-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2dd3d43e44e443ff07e65206729bd2093b6704582191250b98d080edf963ec54"
+    },
+    "configuring-snort-ids-for-intrusion-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "547cde75e31b72d279f1d2f730cc20492b8c25a865cca1f1a7989ab2fc5e9435"
+    },
+    "configuring-suricata-for-network-monitoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bbf7891bcc0689f946e75f7f5293332b497cc3f6d806e9e7b87e1520c51c15bf"
+    },
+    "configuring-tls-1-3-for-secure-communications": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "176ecced71924711012cf1733020e86ba0d99dfca04aa1d40bbfad026b764779"
+    },
+    "configuring-windows-defender-advanced-settings": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "75139f174d8adbc46f96020c58a6aef0974049d9121d0e4a48bb292c5fabc229"
+    },
+    "configuring-windows-event-logging-for-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bd75f948be1a2bab4acd525b01a87ce47223a76af30cc29faca16fa44a0b6cc6"
+    },
+    "configuring-zscaler-private-access-for-ztna": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ff55ba172681f543a47ed862e29aceee7bdc1f3ba991ec21a2b58ab72f5a533e"
+    },
+    "containing-active-breach": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d1079da30af79e76cc1b27eeb502e9b44e004d1fe386e01a6c8f6b0fbe8ffe17"
+    },
+    "correlating-security-events-in-qradar": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "63889002158237288079622c414fcb196da1d53068d5a464de37d53bfdab7539"
+    },
+    "correlating-threat-campaigns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "70163c23ec5c7d650ae9b5fccad3cf3f0bc7600cf07c52606050e64948899ae8"
+    },
+    "deobfuscating-javascript-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "584cc812fdfe7aff13d5fe9e726ea8dd935eb4670f050a5655994686282a2248"
+    },
+    "deobfuscating-powershell-obfuscated-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "94c91c91f2b8612efeb4351a552d6327a4da97fc24085fc47459f8f02aab803b"
+    },
+    "deploying-active-directory-honeytokens": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "db15aea6f0a97f6bc368174344e0fe0b349d7d80d9c97c104cde7fe2b3f5d400"
+    },
+    "deploying-cloudflare-access-for-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6ad7664f696b41883d85274784cd8604f99d852d43eb358ed05c1c475a5ecbea"
+    },
+    "deploying-decoy-files-for-ransomware-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cb0411c9b0804125d90ec59e47a08482150ac5e55c22752d64d51820bc6c12a6"
+    },
+    "deploying-edr-agent-with-crowdstrike": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bf51c8b89687c8b195fd2206ebbb0e5b14b06ba4ff5fa67046df09d5a7aff22d"
+    },
+    "deploying-osquery-for-endpoint-monitoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ded0a50acbcfd45522ebcda6ee2fbfb64d0490419fc548621ed045e6a43479de"
+    },
+    "deploying-palo-alto-prisma-access-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b2a9d78d7e4bf7995f8c313197e5580a91b8060f585e33616f6d9216f6e29e58"
+    },
+    "deploying-ransomware-canary-files": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0aeb6f02b7ff19f22a2a22093c50f2b1a64aedf17800a07cd0f8679ee742bf08"
+    },
+    "deploying-software-defined-perimeter": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "068a9a1615c401c5f8428f03c7e676f5def11b33eb2b8a11ee54a26e638d16a8"
+    },
+    "deploying-tailscale-for-zero-trust-vpn": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e7dba1118f60f8dd50c24d332f59d18f903b27f54a3da2ed77d94f137cfbe2fe"
+    },
+    "detecting-ai-model-prompt-injection-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d20e1429fb7d418d0e7a0f0770e295e302ea2ec74d3c8bade9dac5df8bfc8559"
+    },
+    "detecting-anomalies-in-industrial-control-systems": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ad78db597a9fd751b44b57d7469c31eafe3ac4246aaddfcbc1c010c556ddcfe1"
+    },
+    "detecting-anomalous-authentication-patterns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7d57de07431e00f71752a6e47d4caaebcfc77703de79c38b1d4b1bdbb6025986"
+    },
+    "detecting-api-enumeration-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "754a0b0e671e8e30134282fa3fa24de3ce4300f42f0a643d3a72b96ff04fa15d"
+    },
+    "detecting-arp-poisoning-in-network-traffic": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "664350d0126130259d042fb9bd47ee9858ae1ed00d6cf4958099c3fe045a9c60"
+    },
+    "detecting-attacks-on-historian-servers": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ab0efe69feff867faa6088f85e9f8296a9df268c670140679a00d486fca3a17c"
+    },
+    "detecting-attacks-on-scada-systems": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2263513c0e37a7a73c7364bb6f5021dd8aeb6d3a7dcc49cc1ebd4e7d68cfad1c"
+    },
+    "detecting-aws-cloudtrail-anomalies": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "19f8b5169952c1327575e54a1446ccac191ea94721f17d24401d41fe231f67c5"
+    },
+    "detecting-aws-credential-exposure-with-trufflehog": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dd11771a38a44a0a4e4d9cb2ed6d478e9f7988780757a49d7b51953a159bf570"
+    },
+    "detecting-aws-guardduty-findings-automation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "98d9bb84b1c404b1a34900f1d2aa59056900b67bd991e776eee63627e020767c"
+    },
+    "detecting-aws-iam-privilege-escalation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2fdc6f9408e3cd77370fe71e4b8a73821c2480d395d7cf9754a0f01cadd9f6ae"
+    },
+    "detecting-azure-lateral-movement": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a32d3cd616f6d7ec6df2e5c6406f485289783ee0f9e7ff726de2e5ede7877637"
+    },
+    "detecting-azure-service-principal-abuse": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "597f1d35fd78b84e208e1fe66780623fc52588e37564317a4d7ae46e13f31b0c"
+    },
+    "detecting-azure-storage-account-misconfigurations": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "39b47f8ed49cda0c8595929382d794a1a5bbdff8c676c86e8899e7014c2f2441"
+    },
+    "detecting-beaconing-patterns-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bd7a0de4cd634ebfb512c041c4c96801b327845007ccebb96e3c1ef2030e2ea1"
+    },
+    "detecting-bluetooth-low-energy-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "507c1ead3d4bed8afee20ff42b7ed0155bb5f8d03c358816000638690384e641"
+    },
+    "detecting-broken-object-property-level-authorization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d21a317b347bcfb8b3831f24169b0e6947431f3ff03a9417e440175c2fbd3588"
+    },
+    "detecting-business-email-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a117b072a3a1248bb787af9d747171dee2ee1a6cdeff53b6b1abe7f73b4fb424"
+    },
+    "detecting-business-email-compromise-with-ai": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "696cce8f3e7df5da78914bc4a5196430d18d19e35793b4c7e14bd4f6617af063"
+    },
+    "detecting-cloud-threats-with-guardduty": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dc1628f8038fac9d22ca2b1a8d759d1c6a35146aa744266628761ba4d476bfa9"
+    },
+    "detecting-command-and-control-over-dns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "87e314655d4dc91e61e7f965e90abf5ebc5852d365034961371dbc1914da74c9"
+    },
+    "detecting-compromised-cloud-credentials": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7326435ed5a6e3f68d441804ee1b7d63479b80a873890f678de0dd29918e22b3"
+    },
+    "detecting-container-drift-at-runtime": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "10eadcca85bff7f8d0accd7c8f073eec3a0d90f315e3a0a9861e382792c3e53a"
+    },
+    "detecting-container-escape-attempts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4fa7fc1adb0d9eb946de0645dd7144f2c213a0195d87a8d8e51153ede70bcf1c"
+    },
+    "detecting-container-escape-with-falco-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8986ad7141cd7a8ae709ec5c73242aa733bacbf2f38103903ca80a2fd67007d9"
+    },
+    "detecting-credential-dumping-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5a8f7de5b262d19effa22cd21198e0d75d8d04ab806c13681b515d7e3873a842"
+    },
+    "detecting-cryptomining-in-cloud": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ef34834606505f87e8a3a1195a7c979b88d92b415420c8a2f21042125e87b32a"
+    },
+    "detecting-dcsync-attack-in-active-directory": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6cd2f63461e4e02013bf20f5e14428525ae185649fe6842896e6591db981c134"
+    },
+    "detecting-deepfake-audio-in-vishing-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "de9ddde127f081b266a23c6bba7c28f526183222a4d44d29020a3e3da1fe8f50"
+    },
+    "detecting-dll-sideloading-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3f7e614bce29f199ec5d6f9c7e54e7c4f6fa7c662e9de5118b3b036db6530366"
+    },
+    "detecting-dnp3-protocol-anomalies": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3bf5957c88ca1a7cbe8d71c5bebca98b1853643dbca015c33b7b1488ab439eef"
+    },
+    "detecting-dns-exfiltration-with-dns-query-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3df7f4f1770f6968497dc5e794d4b87959817340754455f56f8ad8257194178c"
+    },
+    "detecting-email-account-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0dfc68a4df8d02da04d49d3e47f7491f16da185623f37985d54348799a028c0b"
+    },
+    "detecting-email-forwarding-rules-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "57f960bbcabf7cbaf9a427f62693e4dbd7b18b2e38fc02150689ecdc68b37481"
+    },
+    "detecting-evasion-techniques-in-endpoint-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "681503de0cc26dc2a0bd9308e2226d28b3f492dfc7378bca9cd052759f90db59"
+    },
+    "detecting-exfiltration-over-dns-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b9e5e33aff1b63f8f74fd8741967a381f66840e8c4d314585be9c78b8992f724"
+    },
+    "detecting-fileless-attacks-on-endpoints": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6134d413c8385b86c9978d78a6606d1ee5692b11d057be44c2e06fb4eb565df3"
+    },
+    "detecting-fileless-malware-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ac1025dc1420fdeb61c11c92fb12bf7f39904588d5f3eb7f33456df4f60483fd"
+    },
+    "detecting-golden-ticket-attacks-in-kerberos-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1f24ea50a7f75b54ddaa707050633621267d228c94f0b5acc3614128c32c9de0"
+    },
+    "detecting-golden-ticket-forgery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d07bd4c8f009c23ae007d22a5ea45bc77d0e916b545acdfbc13d9e449d8954b4"
+    },
+    "detecting-insider-data-exfiltration-via-dlp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ceaa8e320b90b0b8333931cd4d11410e64897984ba29c748ce07c2a27c74a223"
+    },
+    "detecting-insider-threat-behaviors": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "37a8b94528f2e0fd47e0da623bc38cb2eae93e71f26218882939a6140b2aa8b2"
+    },
+    "detecting-insider-threat-with-ueba": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "35fc40f5d4ea6334cc7f5631420c54053cf0a623e43e4d9f81d475bbc8e43b7a"
+    },
+    "detecting-kerberoasting-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7bf6422802affd28fb5d11b75bce362cded975b2d26ed921a238d829b4166a1f"
+    },
+    "detecting-lateral-movement-in-network": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e65222b2aa3d4a286afc44b2932489aa960d8c86ff30307fbe600d8caf6f07a5"
+    },
+    "detecting-lateral-movement-with-splunk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c49f2fdf9476dda8597446f37725c39c0d069c7a06f8333e0c5c8fa373a32238"
+    },
+    "detecting-lateral-movement-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ee83fefa278298dd6205345115a51a8d6b35bc6a2f8470c2295944c4873fe5fe"
+    },
+    "detecting-living-off-the-land-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "387b2de529cd0ef6c769905623614ed49d3ac532a294f835d85bfa2ae89da1c7"
+    },
+    "detecting-living-off-the-land-with-lolbas": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f815cab30ebc7e919ef0f9af826d03fbf7c8c59a14ac6a89ab7e11af2dbf4fef"
+    },
+    "detecting-malicious-scheduled-tasks-with-sysmon": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f874b9868bf25bf2fd69485ee0c97406bb9fd8dbbec6e66ed84d009796951d59"
+    },
+    "detecting-mimikatz-execution-patterns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "26e582a094ca953594baf6d1dc7421d13bb1b8da5f2ff119a95afc1dc2073fcb"
+    },
+    "detecting-misconfigured-azure-storage": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1072a259999adad5faf2aac6fb765a2308353fd4f029e6e80b962283ca56eec6"
+    },
+    "detecting-mobile-malware-behavior": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9908a423de2f46046847f1cdf62f206f2ca6ea766852cd6e69775d58f8b22be2"
+    },
+    "detecting-modbus-command-injection-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cb2c2e33af454f667556acee613a3c36ca9778d8724a2627bf7de8bd81839233"
+    },
+    "detecting-modbus-protocol-anomalies": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ebe17a39f920c3d7055bcf959c8cf2ca1d44dcf5bb418e5093105952aeb0d344"
+    },
+    "detecting-network-anomalies-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "06fffd4aec063559e01a18c3ff611be2418b714d7365713541974084a6733ef7"
+    },
+    "detecting-network-scanning-with-ids-signatures": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "95bba67e559f2ba10605b83f49f842af65bf8e3b34a828795a3100f427c525fc"
+    },
+    "detecting-ntlm-relay-with-event-correlation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a0ae7124d81fbe434eb9c2a52551bb82f840f085afa74212ccf95faa6eb59642"
+    },
+    "detecting-oauth-token-theft": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8613e54da02167268e616bb3dadf06cc4295d75fc721f019b1f2950181b5168f"
+    },
+    "detecting-pass-the-hash-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "eb85513c077c697e32c8053aa96368a34d502443de26c3e210add33765684efb"
+    },
+    "detecting-pass-the-ticket-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4f2b6383557d2f59521a55a310e56d7f89c3a609d7c5ab28ea42f58748451843"
+    },
+    "detecting-port-scanning-with-fail2ban": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c21032957a7bcae5cc58665f7b0b5879f6e57f2039db28d2b084780a9f4e8412"
+    },
+    "detecting-privilege-escalation-attempts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6067d3850c20e5c1e9292a310c888af32847bff350c1d0373f9caa4b69987779"
+    },
+    "detecting-privilege-escalation-in-kubernetes-pods": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "de51c4ffd90839cad444a84e0a2651a98bc3f7b54e185bc1482c7089d3c4ae3d"
+    },
+    "detecting-process-hollowing-technique": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f47c2930dcfcc0fbde5dc719b9a4be9654e1eaef29e16eacd8d87d89fda3be17"
+    },
+    "detecting-process-injection-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "415bb8aef896edfe93fcb659ada70f144600736eea9bd6d167f7e209519b32a2"
+    },
+    "detecting-qr-code-phishing-with-email-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7c6652bc6fcbef58f551043ebd87fd8c46bc0106baaed61ddf90194f07407999"
+    },
+    "detecting-ransomware-encryption-behavior": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6f2597ac71bd4ede5c5e80e80a1ae0f1ae790f35b08e5daf25eba81dcf73f7e1"
+    },
+    "detecting-ransomware-precursors-in-network": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3c161e9486eca3f48ab2187d92a68cf9b4abef5a715234d79d46d095b7c7a0a5"
+    },
+    "detecting-rdp-brute-force-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "87062399da7cdc0ab209a9a7f3f97db96c7f8c03227e9e987deec2669b85bede"
+    },
+    "detecting-rootkit-activity": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "765472339e987bb5cdaf1f2a2c2b22ca187b2d011d8b39e318484111e76f4297"
+    },
+    "detecting-s3-data-exfiltration-attempts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6255ce7c6a1abd1b9fbecec53ec7a2b45618a33208d09b73cf1a9a6d94099b62"
+    },
+    "detecting-serverless-function-injection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9d9c87b18f88138ef8b7ad4a2c58ce8eb8f098a39d2a3c41bd5562c0e207f016"
+    },
+    "detecting-service-account-abuse": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bb3e34066efc17c0573db1db6bf99e529df4bd570dd9e43b570b4fb7a0cac095"
+    },
+    "detecting-shadow-api-endpoints": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f1404a8ec2f9ce2d30d0d2dc537e7e997943f9b4a8cfc7ad7f0a9f27f2ec27cc"
+    },
+    "detecting-shadow-it-cloud-usage": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "14581150eea21b540e51fd469a58c219ac3f203562a02474a86ecd2f30eebf08"
+    },
+    "detecting-spearphishing-with-email-gateway": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1cac789227d6e0269ea32fdc1781d412dce261ef9bb9351a6f3ee37ad2a3ee85"
+    },
+    "detecting-sql-injection-via-waf-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f5faa39d07978d9c18c0fa854b5f4071856464f0d917f07b5fefbfd126868c05"
+    },
+    "detecting-stuxnet-style-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0b8d1415bb2b45b8eae23649de5e4f4f048dd0d702f6c3c51185aff2ac7ebdb9"
+    },
+    "detecting-supply-chain-attacks-in-ci-cd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a607175dfcd3dd9876577576c6181d878e76d949117cfdc87ed3719fa3eb244c"
+    },
+    "detecting-suspicious-oauth-application-consent": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "09e79896caf29b9cae3320c4a87aa0b9c6722e8f3a6d3f520e6409b13d39b040"
+    },
+    "detecting-suspicious-powershell-execution": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0a46e41bbce662b05338576d2ba284381a06aa50320b16e70c05f958faebd245"
+    },
+    "detecting-t1003-credential-dumping-with-edr": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "017ad65a57ef79cf483b425d5e67102ae2c7c8050acb80239b3a431b91313563"
+    },
+    "detecting-t1055-process-injection-with-sysmon": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5b993024977a827ed8b7315522b9bdf77550131456439f1c16bcc3bae6e1c531"
+    },
+    "detecting-t1548-abuse-elevation-control-mechanism": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4f94c1e4e6b2805d6eacff455d630dab09322e688ab1e0cd92305f14e133fe22"
+    },
+    "detecting-typosquatting-packages-in-npm-pypi": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2c0e06665d86acb25d1c7271d06a4a5c919b7f1961a547a44e3b6ee47ed1a06e"
+    },
+    "detecting-wmi-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8033db1ad40d37480399b0977e6afc8c21059bef38641c4f87ce7517d09770e2"
+    },
+    "eradicating-malware-from-infected-systems": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d7381e626d899e19419385192af92620fa7cf4d3b81659aa55aaf7a89b88691f"
+    },
+    "evaluating-threat-intelligence-platforms": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6b7185c11317931182ead3c0e2e6ce33e10b62885fcdba31cfa869081090be34"
+    },
+    "executing-active-directory-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b91d6f20dab849b6dcfb2d3535cc05c4f83603dcd7b4938fd8a02b65cd591dee"
+    },
+    "executing-phishing-simulation-campaign": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a752c2b7c6c867b788ac145f6680333b10193b57a6bc7902ff923bcd58f094a5"
+    },
+    "executing-red-team-engagement-planning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e27bab15016851b66cfd03fa13deae5a31bda5dd55526622ae786c2ae815edce"
+    },
+    "executing-red-team-exercise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "80c62a01115668861c680fb4bb48ad44c669ef1687631a5baa0595870ec84626"
+    },
+    "exploiting-active-directory-certificate-services-esc1": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1e336214589fc439f3df67c58e525b09c1080f9eebf833913a4be9e2fa71f672"
+    },
+    "exploiting-active-directory-with-bloodhound": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "373f5bd822cadfb9bc5cf3d5383d1ec20de1b7c95fc50ec8ae6f566caf8f2c44"
+    },
+    "exploiting-api-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9b62688815aad0ffa91d8ca73d4beb16b1707558d718f5a1c554f7036f1f3cd7"
+    },
+    "exploiting-bgp-hijacking-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "86ef90138a98485e8a005f1dcaffd2ffba9ee5da8ad21f698a7333af05ffc4f8"
+    },
+    "exploiting-broken-function-level-authorization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "78dd312ffe08fdb205d3f7b7f3cdf35e4c02572956ec78526b9cb84ba4f6fa3f"
+    },
+    "exploiting-broken-link-hijacking": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f1246232f870f408e75d476a4caa2f1ffd7504d720b0502d4d9b8e431b7ce27c"
+    },
+    "exploiting-constrained-delegation-abuse": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dda235ce9e0f5e90ddea0b039cfbef543ed02fc14ad4dec7f8c5466fab477596"
+    },
+    "exploiting-deeplink-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1e75af4fa370fd0633f5bfa0d3b4f2846b6b6d05900d9a1badd47c1fa256b28c"
+    },
+    "exploiting-excessive-data-exposure-in-api": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fcc83f4f02fad211af150b3cb684666b4926e884a5076f80d647d0081e79b35f"
+    },
+    "exploiting-http-request-smuggling": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "be4d7d64f1761eaca76acd04f469ef0a5b7359266f2a81e740225f3b22d7cd1f"
+    },
+    "exploiting-idor-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cf3af8bac51a4ca5bb05e07c8a68f1d70beed1f0c5a8f26c418daeb1574088d9"
+    },
+    "exploiting-insecure-data-storage-in-mobile": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f15c63d946f6c6934676c88fc4e6d3d265ee9a26e88d40fb0d592b9cedb12b37"
+    },
+    "exploiting-insecure-deserialization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0fcf49ca4fe96dd447a86c47f2a70bc7fecd75b2ebd7a41e44112e09f9f68ea1"
+    },
+    "exploiting-ipv6-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "db28afbbdaa53ea881cea1d3b156271d353b53bbecb618337b02eaca2d11bb1e"
+    },
+    "exploiting-jwt-algorithm-confusion-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6f6e9051965025743dc3f475900ce184c7262d11b344c46baba0bd731b277471"
+    },
+    "exploiting-kerberoasting-with-impacket": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "74899dbcb126d168d49b9cb0cb7212f1f42c302ccac55da9148a2fbd65b4cf8a"
+    },
+    "exploiting-mass-assignment-in-rest-apis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b6c5a6805e80662977856ffd24235eff0cb8f96161f2ebbc147b8b65e0aa241b"
+    },
+    "exploiting-ms17-010-eternalblue-vulnerability": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a623365387a006fd6a5768320278bae74cec5a2c86d8b1b395b49d7a6d816dfc"
+    },
+    "exploiting-nopac-cve-2021-42278-42287": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6e539ad835322aa2749a3dc27437053ae22aa6271a6304500194c22edaaaf7ff"
+    },
+    "exploiting-nosql-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "93ca2cd1fdfb307bb8298b088a2ce7e2fb54f34dcc4666ef4f9c7903a78d6634"
+    },
+    "exploiting-oauth-misconfiguration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c1663141b935c2381c341c0b610813253d2a0f4f2864437d32335c2c3ed0babd"
+    },
+    "exploiting-prototype-pollution-in-javascript": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e8b859c8185521fb639a3797347ac9b1d75871a553925a53617bda2a98f97af6"
+    },
+    "exploiting-race-condition-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "98fda8354fcd26affd54ed26c86536b549ec5232ff56cadce08e691c6ca09fff"
+    },
+    "exploiting-server-side-request-forgery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dc940f759fc8c1af6cda9932a485041ac15f18371e475477d84e1e01eb44f8b0"
+    },
+    "exploiting-smb-vulnerabilities-with-metasploit": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "aaaee64b8acc86b9899233bef4cda1cf62659f1202eb97023659eb86b65c7145"
+    },
+    "exploiting-sql-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a2921e280bc999e9d5a887718ea65beed160741fa31dfb23607e5b2f9ed3d6bd"
+    },
+    "exploiting-sql-injection-with-sqlmap": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3461d2406148f43cf5c31e729a6ff4b1990db5c2b73d75b721ad188eaf683446"
+    },
+    "exploiting-template-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f5a33755063263471e0b7adcc90f007cb5c6f45e467164731d4155257fdcc2fa"
+    },
+    "exploiting-type-juggling-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e6ed50d84ba0e4d3b5654537fb65b4cd7bca5ae60d6b86410b1d46e4730e7065"
+    },
+    "exploiting-vulnerabilities-with-metasploit-framework": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "37b564e4fc534a5193b329b2803c52f073b2267287f9bc84d65e04e66193e0d0"
+    },
+    "exploiting-websocket-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0ab6541e51e7b66ed8d35858263aa0452a51744a264d963510008496dc1808b5"
+    },
+    "exploiting-zerologon-vulnerability-cve-2020-1472": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f3ecf9dd4299ad20a7f457bef1c34d49297846c72f0dfd63e4a0fd50fce49e96"
+    },
+    "extracting-browser-history-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a79758a26d5acf3b92bce789952c2d395e4d48598612c28100799fb7e03811b9"
+    },
+    "extracting-config-from-agent-tesla-rat": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2cecb86959712a7f1a443b7ac0e927655b3e36b0775c6eb16f53ef4508d65aa1"
+    },
+    "extracting-credentials-from-memory-dump": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "68ccf094c45126fe1483aad77741ab05889cfae9a9837df0d161425b45b9ca28"
+    },
+    "extracting-iocs-from-malware-samples": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "aaab91bae9b29e4204a09bb303ad912ef0b9b2555ccd9aca84f7001251e05ffd"
+    },
+    "extracting-memory-artifacts-with-rekall": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e138d9fa4b40fc3e11174182be8d7e934d4c4286e8d07d1b337ffdafb54fe50f"
+    },
+    "extracting-windows-event-logs-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6e0118921a41f5f75ec2465ac9ba3ae73d303c8d305b239451fc85b2932fcf3b"
+    },
+    "generating-threat-intelligence-reports": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "28f1fed7843236145ca42ba135cc9ff561b7be168efffe6115ca9fc26ac7f46f"
+    },
+    "hardening-docker-containers-for-production": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5434cecda9d0c8777bd6d09d71842e5f3b45a20ff947d3c9b963860b24ddb092"
+    },
+    "hardening-docker-daemon-configuration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "42ef639825a9981994bc7a6f89c230241315717c2bf4bb13b5f0a9a12ea1b266"
+    },
+    "hardening-linux-endpoint-with-cis-benchmark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b0171e451e265e8274ac9bcfea51eb2bbf972f1974f3a6e48d42be8b0ff1fe23"
+    },
+    "hardening-windows-endpoint-with-cis-benchmark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "315eb7b564d7a3311c48edbec1bf9e014fa1aff2639063a2a1e7a13ee54d5bcf"
+    },
+    "hunting-advanced-persistent-threats": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0163603ef624b866ffdbd68c4f61465266a4f25d8e9327d0a76a0a32c0876dba"
+    },
+    "hunting-credential-stuffing-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4a526972f4b5dffd997d3b6aa1e1aece174804a65fb72b90e1c7e41252978407"
+    },
+    "hunting-for-anomalous-powershell-execution": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8cf558989a5b66cdf0be7dc8746db94dfd6aa76dc9a038f45b479671dd8e2fe7"
+    },
+    "hunting-for-beaconing-with-frequency-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "73b410e24b2a47826b6db3eb7cc466d9b4e880e503cb9e10fd3ed72efcf36ac3"
+    },
+    "hunting-for-cobalt-strike-beacons": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d51b9cd035e007690876d404c324e2798fe5acb1ec64a7979b4a245f383b94e3"
+    },
+    "hunting-for-command-and-control-beaconing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "66978a29f6d79fd2904fe019fded7111133f82456ee559d4d378a45f3f070a50"
+    },
+    "hunting-for-data-exfiltration-indicators": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "acfc995ba181197515cf35fe95a1c56015f99d11e07adccb56e5ea4e8f5e9646"
+    },
+    "hunting-for-data-staging-before-exfiltration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "01027534d224fd8f9167e9d180b2461c3231e1714f205b1d2fe2c36651c3cff5"
+    },
+    "hunting-for-dcom-lateral-movement": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1da3c6e2b41e5d416d9b0dfba99e7565a42ebab5afbcb254113c50ac9e2a53f0"
+    },
+    "hunting-for-dcsync-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dcc5271a9290033d6c9d7c419a62380ed4d3273b18b6ee6a23565e712a9d1e23"
+    },
+    "hunting-for-defense-evasion-via-timestomping": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7ad3d9ec1e2a8edb8872ecb3939d331b295880db86de5ed7bfbbb110d07b2746"
+    },
+    "hunting-for-dns-based-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4b2ff67e770506b51cfab4d8b54147fe01be0822d2caf5d0bf20acc64aba0301"
+    },
+    "hunting-for-dns-tunneling-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "48aac6a37ea71693ddc18c75a1ae2eb75c2a71f82e886d84e032073a26bcb663"
+    },
+    "hunting-for-domain-fronting-c2-traffic": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "04205ab19f54b49aaa78231a98aa34b38b7df20384982ab9ae818700a0b5bea4"
+    },
+    "hunting-for-lateral-movement-via-wmi": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3baac8638a536e32fff22560fe61c4b473fbd1135c9afdfeac16fc7d5ff98e54"
+    },
+    "hunting-for-living-off-the-cloud-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "acd895a750b17f11013aead68d585da541927abdaced5aa547cb48a5f9601f2d"
+    },
+    "hunting-for-living-off-the-land-binaries": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a3fa342b15d738952932a6946f4b420c90e49b4df07bdae705f9c2eadfc916d5"
+    },
+    "hunting-for-lolbins-execution-in-endpoint-logs": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d3e848b48540760fb828e1442eb558a3893428f1637b7cfc27c57edaf76cbf77"
+    },
+    "hunting-for-ntlm-relay-attacks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "90abe3af772ec6b5a77b575f70e37288c709c3a891cc08fc76c53eb10b8b971b"
+    },
+    "hunting-for-persistence-mechanisms-in-windows": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "731f8e6351211c63851f72e89eea7ccd7c7cfe64b26b3134cb7d8ce151edc3eb"
+    },
+    "hunting-for-persistence-via-wmi-subscriptions": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d4996fcd8012080300ea904616373c9de4be75095cc6eb9aed6b6a45233d4497"
+    },
+    "hunting-for-process-injection-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "96543c0b5c4d2caba98be937fcac316194e5502cf726c53a60a5b3768a161362"
+    },
+    "hunting-for-registry-persistence-mechanisms": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "429866bdb56d388bc9df0ae778c2e790d7268e12cadccf218fc72d611b536e66"
+    },
+    "hunting-for-registry-run-key-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2dbd8f00a72a35fb75faefccfc090480dd6d5efb13e9e6a71aadef06283a1025"
+    },
+    "hunting-for-scheduled-task-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "598dbbd56ad5453c6ab9a284a1d723d3929beae628e7db8a954335ebab4136f8"
+    },
+    "hunting-for-shadow-copy-deletion": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0ef4dee8b3b0edb3c3860a9af1d57a36492931461267e26dadf13280c6a6348c"
+    },
+    "hunting-for-spearphishing-indicators": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "433bed6d4d2af806afc72b3ca3da850cdeeedb5b0135a92afde907144a7ba8c2"
+    },
+    "hunting-for-startup-folder-persistence": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8600790bda17cdb434280164b307c18d8ae1a9bcd413d818db7a26fd3c689a71"
+    },
+    "hunting-for-supply-chain-compromise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "831fb1c0b4d19b2c75ed6613dcdefe6e945c95cc99586fe6dfd79fbbee60e3dc"
+    },
+    "hunting-for-suspicious-scheduled-tasks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5fd2286d74fcd3bf2040a5bdb676d76e0b731cee976e09e6931b5db84d3d85d5"
+    },
+    "hunting-for-t1098-account-manipulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d5ac33ba1dd208fc90949e97eba87f3c232cf938959924e7039dc64f6cdd16b3"
+    },
+    "hunting-for-unusual-network-connections": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "867266a3047ae424b4a4b9f4fff5d03d8f4a8d2f176f4fb501468470e37ac45d"
+    },
+    "hunting-for-unusual-service-installations": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ba865639b8cfe7c4c925c5eb176208e64c0a149e6d7fb60e804e5ee60ef182ed"
+    },
+    "hunting-for-webshell-activity": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "477da7cfb70b9a648406ba205a36488d19a361fb7239e945dea835ce15474cd9"
+    },
+    "implementing-aes-encryption-for-data-at-rest": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7f442a3ac008b71fb86cfc32cb65b9bff0a076c542c969df7540006e026ccbd7"
+    },
+    "implementing-alert-fatigue-reduction": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8a992db0b105d968881715b526073f9ebcf42da0f0d2951ab642fcf6040d08b3"
+    },
+    "implementing-anti-phishing-training-program": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "eab8b35593fc52ec6502654ca6f9528f7ff487a3aa9e2461f09c97429cd9f97d"
+    },
+    "implementing-anti-ransomware-group-policy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5fc36fdabb1f9b9c08478af79750bb6f26c683fa04cdb456be56020b0e51bf9f"
+    },
+    "implementing-api-abuse-detection-with-rate-limiting": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3e9fc90602cd58aa54616e101282c26a29a0d3d271d329b64a8fe5931a01da8f"
+    },
+    "implementing-api-gateway-security-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "127f4c561939234975d698827b1039cad8bfb22cb58821360b90756d79ccc9ee"
+    },
+    "implementing-api-key-security-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2555ad128911756405ca9f0ed6cdf2833972ab831fb966fe795b832d16292db6"
+    },
+    "implementing-api-rate-limiting-and-throttling": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1181868b3eea258aeb6c70660ac320328962864cde21c6d487c40a9b1fd8ecc6"
+    },
+    "implementing-api-schema-validation-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "df6d35f564751bceb6c5a42253e56481097e4f6df66d37489421c4561c6a2a5b"
+    },
+    "implementing-api-security-posture-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "04b19eeb9dc167f776296d0d8d71f66e2a3be76fd91970fe71c16e7fff91b9f1"
+    },
+    "implementing-api-security-testing-with-42crunch": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2225bd8ae8aebb16929cf534946d7b15593df695575a33c88275bd1757ae0554"
+    },
+    "implementing-api-threat-protection-with-apigee": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "989414a8285c4f2aa82366a8e5f2fb8fa5761b8a744b985770882270dfc1c0e7"
+    },
+    "implementing-application-whitelisting-with-applocker": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bc60d72383226a433168e132b42b61cbf9a36fa6ec9019ef8774c88068aa0d40"
+    },
+    "implementing-aqua-security-for-container-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "550a79277cc3521b7ca9295856010c401b83a17ebbc1e6d26f17c0b5c00029df"
+    },
+    "implementing-attack-path-analysis-with-xm-cyber": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "804e649902a0393d8684f56aad9b81d6f30238c573ddf34f9f05b8355a2cdcf4"
+    },
+    "implementing-attack-surface-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1462a74693a3889240b79bade156ccc2d1c1aeceaf51eb4342a7d7a75ed91fc9"
+    },
+    "implementing-aws-config-rules-for-compliance": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ca88966bfe11b73bd426dcb75d979d2331f8574a85d5ac790d839b0223cf558a"
+    },
+    "implementing-aws-iam-permission-boundaries": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "525da17781083d05fa2eb00eee64f82fb3423c18f801548f40e5076ab0a85da3"
+    },
+    "implementing-aws-macie-for-data-classification": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0ef6483d61ae1834baafb3257bfae2710eef7c8bcdff606a9d8c61531f5c5a29"
+    },
+    "implementing-aws-nitro-enclave-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e2111a5f9f380077ac889b79de791e6ca4dbeadc7c57a3c10b2b55bc66ff3df3"
+    },
+    "implementing-aws-security-hub": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0963e73ae0f7525de130c1ec0ffecbe5a2e533755013c7442fe0d9a20a415987"
+    },
+    "implementing-aws-security-hub-compliance": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "895596dddfad5bed2772953fa2d2725a702ccee5c1a3cc86d313d54abd4295b1"
+    },
+    "implementing-azure-ad-privileged-identity-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "028ca4f52d2486c1a6ed87a0cd3cec25a65802be845f29c2292c7343474ded6a"
+    },
+    "implementing-azure-defender-for-cloud": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7ad08fab581a0c64d2d6f83b69bc50ed796783bab7a7e76e2749663f02d0b9f6"
+    },
+    "implementing-beyondcorp-zero-trust-access-model": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cd0ee966f122684aaef85b9e675129ebb0b65accab17b61632f0e956e0778608"
+    },
+    "implementing-bgp-security-with-rpki": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "85625c58b17ba767ae9f5aebbc4cc8900d44930138cb15fd3829b2e0461e1ea7"
+    },
+    "implementing-browser-isolation-for-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "50628cf398256d87924f188df26f34292656dac5a3c8e6dc0640c980df5a0abb"
+    },
+    "implementing-canary-tokens-for-network-intrusion": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "460a1f10850b4587cb0110dc95b1bafb3e5900470d3c8f1f4fa94c7b1a075ce7"
+    },
+    "implementing-cisa-zero-trust-maturity-model": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "37326ac8b4ad434683de8b4d49ff23907ac1ca9e30e3df4a5e4992463eadc57b"
+    },
+    "implementing-cloud-dlp-for-data-protection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "96011e5b56680f0c88527eae7b787f7c5cdcc1aa96fbb697b49d9a0bc4d4945c"
+    },
+    "implementing-cloud-security-posture-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "848e3d53921e14a983380f78ed3f9989275637b9e02dcfb9e97f8b44a05268c4"
+    },
+    "implementing-cloud-trail-log-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "50e4db4da526e57ce7307725355cd96dc61f60ea443c3e7f4404cf7ff4831dc4"
+    },
+    "implementing-cloud-vulnerability-posture-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6869f4ae72cec97400584fc061bd5016cc6fcbff0184872aa18cca13973aef58"
+    },
+    "implementing-cloud-waf-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4d68390e98ad53373a879da15e08b2e3d9531b08ea65bcd29fb23e89e832dbf2"
+    },
+    "implementing-cloud-workload-protection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1b9dc8548da693823af188c9bf5a86c4e67e95dac8829d26ad34c1b2889ec2ce"
+    },
+    "implementing-code-signing-for-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2caaf08111b2b18a9be6455dd6f8c34d69c7410632e5b2500e589ea7c49734e2"
+    },
+    "implementing-conditional-access-policies-azure-ad": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8b46682633ed689df8ea01b41aa500b11d7d7dbf58b8c1d3a2aca57dcd056361"
+    },
+    "implementing-conduit-security-for-ot-remote-access": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e7ab2824c278e3b1bba461719060539a5fb9c697ea9b05a7c220e5f280516d93"
+    },
+    "implementing-container-image-minimal-base-with-distroless": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "eb1889963fa8d687ca6f28ffd9e288dbadba6ac361ab3dca423b059ba1ea2f7c"
+    },
+    "implementing-container-network-policies-with-calico": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "daf771685e939671558d5081dc9dd930ea8595f2aa7c0a2290d665389944afbc"
+    },
+    "implementing-continuous-security-validation-with-bas": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b7465c14d4a31f86a9e8a126c91c1b1c8e65d2fd51f45bf0b09f983fea13d580"
+    },
+    "implementing-data-loss-prevention-with-microsoft-purview": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "29d1d1e98ebd6e22014da6bb9aa128dd4cbcec542047dadca7ede548762205cd"
+    },
+    "implementing-ddos-mitigation-with-cloudflare": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "440ad6d7281cc78a3f067a7318c453a26d7903e4227d82cd551fa4c5b9299090"
+    },
+    "implementing-deception-based-detection-with-canarytoken": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a5431955b1cb6dddad4e1aa757368bbdaaa24816e99d88ec3857b925a955a486"
+    },
+    "implementing-delinea-secret-server-for-pam": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7ae9c953ed8e9fc550b0a16d04a1c7588a7b896d2c08b54a4ac89836cd14ff30"
+    },
+    "implementing-device-posture-assessment-in-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "613b6e37e810363ebeb33201ce0e4b28f7a2885f4a4a75ee071b3ae7791d5407"
+    },
+    "implementing-devsecops-security-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cf5378b5a2ca6cca000f194cb2b1b7021caeb9c0c9bf1feb0057ee56aece4f66"
+    },
+    "implementing-diamond-model-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fae83854f0b95dc3fdca46dc4ad999cd968cc300c882054ae45ddc2bb7999cb4"
+    },
+    "implementing-digital-signatures-with-ed25519": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5bc27d926830eb170326e5b5eae28bd780049b37e2726e0d8d037c64a857caf3"
+    },
+    "implementing-disk-encryption-with-bitlocker": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1c388d2b17c5c3ae894783ab989db267aeee1771338f125d4b62ddece4973768"
+    },
+    "implementing-dmarc-dkim-spf-email-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5990d3de5257645615c9786d53b7c10782346c77685be2b29273a1cd41893f22"
+    },
+    "implementing-dragos-platform-for-ot-monitoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ee5039cdc04c97e7135d080965ec415338f315e324127edd079c9280ba499e65"
+    },
+    "implementing-ebpf-security-monitoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4b37c93cdd66478946ad2cbc6a35d4504e7db935a62f78aaefbe796b01b32957"
+    },
+    "implementing-email-sandboxing-with-proofpoint": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d5419790c6a96af3be7bdaa22ae5282b7b4cfec76bca2b4536735122e886c6ae"
+    },
+    "implementing-end-to-end-encryption-for-messaging": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ef89d50f1b8417f00cc285981fbbf0a96abb8a81cd40b7b8d1024db72ed591ec"
+    },
+    "implementing-endpoint-detection-with-wazuh": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e65583631571c3ab2c5add964f896ce0b5a1b71d19a31d82817c0b4741c7b78f"
+    },
+    "implementing-endpoint-dlp-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "727a16fb140b580078ce25cfef2620511ddd392d56e43c0b6007744c301f5e63"
+    },
+    "implementing-envelope-encryption-with-aws-kms": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d4132cd9120dd369d8835287c83c8da427264df00329921b249b9f722360267c"
+    },
+    "implementing-epss-score-for-vulnerability-prioritization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "46d9f7d8a0e11b7e94a67081bad4e27ed740f793ea13e60ddbd36934e4732697"
+    },
+    "implementing-file-integrity-monitoring-with-aide": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8ca2abb2448a88b45b8fa353cdc8f4da0807a28ea7cc40b0204ecb89171e1e69"
+    },
+    "implementing-fuzz-testing-in-cicd-with-aflplusplus": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2caca1e453cb2c439cfbcfee14a2e9e1c347a3935bc6d72300b00bf692f5c256"
+    },
+    "implementing-gcp-binary-authorization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0b298c068049f18e3dd87b36d61f4aaaf3f86603e3dfe759b1b2476907b21be9"
+    },
+    "implementing-gcp-organization-policy-constraints": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "99c38fa6b7ae490d6a93642c211b0c6d5b27f87f7f1d7548505a1b879f19814c"
+    },
+    "implementing-gcp-vpc-firewall-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fc02f6b286384e41c6f7dbfe5785810c5c3b729c679cbf106d991d18f19387e9"
+    },
+    "implementing-gdpr-data-protection-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c948c1a176171486052a39b2d56cf307eea6f017c9e413b5dd58b5b73bb2d9bd"
+    },
+    "implementing-gdpr-data-subject-access-request": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9923c32c208cde2f39d158b359f341a3b55156665d110a7f6317efaa2a801ee3"
+    },
+    "implementing-github-advanced-security-for-code-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "afdeba8a689dd9266f7335c1c34e7207dcdf383acfd172a533ad5a67d49616c0"
+    },
+    "implementing-google-workspace-admin-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "276905f8de770be9852e8a02a124c51078175d31a0108c3c9dbd0b1e0b6f467b"
+    },
+    "implementing-google-workspace-phishing-protection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "13a029183015a3a204d2dbd7e925008c717b1da517d25f11262436f6ddc4b92b"
+    },
+    "implementing-google-workspace-sso-configuration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "04b01bc895452867bd7228d8f50e6a9b0f135a8f83df31833b04ea885521c32f"
+    },
+    "implementing-hardware-security-key-authentication": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9a000116027e0ec1d2a718d0db44c7ad6b1296839cd3e5a007370a434591b425"
+    },
+    "implementing-hashicorp-vault-dynamic-secrets": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "716747272e106dcd6400b9524d3e985d53510f9f9af1a0f0c1ba83b9b284b5b4"
+    },
+    "implementing-honeypot-for-ransomware-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ec73d08668aede5deee0778cac0b067bd0f2e6bd79377243d6746504fc8b47f5"
+    },
+    "implementing-honeytokens-for-breach-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a547f8ffe4230aff88ab6e5a597cdbbe53055d65d2d44f43b99fae390830a13d"
+    },
+    "implementing-ics-firewall-with-tofino": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "50282d953f6b7eff8fdca7a5fa694a51582b814e85471fb1509098f2b0bc5201"
+    },
+    "implementing-identity-governance-with-sailpoint": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1818940fc2d0c35ac89f1c685226c5f4979888e1113d4f0480a0c3bf99c462fa"
+    },
+    "implementing-identity-verification-for-zero-trust": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bb6c44611f46c168eed12cd515abfaf23725948106c2c4d75e94afbbd11f8dcf"
+    },
+    "implementing-iec-62443-security-zones": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "98d4018ba9b21528a163fb6bf0f4d8cb52b649614233b5bf4dcc6636e5d46612"
+    },
+    "implementing-image-provenance-verification-with-cosign": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "47e427c86423031c71850fb4aed5b8ca6ab6915ee1a42144922f2db34c2cecf9"
+    },
+    "implementing-immutable-backup-with-restic": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "17e89aa63eb558f43ad940e3883f14326f2d30673563feb0cd62396eff8fe4a1"
+    },
+    "implementing-infrastructure-as-code-security-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3da0818a3399e281875423e42af811c860725823cc16e9ca1bcfa9c24ea46234"
+    },
+    "implementing-iso-27001-information-security-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6d3b0d2be3f6dc8b96ed67d3848cc9d81b94cc1b63c674c05d4eadb80eb31f72"
+    },
+    "implementing-just-in-time-access-provisioning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2ed6bc4e4703838d6263408fdd84257b72e354f4d2bcae21f4730c76da53b1ad"
+    },
+    "implementing-jwt-signing-and-verification": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "249657b1c34a1ca9dd5b6b2f9d92902676e1f7aa2c6ac061151c88be8fe4b752"
+    },
+    "implementing-kubernetes-network-policy-with-calico": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4de4c4536b40573b4aeb18ddde7b7dad1ab31bf54716557e68652ffb5f52ed3b"
+    },
+    "implementing-kubernetes-pod-security-standards": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1a1af049be83312a963445958e6a99f9fbcf3b85c27e3cc05877870897e67008"
+    },
+    "implementing-llm-guardrails-for-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d4b4a216cfc534196c84ce6fb114d4071069dbc8d0afbc8d64e1585a665bf559"
+    },
+    "implementing-log-forwarding-with-fluentd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "00f7b2888f9425b39150f3f2993e706b408d57740b5d2302a777c4e147b559e0"
+    },
+    "implementing-log-integrity-with-blockchain": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b62b1261f59bbe35177c7931b5e796b716ebf20fdb6f1688bbdd197fa401f675"
+    },
+    "implementing-memory-protection-with-dep-aslr": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "99d075ebb3e680f6a3b79cb6bffef064717f9a1f22995c7fcce54c0193ba5ed0"
+    },
+    "implementing-microsegmentation-with-guardicore": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c186ebd7b528442fb5ccb1ade1d0b8376cf2e886adadf84388dc15342891e773"
+    },
+    "implementing-mimecast-targeted-attack-protection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "15144f30eab2f394c7853470d34af0ef8c1e5c3a225f9b37fa35beb855e4a931"
+    },
+    "implementing-mitre-attack-coverage-mapping": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6c1fa9ba1b5319132688c3461608f6b2fd94c7dcf536a29aaec2b3a3d94942ad"
+    },
+    "implementing-mobile-application-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "afab471720e6883e20fb80f0bd11829d91b9bfd6010566a295fc458bfe1ae01e"
+    },
+    "implementing-mtls-for-zero-trust-services": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3e6af1d63d278c47be82fc97a168bf5a8e6d43477240dd8d3b0914610b7b7ada"
+    },
+    "implementing-nerc-cip-compliance-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4ad5e07415f1c59c016d93061c4c1d7b3263040f437e635d75fa689abcc7fd63"
+    },
+    "implementing-network-access-control": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "697158082fe3b1e555e4b975dc299df03e779f9a0206d739e54d060734090a1c"
+    },
+    "implementing-network-access-control-with-cisco-ise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "37f683f0cfd3ed6c71d2867edec641e805dcb58eeae4d51da74c80a09e9f37e8"
+    },
+    "implementing-network-deception-with-honeypots": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "96edf6541afe458f558ff4783a7084a8bf1ebe57196bc4969b1906aef384e7f6"
+    },
+    "implementing-network-intrusion-prevention-with-suricata": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7c63cf3bbcfe16b1f0a51cb86c648e6869784816a5182436bab940bd51d58910"
+    },
+    "implementing-network-policies-for-kubernetes": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f9740194c2d98e7ce2259f2bcc97f5c48358da893b563323bf495b5d1a22987f"
+    },
+    "implementing-network-segmentation-for-ot": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0a10839d826d217f408cb1be701e7c9badf1480f8c1ae473ed631516700cc61a"
+    },
+    "implementing-network-segmentation-with-firewall-zones": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9027fb0262b5a6a9e32aafe871afda95882692bf35759867ad6bd1720b85b833"
+    },
+    "implementing-network-traffic-analysis-with-arkime": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "321f1f255a543a57de108034709e1a5a44d98c026686f1c7a7a3ee6731ad0f03"
+    },
+    "implementing-network-traffic-baselining": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a97ac1930669eff3fd4ff3a7373fde9713e7c8a219a4f7675005dfae9dabdd18"
+    },
+    "implementing-next-generation-firewall-with-palo-alto": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4e09eae4cd9e323854af0e51588abef375861a02bad2038ce9bd19e4f508766a"
+    },
+    "implementing-opa-gatekeeper-for-policy-enforcement": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c41a6889965954d4818d3f520b9662fd84f147b2fbcf2a4e5157268b1023fc82"
+    },
+    "implementing-ot-incident-response-playbook": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1482fda008cb30ebba369bf28869dca2775d950572c3b3fc74079ac0370c3fb7"
+    },
+    "implementing-ot-network-traffic-analysis-with-nozomi": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1cd51a374824f72cff9ed9c5b80cf55d7479d4eeafacf21a8794def449295875"
+    },
+    "implementing-pam-for-database-access": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9338cac954c6049814c120f9c5b413bf8e2e05d864d8dc788182221201460d3c"
+    },
+    "implementing-passwordless-auth-with-microsoft-entra": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "906f5b6dd8bef04363eff28285a4453dcc8140259bf234902036d0c0d10da21a"
+    },
+    "implementing-passwordless-authentication-with-fido2": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "499f642b26e5fc96da3edfeedd20a0903a60330642b4eb951cf88b7c1fbd3119"
+    },
+    "implementing-patch-management-for-ot-systems": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ebfa4cd65b78de79a9bc2ffe67aa04c4062bbc62c5beb41f5b476b44fb205467"
+    },
+    "implementing-patch-management-workflow": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "770ad1e3e1be167532c010df00ed985bd60024fc07e408d7dcfc4b7402c76313"
+    },
+    "implementing-pci-dss-compliance-controls": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "de4ddab9e2e47e1539ee7ac02851f47ab51d8ed0d75512a97e461552a0357e2f"
+    },
+    "implementing-pod-security-admission-controller": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7fe4746bacf595be449f60dffb258d742fe3379aded64a97d081c30c261b2637"
+    },
+    "implementing-policy-as-code-with-open-policy-agent": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "70380a0e398e4385a274047418a4b6f2baac97c51f37a2e15ac9ac41c3bf79c1"
+    },
+    "implementing-privileged-access-management-with-cyberark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "193ac8cdcbdedd28b402d3f31337467ebdced4a56776bd59f175c5fbc76a6c56"
+    },
+    "implementing-privileged-access-workstation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "260f5e6610e279c6d22a4bf8a157ceab458bdd742652a0c0e90340ce86281bfa"
+    },
+    "implementing-privileged-session-monitoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2cf71cbaef3a5c42f4a5898b3065b8edab122433f8de93cd7601262a83cb810c"
+    },
+    "implementing-proofpoint-email-security-gateway": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c57046e497012b110eb26b1508eba4fd36ca50ec98b8ac07df9b4817bcaebf61"
+    },
+    "implementing-purdue-model-network-segmentation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dd2c09ab29f687e376135ba19ca0955e79fc4d115c97b452ee7328008780b350"
+    },
+    "implementing-ransomware-backup-strategy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "953d681a2ee3207f4d9f23a5fb54dac61b5d749b026fb72bbc3d7a76aaaac0cc"
+    },
+    "implementing-ransomware-kill-switch-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "41b029c55cc688c0aa4735a69060dad545b658419e79f3bacfbbc254c4af93aa"
+    },
+    "implementing-rapid7-insightvm-for-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3a98ef53e9f7e63486e18a14dc33b757476a50d7949725e1a6a878619659ccac"
+    },
+    "implementing-rbac-hardening-for-kubernetes": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a2f4b6fa538b2d3efbcbbf5b8992202375ab317dba817dc24beac68e11271fee"
+    },
+    "implementing-rsa-key-pair-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e41278c9ac7da177500d815fb2e7886c93ad8eba5cc5f37b1f433797d77a05a7"
+    },
+    "implementing-runtime-application-self-protection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b9f37c735cb9d1e44d0cd19c05779de54c887d5b65925066e09ee44c42df896d"
+    },
+    "implementing-runtime-security-with-tetragon": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cbeaf42f6547c1b92c8288f8406c8306368066c6cc139b1a7d57051ff634d5ec"
+    },
+    "implementing-saml-sso-with-okta": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f666e409575472e1f96836ee6528e397c04549eadf09a8f9305223e71f61268d"
+    },
+    "implementing-scim-provisioning-with-okta": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "066237695c89e5c9a27650d5c516ba231b6d7b908ccd2d6576244db459b7587a"
+    },
+    "implementing-secret-scanning-with-gitleaks": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2a2cc7ae183b0382cee6bde970dc985bf8f40e8b643e5f95f69a0a7d0642ca43"
+    },
+    "implementing-secrets-management-with-vault": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0d56b40f29017949a8d1a71436959ed0b813177b954db02cd9b6f7bf0ece2957"
+    },
+    "implementing-secrets-scanning-in-ci-cd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "77eb7ada2c1df1891347fa0a31a211386fa261dae38fd7f565cf0d1ef9e282c8"
+    },
+    "implementing-security-chaos-engineering": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7774c1dbec1006bb52450f773cb7748247f1b35277dda0e4cfa0f4fa1c297272"
+    },
+    "implementing-security-information-sharing-with-stix2": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ffe96e0abe62f9bc9179e5f033d2bc41415e7e268c98d9ea407bf1e194e2d294"
+    },
+    "implementing-security-monitoring-with-datadog": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2e9ca6772ec36d689ae5ca3cb071f2651b7b8bfdf83846dc0bba80142078eb95"
+    },
+    "implementing-semgrep-for-custom-sast-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "923ac7267882462236a2eb4c08496c35e179ec285f7509e14f95955bde260fb7"
+    },
+    "implementing-siem-correlation-rules-for-apt": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "acbb6626bb4b6a8ab79a36dedbfa3677a7447b30f06bfd90f93dcdb9cc835c0b"
+    },
+    "implementing-siem-use-case-tuning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2c54a4309eef9018231c1acdada3a4d3724f817bd1a74ecdbb4811a8f1060f10"
+    },
+    "implementing-siem-use-cases-for-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6a871de03595c6c956f02ce018c785d235a745ae30b631ae615f5cec71d6ad0b"
+    },
+    "implementing-sigstore-for-software-signing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1266df01a0f3cf955b0e069bc8442e2abb07c295c06cc4ae7bb639a8c171a7fd"
+    },
+    "implementing-soar-automation-with-phantom": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e6a552ce238fc6c8edc358cadcf0490a372939a850cf9fc1fd9eced08fd28281"
+    },
+    "implementing-soar-playbook-for-phishing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c2d7ab3733a998349d230f33b0cb1b7047aae7905ac8bbf52fa837446299c46a"
+    },
+    "implementing-soar-playbook-with-palo-alto-xsoar": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "49bbcf0b51004dd3fe947b71188819decac681efcb8f264479250778abcbef0e"
+    },
+    "implementing-stix-taxii-feed-integration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1905e19f054f7093d72a42a404039b1ac84022f5ce308ef6cdf6e4a0f20dac7e"
+    },
+    "implementing-supply-chain-security-with-in-toto": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d4b8e434e567b149ea7daa2b83e00c4cdfe9d21fdd1639218bfb1c9d6d64a481"
+    },
+    "implementing-syslog-centralization-with-rsyslog": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3ad4d4b6ea221c7f6de15c7db4725874656dd377b824a63c1daf9f0a2a449d8c"
+    },
+    "implementing-taxii-server-with-opentaxii": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3df7a1d7d18f1d386cf267c3358cf15048a5f9cb78aedde075951202af048b62"
+    },
+    "implementing-threat-intelligence-lifecycle-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f192510eae0b3861ae95830c58bdfa0fba9b70691e660d0b32fd64a498cf8874"
+    },
+    "implementing-threat-modeling-with-mitre-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0c8bae1e28696279e7d61d40a33efb433df19b4616310186cc45cabf1388a281"
+    },
+    "implementing-ticketing-system-for-incidents": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a578ac4cbb35c11ecf7ffc08d070d406342746ba8cbd7b8491d548e311fc6b1f"
+    },
+    "implementing-usb-device-control-policy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c0c3aeb856f91dc73ab1e55d16379af11280da95214f0147ce06030fdb763cb0"
+    },
+    "implementing-velociraptor-for-ir-collection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "031ace581f349ea15fac169a3d01e29309acc37ebc4a7d8cc0d06f46d64d9263"
+    },
+    "implementing-vulnerability-management-with-greenbone": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a688be0ff1f6021bfc1a3cb567c0849c14032aee25bc9130b0b02c51d284a0d1"
+    },
+    "implementing-vulnerability-remediation-sla": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c43e030b00e686599e46cd15145665ce07733f9b6cc0d7d4106b1070fe791ccc"
+    },
+    "implementing-vulnerability-sla-breach-alerting": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1a8630e41f7b6761428cd8e5a4c7ff95ff2b313a3f925a60db135e275d32b6d0"
+    },
+    "implementing-web-application-logging-with-modsecurity": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "44463249037e3d22dfe152412f362678c2bea2ff3fd11fb897594472cb94889d"
+    },
+    "implementing-zero-knowledge-proof-for-authentication": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ddf92a38d67c65b0827f2d1546c32742e9b501318788ca399dbdf7e4fe52493b"
+    },
+    "implementing-zero-standing-privilege-with-cyberark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "163f05c1f28a5e1214c3d4adbcdb3c9130843bcebd989d40debb9ce422d696aa"
+    },
+    "implementing-zero-trust-dns-with-nextdns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d40a13a0fb96eacd21f5ceecf1f2cbf4474f69f05da5705375c191ba68a321bd"
+    },
+    "implementing-zero-trust-for-saas-applications": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "60c6d8d0d6c6a2445f5d5c2cf271e2edee7f2c6ea29b5b4d4c6cd95435da3a67"
+    },
+    "implementing-zero-trust-in-cloud": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "df047bba12a3927cf58ab93fbc98c130e3b7c796097e45931181a33c929a4f86"
+    },
+    "implementing-zero-trust-network-access": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fc649b0d5b6fc6cb85217d0d5b8161f38863fc7fff7d5edd690e8e899a87ac41"
+    },
+    "implementing-zero-trust-network-access-with-zscaler": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bce896b9d96cb6758be9b54284c2dbfc571678dccef719fefe2279198f1755c7"
+    },
+    "implementing-zero-trust-with-beyondcorp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b39c888066e10a22308bc7e8de62e55172d241982753c8339d47a78f375bd976"
+    },
+    "implementing-zero-trust-with-hashicorp-boundary": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4d455f45a63d2788af69f64a88f41e078a3ff8285d46bce1c65824b4054740ca"
+    },
+    "integrating-dast-with-owasp-zap-in-pipeline": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1a67fb171c2ed915e913e1a2f0896b6c55fff22b99a85540f1b7f816cb2baa6a"
+    },
+    "integrating-sast-into-github-actions-pipeline": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ef2828d7127f372cc581098e069cba3e5a46dab08941eed121c278b6357180b9"
+    },
+    "intercepting-mobile-traffic-with-burpsuite": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6d99df7de31a8453a2fea07ed4399965760dd84367f59e366058e53b8176ee11"
+    },
+    "investigating-insider-threat-indicators": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f1c3b6825ad7501a0caae056dcc6c3051364838c044af819b5b090fba2df3de4"
+    },
+    "investigating-phishing-email-incident": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6dd561aed3f3e71bf61699fa99f3656343d71866f088b9762850e92ea9c0af37"
+    },
+    "investigating-ransomware-attack-artifacts": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ff35532cb0b26d52ea4660866ede34a8ba9cc0a600ad6cdd959dab83d5284e70"
+    },
+    "managing-cloud-identity-with-okta": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ea756bf05cd7f301a857e422669fd00f08c1b6935fafcefc397264d2c1cdc81b"
+    },
+    "managing-intelligence-lifecycle": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3b16779f7bf00715eab26bd844cccdf262f863ccde1cde658f01d92cc1af6550"
+    },
+    "mapping-mitre-attack-techniques": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8e59444be6970f43839ba5a72eb140106776a566ef7b9b348710434c4ef18760"
+    },
+    "monitoring-darkweb-sources": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a91ec496d81ad975dc40939ec0a41007e3464a283f1e1c640302a83c2884dbab"
+    },
+    "monitoring-scada-modbus-traffic-anomalies": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b15b229a0c9eb0118e83c1e35c11c3400061330b8eed01d665923b51a3425ae6"
+    },
+    "performing-access-recertification-with-saviynt": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a687cf5f06a93fa7f5310a154bbf4cb9036ea565099e8dee020bf28adf095a40"
+    },
+    "performing-access-review-and-certification": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "74d007bb866e57697b5fb67b19e33890e2011214349682ecc9d2b74d637a870a"
+    },
+    "performing-active-directory-bloodhound-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c479ba490e0ab00b33ee30036d418bb7cbc5243cdc5906b568dc788f5210bd45"
+    },
+    "performing-active-directory-compromise-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9d351c70f31717e0a6a7cf2d0aaa1a706443346de7bc001197a99162e6d4ac4c"
+    },
+    "performing-active-directory-forest-trust-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fd5fafe332388cd7f793289d34223dd98d4b1808a2420b1b2bc9f91959087ccd"
+    },
+    "performing-active-directory-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6cb5117665cb359b1b701c1ce8aa911744a13098a61bc3b1a9528e55910fd7ca"
+    },
+    "performing-active-directory-vulnerability-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "52c520684d18d6f8c2ebc23e95a6f46b75da1325ff377fab50c68ea9ac0f39d9"
+    },
+    "performing-adversary-in-the-middle-phishing-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7694d7a100a2bf13c1b514dcc7b58ec4cb55605090b8bf4715d2593bd9bee431"
+    },
+    "performing-agentless-vulnerability-scanning": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4dd3a68cc98e02cf69642ef6d7a96012060269692d6647feea3889e729540ae4"
+    },
+    "performing-ai-driven-osint-correlation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ec8c01ca7dd26a6932837fb7c0a83ef41c60219e5931dbb8670c702d7a798d66"
+    },
+    "performing-alert-triage-with-elastic-siem": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bc73ce0566d88381842582c726c87c21fe8d23e4811236bd6711ec512b2936aa"
+    },
+    "performing-android-app-static-analysis-with-mobsf": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3ee2e479bf4410d8158e422b25da98b452c7a182a34c3cf15155f49a01e07ca3"
+    },
+    "performing-api-fuzzing-with-restler": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d233193cec45fd312a71a7ef9a4522ebef1bd51d28e45ef5ff52a0919c32883d"
+    },
+    "performing-api-inventory-and-discovery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "646057e1bda4b1903d0e7579c450e108078c18284ce0a112f511e95009d705d0"
+    },
+    "performing-api-rate-limiting-bypass": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3f13d8b0111b87c1ff9111570ef19e0aa4cb7ed72f08de0cbba1af029a75954a"
+    },
+    "performing-api-security-testing-with-postman": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "19bc8834901fcfe1150be21ec9fe7a8137be2bfe48dc442de8cb5c5abd0344f7"
+    },
+    "performing-arp-spoofing-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a6e5b174d8046a66ec5d93e6d0f4ca1e4f3ab33dad9d1f473075db66a48dda12"
+    },
+    "performing-asset-criticality-scoring-for-vulns": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "79f824bbf11ae65bf515854bb413a79bd62ef695265755d53dcfdd09e96f6885"
+    },
+    "performing-authenticated-scan-with-openvas": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6a234eda0734581e8ffd3be8c0c0355c68bb4582c5d3b548fe5e20b648a202ad"
+    },
+    "performing-authenticated-vulnerability-scan": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "940d25ad8310584b315a8ebc780af8e75c01e9e850abc0fc41b941b0c5f4e41a"
+    },
+    "performing-automated-malware-analysis-with-cape": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f009e9bcd1c036071c0d82a7e3d0bf365a246e758455bf40dcf5f795f4edbbfd"
+    },
+    "performing-aws-account-enumeration-with-scout-suite": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cba8311431b44e700a211027560d41a4fa26abf76966217d2856a98b613a032d"
+    },
+    "performing-aws-privilege-escalation-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "489b7a26a2bf8d96ea3e23f24ba019510370acc72477dcede37374c15f1a43b8"
+    },
+    "performing-bandwidth-throttling-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "144e620d1f972956823176a4763954da8c6f946a0c29d1716743fb477d211951"
+    },
+    "performing-binary-exploitation-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e6a79e54a12aab7053b6f9dfcfd7bce7075a948427181d22b4c2058aae3cba3d"
+    },
+    "performing-blind-ssrf-exploitation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c67e658f105b1c10fb298e75a6c9634c8c1bca5fcd0499938ef5c1cc5fcd6a35"
+    },
+    "performing-bluetooth-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "19ec32546eb7549d26e350e02f6e614581897933625384cb0afb4d3357b66416"
+    },
+    "performing-brand-monitoring-for-impersonation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "feb7a282ee1e9c1f49f7f3c176534eb75ce3d5e68dfe320344ffc9a6600ceb42"
+    },
+    "performing-clickjacking-attack-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "681585c3757eb34e1d09c5242a38f8aa41636a9419449ce87d00a2245d680891"
+    },
+    "performing-cloud-asset-inventory-with-cartography": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7826c78bd2008ec43af0ec35afd7c8bc7eb298321eb7ceda1ecc28248f9b7cc2"
+    },
+    "performing-cloud-forensics-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "85add208a1d44ea912f51c3905ea692cf8b64ca5c9660960b19106577be3a977"
+    },
+    "performing-cloud-forensics-with-aws-cloudtrail": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d0fa08031bbf254ddfabb46a0d803953af57070d5993fe74a5c06cbe9ab1f21e"
+    },
+    "performing-cloud-incident-containment-procedures": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cf95189eaf7adec9ecdab241b00eab8bc58518b5525869575ecb825dba5e7108"
+    },
+    "performing-cloud-log-forensics-with-athena": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b485c6029fb6c7c056bf95292b0cad8a73670a334c6bde8f6cc36da155c15962"
+    },
+    "performing-cloud-native-forensics-with-falco": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "08d20114dbe4d41686eff3e16f2e71d9659bc5ee478d797ec5f641ffecbc5ff6"
+    },
+    "performing-cloud-penetration-testing-with-pacu": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "899cc894ca16285251c95543dae5b2c24ab68710f3d2bfc0e17d622a4aa3c768"
+    },
+    "performing-cloud-storage-forensic-acquisition": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "68d747046a222e72d14f92452dd84c0b475e869b9574c57e775eff98a4be0ed2"
+    },
+    "performing-container-escape-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7f1d1958a60efbd85201069b4a4cff3e3a84c135f2e2141e8ace6feb6fc08344"
+    },
+    "performing-container-image-hardening": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7eefd9b9b00b411ade47fd60ed8c6b0ce47338f8861d68dc5e91d86baa9bfc32"
+    },
+    "performing-container-security-scanning-with-trivy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8be274b167824ae8f097df606c01403ac0d8acc339ef3459af5517d06a43cb0e"
+    },
+    "performing-content-security-policy-bypass": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "46f4931f4af9a641e9297e5b93a801c70df079ab8d178e4c9d3ac869a90be5e7"
+    },
+    "performing-credential-access-with-lazagne": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3d2bea0217fb9cedf3a756b1aca085300d08be7eca99620944be6eebb34b5564"
+    },
+    "performing-cryptographic-audit-of-application": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7dfebb2d5677fad5ed02525b195871a9fdae17b7f9904b18925f484635b1ff66"
+    },
+    "performing-csrf-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "57aec519c51fe2e3dedb7fb9d8d5858ab70879edd76eabb0b8f0259aa50167f0"
+    },
+    "performing-cve-prioritization-with-kev-catalog": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9223a4e6e8b8d09e3ad17fd7826d8223f1657d52479daaa72eead2411cec7d3d"
+    },
+    "performing-dark-web-monitoring-for-threats": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b76dc425ae0820dc10580ff2d54e3af6c1e684f983b4a41849607442c98aa510"
+    },
+    "performing-deception-technology-deployment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "23970f7fb41b3936bc541beaafb2659b4a0bcd4a0980a4a46d61998eeff1af81"
+    },
+    "performing-directory-traversal-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bbf7e517a07368a722f5fd9c18dc0c1c8fca89fc49e3475f0ac117e268cca519"
+    },
+    "performing-disk-forensics-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c1b220d0e098bde0cc9108fefe8202f682cb3d5126488802e0cc728ab427e6a1"
+    },
+    "performing-dmarc-policy-enforcement-rollout": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dca7225631933f2c0868c89450c03b581323151f1a67491549313469d905d553"
+    },
+    "performing-dns-enumeration-and-zone-transfer": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "06bb12d483f1958b4e4bd42cd3bdd7d4b7b35b2825a60f74341baa10b4cb4980"
+    },
+    "performing-dns-tunneling-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d1e6a4db9f8b40f489a42a4c7f236b3d570e4255436745d6b06b056511e9dd8d"
+    },
+    "performing-docker-bench-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e5bcedc46ae0624762a305e6b008ffec3e40fe60223020922cbdf529b33f289d"
+    },
+    "performing-dynamic-analysis-of-android-app": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4a2c6ca701bfd346f85a6192fe62e90577ac53d580fa8b2e385c39670defdb33"
+    },
+    "performing-dynamic-analysis-with-any-run": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "301e6fb0012ba655aa93cc51748e051c3abeee1b8e2d9a10c9388a18d907377c"
+    },
+    "performing-endpoint-forensics-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f020fa6f44986782189f7146d3105828dbd28f6cabfb3a2f7b63337d3e792f77"
+    },
+    "performing-endpoint-vulnerability-remediation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cd12990f65844fc6c90d486a5fefbd99dcdb8a3d8651526d7b07bf3438d4e882"
+    },
+    "performing-entitlement-review-with-sailpoint-iiq": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fe3002542c8c040c0ef8feb1d20fc4377022c733d063b1b9abb0836a73e62f5a"
+    },
+    "performing-external-network-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "88509e811cd6e707e6c3cef33de43fb3cbce3802508f1211cce80b42ef21fd03"
+    },
+    "performing-false-positive-reduction-in-siem": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7a03baac81f23039535832df1e98cf2cf8a69e328c243a5ac7a0c8e6963be1e4"
+    },
+    "performing-file-carving-with-foremost": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9ddea4560555aff8af2407c9f7e0dc2fd6b5c2d8141973a915da15328e617951"
+    },
+    "performing-firmware-extraction-with-binwalk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "25716ae8d99f486d4ae9088327f35f7a74c61dcbc05e9f318d7f5cd38b3e0693"
+    },
+    "performing-firmware-malware-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "956650affdfcabc95bea17334798b8decc138745d2352c84adcc32730938c619"
+    },
+    "performing-fuzzing-with-aflplusplus": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cd066778541959d8fd35b9eac3052b895ff0e5e2ee9f7e4b275ecb9813d3f61f"
+    },
+    "performing-gcp-penetration-testing-with-gcpbucketbrute": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9b5ca8df193c621c9fda1ed4de7050bfba922a9d18dfd408d1c3e6e6f363bc44"
+    },
+    "performing-gcp-security-assessment-with-forseti": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "98bf5952196a3da67abbc1b37c87393da0e33c70bbfb84271aef8cc378b46146"
+    },
+    "performing-graphql-depth-limit-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1f11ed584f8296a26a7ba6b70b3856d8d43937a36c5e9675d7b59622b16732ea"
+    },
+    "performing-graphql-introspection-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "932c631082ed83dd7a1caae06f61217a87edbd599a9d88ec86d7ba7d96871532"
+    },
+    "performing-graphql-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ee7e1005d77d50303f45c239e9e83c7208687cd87f5cf1a49003516010c25fd3"
+    },
+    "performing-hardware-security-module-integration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9a873bb7e4330e85d06c30ec1eb9361d5caefcb89bcc3e4f78334735cf03b009"
+    },
+    "performing-hash-cracking-with-hashcat": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2c652bde5622471194b50bdb61bfa6bc417618ad415a73c94bc3d831606e3abf"
+    },
+    "performing-http-parameter-pollution-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c1c770005960ae3f58dca5aa3e97e590e8e38db05ba4b81af95ed9620ae7ab1e"
+    },
+    "performing-ics-asset-discovery-with-claroty": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2ad6a60821f6d2c67c768b5218a3f855db5eec9229891c0de7ee3d655a95c2c8"
+    },
+    "performing-indicator-lifecycle-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "61e44e435dad8ebc189db1c7930f25cad3d2e117b8f461792e0010cb677d1f39"
+    },
+    "performing-initial-access-with-evilginx3": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "70d692826f37e7590a2e41c6fb28a084770069e8cdb524909601ed5815509653"
+    },
+    "performing-insider-threat-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b88e426b49de354a25b76be58d1dced9b81d4a20d2f08da04753aa3a28f4b17a"
+    },
+    "performing-ioc-enrichment-automation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3ba39911367e46c4905d9989fcd2ebd1fdc0384698dacf8a27c7ec812e0559be"
+    },
+    "performing-ios-app-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "874be4deec054b1dacaa616f08aaafb5134ecc79a2ffe041ddaa0d5e8e36d44d"
+    },
+    "performing-iot-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1211527e0d3007abb5178d7edf1bffc7371f6ac506fb152459818f96569f7847"
+    },
+    "performing-ip-reputation-analysis-with-shodan": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f719de43fcdb4165fb64d28e91f83c4b4b7594c0070f707730b8c84333dee9e9"
+    },
+    "performing-jwt-none-algorithm-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1559ca825195167bf422de393a6137afc7882a76b9a996a795e7abac5c07f0cc"
+    },
+    "performing-kerberoasting-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9ae9319a1a414d9ed88c99cb65c0889ba7795062bcfe44b4b32ee56bd7d240f2"
+    },
+    "performing-kubernetes-cis-benchmark-with-kube-bench": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7da2239041abb0edbee0d465de066570a07c8623746baeb6cf2a638d0fead09e"
+    },
+    "performing-kubernetes-etcd-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "07443fa1481997539e1672bd36f1412276c4d78677393e5832dec3a2a4e3430c"
+    },
+    "performing-kubernetes-penetration-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d788d059c82fb91968c028e87a73cbf370c3bcda1a4a730e5432debef93f3b47"
+    },
+    "performing-lateral-movement-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f362a23753fbb2a8f656765691896a85cbc16c5c992fb7f29e6dda014f11a64b"
+    },
+    "performing-lateral-movement-with-wmiexec": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c73b8d8f0b7d838fcb6f48110e01a49625ce600a927809302c8793a1565f75bc"
+    },
+    "performing-linux-log-forensics-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ecaed9a71870ebb96be2a0cc56020e41df1b584d8a148da9da0872c3ff249f6d"
+    },
+    "performing-log-analysis-for-forensic-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b6eff7434f4b6997cc8a62b6cd828a9a03adaaecf7f180dbeff4b26a6e32f823"
+    },
+    "performing-log-source-onboarding-in-siem": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c0dc5798d342caf09e0540a4389e10728a21e38647838ae04819aad86049585f"
+    },
+    "performing-malware-hash-enrichment-with-virustotal": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "39113f127f9e28c91afacf72e81eaf9337f3904c783e3a02e1b01b708e928fe0"
+    },
+    "performing-malware-ioc-extraction": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b423efc70bac0d24750357582efbabd90ae47cfbdffd95bc94fad66af6948a01"
+    },
+    "performing-malware-persistence-investigation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9d5e9621387926155b3bdbe2a3e071d37670a26cbf95ad24ca95b1a8ac363386"
+    },
+    "performing-malware-triage-with-yara": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5a6b1678783bf1178d675984bf9476ae12812c0ef0eebab74000d0adde561180"
+    },
+    "performing-memory-forensics-with-volatility3": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2b10b1947a67275ff5c3270b5664db2b83736579901a3f93a6a0c6a963a23c4a"
+    },
+    "performing-memory-forensics-with-volatility3-plugins": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "583389ed2471c2292dfbabf145fa5f4447dfcda544d10981ec02dab1629fd529"
+    },
+    "performing-mobile-app-certificate-pinning-bypass": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9abe442b456ee77c47316548881f52b33785ae20b101e3bb62e44c0f83619d01"
+    },
+    "performing-mobile-device-forensics-with-cellebrite": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a38b95dcff560d11079a33039e1e469e43758f5b4b15817f7e4f5920e334e325"
+    },
+    "performing-network-forensics-with-wireshark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "897105ba4b1c810f0100152f90677993c399c6cb8f9b20d24a01afb37dd8f77d"
+    },
+    "performing-network-packet-capture-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "68b1057b41d71932a4dbfe4dfc605d31651f5e97dde7ba66beebd6bf950394bd"
+    },
+    "performing-network-traffic-analysis-with-tshark": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0df6467b240ef13425d5422a21f5018435d2741cb11c05d6c82bdb4f2bc001de"
+    },
+    "performing-network-traffic-analysis-with-zeek": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7d23c0eccd5318980326c74b605d1bbe486ee1aaba69f0b13889bcbaa118657e"
+    },
+    "performing-nist-csf-maturity-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b4969b2598c7d27268bb61e1ab2bd3d009f331f4b22ba81ef3892419a89eafb1"
+    },
+    "performing-oauth-scope-minimization-review": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "960c0014f866263fff24b71c678576f58e49a5fbe67374c42b86c48db8116061"
+    },
+    "performing-oil-gas-cybersecurity-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "91af0765fb1f5c7fdb5a02edbfb5fc5b432403d10c75837736d5cf849a3fcd55"
+    },
+    "performing-open-source-intelligence-gathering": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a721efbe5a688d91d39003dc7cd08e892a91d01c9a7a1671b26c883f376027c3"
+    },
+    "performing-osint-with-spiderfoot": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "53483ddb940294db0fa7d82c8766eafa5dcf77a91d7dcbcf823260a5726b2e45"
+    },
+    "performing-ot-network-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "485cce1e5f0a4b6f683762d9c6029a7435e7568f478dae9b80b4398632166fbf"
+    },
+    "performing-ot-vulnerability-assessment-with-claroty": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8cfaf13075c94430833571c8998d54815e726585bba57bd6d0bfcfa1071a9cd5"
+    },
+    "performing-ot-vulnerability-scanning-safely": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "182656cece86ef8b24352a4cfb57b55c9e06f56f679ff7ad01459916b0f3a394"
+    },
+    "performing-packet-injection-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9802cd1de2bfc6e7c447c3ff963b3bc3b347d6f7a7257a545b05af8525c4982d"
+    },
+    "performing-paste-site-monitoring-for-credentials": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b80aa12bef6941dfcd13ad8ceb632b675310eb2d9f974fdecd0bb5dbfa48ae26"
+    },
+    "performing-phishing-simulation-with-gophish": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6342aa9f2402f07b5db3ae5cf0bbd8d8c36553f1cca99ac1c85dd6aed47ca497"
+    },
+    "performing-physical-intrusion-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a2f025cc63b50e88aecddacdc118261eebdf8ebc0206c5e897a92991c0798dec"
+    },
+    "performing-plc-firmware-security-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "99af4e6bd125ed918b4931c3bd53a3e596e47de15b1fa4953a50bb59f4eed29c"
+    },
+    "performing-post-quantum-cryptography-migration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "44184172067237b97458c360e26ee09d6258eaa9e8ca5cd85be78932a004fe29"
+    },
+    "performing-power-grid-cybersecurity-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "184649f702dda1fdacc9a4c712523140eaa679f4752f951bf66eff26a77f9e16"
+    },
+    "performing-privacy-impact-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7253dd5c5438a50b2ac526cf9c31ddb4c0c3932e2f22f2b5ed8ff2fb120bb5c9"
+    },
+    "performing-privilege-escalation-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f06de19c186bb5a78b2603612d250c4b4f5cee1d2d6c4676e5fa4478fa9775d6"
+    },
+    "performing-privilege-escalation-on-linux": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9a00d42e9a670c7dd04f4d3e87e75949886c7b0f7a7ffed1bedad0f7674dae45"
+    },
+    "performing-privileged-account-access-review": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "27441fdcac903d37468c4a21a51145e72ec7720b778406b266483ff4550e1cbb"
+    },
+    "performing-privileged-account-discovery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bc1d724f50f39936bbd9f8baddcee84cc2e0450d827e69c05b18193746ff7a1a"
+    },
+    "performing-purple-team-atomic-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "10ef3e666d865853516344516258b7fd94db7e577f7477aea30e92cae7ccfe31"
+    },
+    "performing-purple-team-exercise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d94d35fb1ef781dfa2a9376876c75760829e8b58ef1e0174e15426beb1364347"
+    },
+    "performing-ransomware-response": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a6804e4c6f70f1ad0f02ff061d018eb8bf78523ceba1e227137381b2634bc03d"
+    },
+    "performing-ransomware-tabletop-exercise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3b95eec92dec5f8cbd84276456d76d10b535eead1307bb79a217a9ceac7c61d5"
+    },
+    "performing-red-team-phishing-with-gophish": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b1a2141856e574a1e83772beafa7ae774a816ef0d09fa3ae656ca8496aed7f44"
+    },
+    "performing-red-team-with-covenant": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "beeff2d11764c8aa212d99b1659ff71619597ff13b1a2905a29913e6bb9174f1"
+    },
+    "performing-s7comm-protocol-security-analysis": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5a0ea23efbadf8f0c5cdfeb05ef386bab4e0cc743d1911c986254d36baaece6d"
+    },
+    "performing-sca-dependency-scanning-with-snyk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e5f0004b11dbdc2ce9c6eabb2d9f051558c6f88e8e37fe619442e223f89a7024"
+    },
+    "performing-scada-hmi-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9fef649495cf6f25f56ac44be0e149ac94597180d40c588dc7da1dec4898d233"
+    },
+    "performing-second-order-sql-injection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1b75eddd8fb32f2054be328c87a912eca3b26abc4419a4cf3c05c21f0865ec5a"
+    },
+    "performing-security-headers-audit": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2b72ab61979d862c37683258b415f330f9076dce6aa00c9d67b1e3de3411d8bb"
+    },
+    "performing-serverless-function-security-review": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ec3c327df38bcfc13693a0c55202e5da3b8ecd323bcdbc608ea312b183d3bc23"
+    },
+    "performing-service-account-audit": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d0e38e5c92915a0215e9d022e572ee12c1c9dba9b0a37882a6df7a3540e0e7b3"
+    },
+    "performing-service-account-credential-rotation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "b62a8623703c6a0e4928e79f87de1ad32e3998004fb0a7c1a32372532600d7c7"
+    },
+    "performing-soap-web-service-security-testing": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9655dadd26fca618d5b80324c5d2faf9d743898d9d9fefbb84ccaa1e80befc34"
+    },
+    "performing-soc-tabletop-exercise": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d800f0fc0dcfb5f4dd16dd35c0ef2d4798b88c70bc6bb6c0f0068d61504a38c5"
+    },
+    "performing-soc2-type2-audit-preparation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6258fe5363b0cec7fdb98d9d19975f0c0786535690afda5b25c213d3fb885e60"
+    },
+    "performing-sqlite-database-forensics": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2dddef57c4b808037a580f88c2161363b13adb4f635230e5c0cdfe64d65ba4b0"
+    },
+    "performing-ssl-certificate-lifecycle-management": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2b93d158a7aee3ee490365c93871dfb4232dabad91e12db24fb2eb44a0e5b940"
+    },
+    "performing-ssl-stripping-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "991ff65f99ae7b5fac2efdaefc4f384e191e44cdff71216f27462402d8ab7d2f"
+    },
+    "performing-ssl-tls-inspection-configuration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "35890d27de9293c1f802dcfb33c682f0d238849b5374476a928b4e438f11c1ca"
+    },
+    "performing-ssl-tls-security-assessment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ca96e187b21d66b90f347bf9560b6ad61bab3587647e861b66c6370ce020c102"
+    },
+    "performing-ssrf-vulnerability-exploitation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0ddb292addb0eac4d81b89da78ed15820e5952f36a6ec6a8c7f3de04ffe33891"
+    },
+    "performing-static-malware-analysis-with-pe-studio": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9f33cf2de6c265e733213499c184b13e80b441aec62d2122964382f465e476d9"
+    },
+    "performing-steganography-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "34a2e480293626a7ab6643c721e3d51299d7fc4696e61fdeb17617573d3adb6a"
+    },
+    "performing-subdomain-enumeration-with-subfinder": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bc0d973165f60b300b11b0637b63ee19a7bcaf1d1f5481f2117d5c7d79a4c9b6"
+    },
+    "performing-supply-chain-attack-simulation": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fc3af726091515f344d19151dda9646b56d2f7ae2c88ac961b8a436d737502a2"
+    },
+    "performing-thick-client-application-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ebae23c97274142e4a6b68818aabdc068ab2b3585f7ecd38ab3b4d13702308dd"
+    },
+    "performing-threat-emulation-with-atomic-red-team": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a50a806b8c105a150989cb4949bc45d2f47c887501060640ef3c5cbdb49224f6"
+    },
+    "performing-threat-hunting-with-elastic-siem": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cd0e5a4fbd196a5a1c9071ae4cab7bd056c9f845d86c73e27175d51013eb6d55"
+    },
+    "performing-threat-hunting-with-yara-rules": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "46dd65b1e7057765c66d39123ace410585956e3257d4f18a880549589ac3c828"
+    },
+    "performing-threat-intelligence-sharing-with-misp": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d9059941028d0a4157356eafb1a92964fb1ddd6a3de9d928300adf57d7393540"
+    },
+    "performing-threat-landscape-assessment-for-sector": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "74f210d704d8e32d15f6eb15fca4d73c6f0e3e8366647926d8dc0384e259bc8b"
+    },
+    "performing-threat-modeling-with-owasp-threat-dragon": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "27f3a0737eee3bc35f09dc8588faa2f097d3a0772b9146c08905e91dbbac6177"
+    },
+    "performing-timeline-reconstruction-with-plaso": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c02497375caa4bd993554f0392477983d7bd18b28863980ae9de48d1fb8aa23f"
+    },
+    "performing-user-behavior-analytics": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6daaadcd4c06cd32266a0fbfcf069d88ec1bf6e8243e392ed4bb20dddd7bd566"
+    },
+    "performing-vlan-hopping-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7cda4da9690a947fb52215894f5a21de8b3dbeb42a5080c1042e59f68d150510"
+    },
+    "performing-vulnerability-scanning-with-nessus": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a90beb8dee45f891599c11d23e97ba72a966f746a8e77cd98485807d786d9c52"
+    },
+    "performing-web-application-firewall-bypass": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "80f11c6bfad7e68de46909e311168eccbd3e4964ef3568b0d8e1db813ee0b2a3"
+    },
+    "performing-web-application-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "449d856498b6594dce23a992035b991aac09361a0d26e4e2a9ba91415991acc8"
+    },
+    "performing-web-application-scanning-with-nikto": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ab32777226e3b3aaa26c06a99cb7a756201cc10f32651aef76eedd6e7e951230"
+    },
+    "performing-web-application-vulnerability-triage": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7b5832644c3a3c32068ba69d7f86eec11c87a75adb06972f95f5a2228ce55717"
+    },
+    "performing-web-cache-deception-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "beb1e0f53fe990e99153e287708ea32d17519fe29a3722152316ff2ccaa01ed3"
+    },
+    "performing-web-cache-poisoning-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ccd752a21ac887d48cba29c18bb675bf8804573ac2283f8e527e29371e134f34"
+    },
+    "performing-wifi-password-cracking-with-aircrack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bd9e7f2ec62d037501879095be713223586e8e734f0e7132cd2b8cb8f4735a8a"
+    },
+    "performing-windows-artifact-analysis-with-eric-zimmerman-tools": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3f11ce3aa6da291eb454769fbeaf84cc500900a1da22ec66e5e90184eb5628b5"
+    },
+    "performing-wireless-network-penetration-test": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4049639a36e4a6c33b562b23c08e0eb29271a6572017c240f8557c2edb94e78d"
+    },
+    "performing-wireless-security-assessment-with-kismet": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7dac8443b39c48fddabfaadcd883ec7a373f1d820ba999d72d4297126928bce5"
+    },
+    "performing-yara-rule-development-for-detection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "f0dc6fd98b41128e6500da543db9409b7ef1b824cb9dc89aff014222e2714037"
+    },
+    "prioritizing-vulnerabilities-with-cvss-scoring": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "a41963fba22453f3303e548266af2b203c3fae43fe78030c284008af44e1bc4e"
+    },
+    "processing-stix-taxii-feeds": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "1e888a05fd99533bb931659f2de93e4f0c0960a971b5571d97807a8d6b9a5f79"
+    },
+    "profiling-threat-actor-groups": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "8289b389879c58f0175654b2bb8fabcef4f648a4105c6680fdba0dc6bf838f6e"
+    },
+    "recovering-deleted-files-with-photorec": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "148549600c515993fd71e2d65c4e24a8eb914872f72e296c32864fa8da24c605"
+    },
+    "recovering-from-ransomware-attack": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "881d8afd0d01bc8dbcf88aa581008155a4e05851f92bfb5100873c6078d7c392"
+    },
+    "remediating-s3-bucket-misconfiguration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "d756d8f7f6cb5777a6ddd4fce514efcc7fd837f120ac9fd9be1f636fb4bc337c"
+    },
+    "reverse-engineering-android-malware-with-jadx": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "58b4a365cc7312172dc693fa6870609307e81a9c56f41d824b067812025ed9e2"
+    },
+    "reverse-engineering-dotnet-malware-with-dnspy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "95da09939443260330233872d2bbc0b7ebdfcf54a477ded433a57ded887bce68"
+    },
+    "reverse-engineering-ios-app-with-frida": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "779cfaa68625d5b41ab7bfbb12c7c3a0cab9b8a7881f886000dd6bddff22d159"
+    },
+    "reverse-engineering-malware-with-ghidra": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0314717fd6564449a2b21346ef384484df06b743158b38f1cffed4d8849040b7"
+    },
+    "reverse-engineering-ransomware-encryption-routine": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "5ba33dada84fcd6b3a3d0002147342d8185cbe4013536fdffe7aea2a485bc2f8"
+    },
+    "reverse-engineering-rust-malware": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "190ee9ec28308d1334615682de7e22a092c5b95d7dd4bfb2e3ea4f3603dfb6b4"
+    },
+    "scanning-container-images-with-grype": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "25371c784240e58b64734d2292ea04f28633c0614e9926a3f529ae413d92e5a6"
+    },
+    "scanning-containers-with-trivy-in-cicd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "81ad49ae2c39011e2eb1a1755eabafe0b5c390e183bb9a4b403e206748829bde"
+    },
+    "scanning-docker-images-with-trivy": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6a9770d7b3f5564d5a051f895defa5fefdd87024ff0eb4efaf6e2fc7ff60a3d1"
+    },
+    "scanning-infrastructure-with-nessus": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4be07482db3955741e039cb0f918c91a2b5f6d97d65317d65d6990989b1376b1"
+    },
+    "scanning-kubernetes-manifests-with-kubesec": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "43b2cb65649c799d6a4b078dd6e67be97948211aceb736eff31ee3403b05bd33"
+    },
+    "scanning-network-with-nmap-advanced": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "238b359fb0cccd857da97ea3cceb4241d9d2e178a8f69a31e684c334a4bbb3df"
+    },
+    "securing-api-gateway-with-aws-waf": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "59deef17c015b9141f8b267b8d8368ce74acc4f599218f54fdb095ee8f10be0a"
+    },
+    "securing-aws-iam-permissions": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "bc35313c64ffbbbdcfe95b30a9d4f5a5618e6dc8bc9196da2365dc12d5f3bfc5"
+    },
+    "securing-aws-lambda-execution-roles": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "fa6680a2ce5b0d6234b32aec6ccde0aca6af1e8ef75d65a33ae16273a56304e5"
+    },
+    "securing-azure-with-microsoft-defender": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "396bd141e503d32402006ab93a19d5e1cbd652a7c001cfb69e49c51c7fc3d252"
+    },
+    "securing-container-registry-images": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "03ea6fab689768fa4c2d451695ad572833ed0da8d7e1995382684eba81f6f699"
+    },
+    "securing-container-registry-with-harbor": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "97d89054545c7247259faa954ed41ef3817d84f1d9e140472b6388da534b6a54"
+    },
+    "securing-github-actions-workflows": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "dc709e3b9d20ec688ae833033893881e127c4ed5344a71260bcb3fc71fd3c2e0"
+    },
+    "securing-helm-chart-deployments": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "57005e38758b7e9960a0c85ad669392733b8fe34c61508720a4d17430f295db9"
+    },
+    "securing-historian-server-in-ot-environment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6dfcb8cdd8c6945a7ea56c1f4a2f563b236edee0ea91cc8e34cbaa848b036a23"
+    },
+    "securing-kubernetes-on-cloud": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "49d5263caac6e0b8982cf47db1ab5eced69c1a9117ee46bc9027cd19eddc14ff"
+    },
+    "securing-remote-access-to-ot-environment": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "14b63b6647f7514bd7c6e9330aed8140a475792a8b3f709b8b12de99e483b4ca"
+    },
+    "securing-serverless-functions": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7ac4186b7efce50c590e06f286e762a96001be30a3d3c5c0bc2336cc88999cd5"
+    },
+    "testing-android-intents-for-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "69562508e2addb569b00306fa7ad51ac594b97393ccf7eacba3207cfd416d858"
+    },
+    "testing-api-authentication-weaknesses": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0eb152773a6e9f60cdf73381ed0d75a6d9002bd31859fad205fd903849aa62b5"
+    },
+    "testing-api-for-broken-object-level-authorization": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "434ffdc9aed1c752c40bc3a983d7e0fa59be669a1be4c81a4c36d8709b514483"
+    },
+    "testing-api-for-mass-assignment-vulnerability": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ac92f79fffb922db6c38a33524e1ea277165c3062c1dbc9c42483c76dbe01c9d"
+    },
+    "testing-api-security-with-owasp-top-10": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "cbc22fd83aa63874e029f80e61dbcb449f3e9974839914c65391bf47a1287bd3"
+    },
+    "testing-cors-misconfiguration": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "7492938b161899f885fb2e0f0d9a8ae9837780bd3c398414de030b792844b8de"
+    },
+    "testing-for-broken-access-control": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2ad520dc127c350b14eb0eac5c3df855a8a93eac0d0a044fb3f8828f4efe77e9"
+    },
+    "testing-for-business-logic-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0230c8dcc4526f6bd8f04185e491ed83eb6bd73d3008f7b8c0107382504c9fd3"
+    },
+    "testing-for-email-header-injection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "797fa54fa7bbbdeefdb82b2ff3cc8da43fa3dfa8fb0305f5fa7c36ec9cf0c95c"
+    },
+    "testing-for-host-header-injection": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c5252d02709ae1f720adf6a529629556608e3dfeec292518e1466d8dd3e56b55"
+    },
+    "testing-for-json-web-token-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "9c84181e3ab0b989bede04f82fb156f30ab8639a3e1fb10305e30084a7b41302"
+    },
+    "testing-for-open-redirect-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "79fcfe55bcd201a8c1bdc6cbe9595e6cca84e7d726e8c1953f5d0b80270e9db6"
+    },
+    "testing-for-sensitive-data-exposure": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c8971736224ab4275aa2a33263f2c4fe552076b3f790ca5b0af04130176d63bf"
+    },
+    "testing-for-xml-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "37a6ae6c4ec75925b0caecea6e7298e16680790576e57af2ee9c966df1f8563e"
+    },
+    "testing-for-xss-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "46e52c570bce417ad250736432a1eb7c570305281417f55d840fcdc8c5a16abc"
+    },
+    "testing-for-xss-vulnerabilities-with-burpsuite": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "0b4428115b004175de2bf5a2505129314efaf88120bcecf3f712357f2d69aad2"
+    },
+    "testing-for-xxe-injection-vulnerabilities": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "670ffeae354d2df84656a5f1b7d3963919d52d31343ca1b4eba117d9cdea136f"
+    },
+    "testing-jwt-token-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "3f8364e84708de9707d23a9b62b1075e892e0a90d3270e07bb3fd8c2819898f3"
+    },
+    "testing-mobile-api-authentication": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "6d1bb7c6d78cf11ff18696883762d8b54bcd75efe29e8e579ed5c4d86cb817ea"
+    },
+    "testing-oauth2-implementation-flaws": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "74d462756e92ccf0a2d45425b6c7aa4f607a856e49aba9023ad2af596f9926a3"
+    },
+    "testing-ransomware-recovery-procedures": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "4731c073cf0dbe4027579d42beca09bf4c038de64e7f33fe2cc1f3afcfe87332"
+    },
+    "testing-websocket-api-security": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "80152792ecfe68a4ae0cd3ae601b3dc8eb367d1b0a251fa5a921c212cf6ea48b"
+    },
+    "tracking-threat-actor-infrastructure": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "e86839d12a991d5eb22378d996ec49f3e8595bf5a00e2559108255e99ec7ea8b"
+    },
+    "triaging-security-alerts-in-splunk": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "2890c3e094b59011a99a7e1220224f4416ff5f0b936226b3f2e2fcd85d7063d4"
+    },
+    "triaging-security-incident": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "365b02adc8bd33aa3f693af46e28d09ca6b98697781f127ef40324333f2d7ac2"
+    },
+    "triaging-security-incident-with-ir-playbook": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "ee06ccf94a9f1992a89dbd3e76e09da28d4bb00b3a41d54339b75656383a138f"
+    },
+    "triaging-vulnerabilities-with-ssvc-framework": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "910fe8017b989e759f85ff279d7e184451a3e76fbf81d16f7453b6ca0e62d144"
+    },
+    "validating-backup-integrity-for-recovery": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "computedHash": "c3f6bcb27de91d93ae40ffa33c05b6dc9a569428fee0a9bd4f0c690fdb0b95df"
+    }
+  }
+}

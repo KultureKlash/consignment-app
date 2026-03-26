@@ -38,6 +38,9 @@ model Consignor {
   qstNumber      String?                 // QST number (Quebec only)
   storeOwned     Boolean  @default(false)  // true = store-owned inventory, excluded from payouts
   feeRate        Float    @default(0.15)  // consignment fee — e.g. 0.15 = 15% fee, consignor keeps 85%
+  status         String   @default("active") // "active" | "suspended"
+  suspensionReason String?               // admin-provided reason for suspension
+  suspendedAt    DateTime?               // when the account was suspended
   avatarColor    String?                 // HSL color string for portal avatar badge
   notificationPrefs String?              // JSON: { disabled: string[] } — null = all enabled
 
@@ -90,7 +93,7 @@ model Listing {
 
   price           Float
   cost            Float?                // acquisition cost (store-owned inventory only)
-  status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "active" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
+  status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "active" | "paused" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
 
   // Lifecycle timestamps
   createdAt       DateTime  @default(now())
