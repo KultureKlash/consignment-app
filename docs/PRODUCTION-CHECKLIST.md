@@ -59,105 +59,40 @@ These are set in `app/entry.server.tsx` and activate automatically:
 
 ---
 
-## 4. Improvements to Apply Before Production
+## 4. Security Hardening (Already Implemented)
 
-### 4a. Add Cache-Control to Portal Routes (HIGH)
+All of the following are already in the code:
 
-Sensitive portal pages (dashboard, payouts, listings) should not be cached by browsers.
-
-**File:** `app/entry.server.tsx` — add inside the `if (isPortal)` block:
-
-```typescript
-responseHeaders.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-responseHeaders.set("Pragma", "no-cache");
-```
-
-**Why:** Without this, a shared/public computer could show cached financial data to the next user.
+- **Cache-Control** on portal routes: `no-store, no-cache, must-revalidate` — prevents browser caching sensitive pages
+- **Cross-Origin headers**: `CORP: same-origin`, `COOP: same-origin` — prevents cross-origin embedding
+- **Server info removed**: `Server` and `X-Powered-By` headers deleted — hides tech stack
+- **HSTS with preload**: `max-age=31536000; includeSubDomains; preload` — submit domain to https://hstspreload.org/ after deploy
+- **Expanded Permissions-Policy**: accelerometer, camera, geolocation, gyroscope, magnetometer, microphone, payment, usb all blocked
+- **SameSite=Strict** cookies: better CSRF protection (trade-off: external links to portal require re-login)
+- **CSP base-uri and form-action**: both set to `'self'` — prevents form hijacking
 
 ---
 
-### 4b. Add Cross-Origin Headers to Portal (MEDIUM)
+## 5. Rate Limits (May Need Tuning)
 
-**File:** `app/entry.server.tsx` — add inside the `if (isPortal)` block:
+Current limits in `app/lib/rate-limit.server.ts`:
 
-```typescript
-responseHeaders.set("Cross-Origin-Resource-Policy", "same-origin");
-responseHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
-```
+| Limiter | Limit | Scope | Notes |
+|---------|-------|-------|-------|
+| Login | 10 / 15 min | Per IP | Prevents OTP brute force |
+| Portal API | 60 / min | Per IP | Search autocomplete |
+| Portal Forms | 20 / min | Per IP | Listing submissions |
 
-**Why:** Prevents cross-origin embedding and mitigates side-channel attacks (Spectre-like).
+**Known limitation:** A consignor submitting 1,050 listings would be throttled to ~20/min (~52 min total). Consider:
+- Raising the form limit for authenticated sessions
+- Adding bulk/CSV upload for high-volume consignors
+- Exempting authenticated users from form rate limiting entirely
 
----
-
-### 4c. Remove Server Info Disclosure (MEDIUM)
-
-**File:** `app/entry.server.tsx` — add to the "all routes" section:
-
-```typescript
-responseHeaders.delete("Server");
-responseHeaders.delete("X-Powered-By");
-```
-
-**Why:** Hides your tech stack (Node.js version, framework) from attackers scanning for known vulnerabilities.
+The rate limiter is **in-memory** — resets on server restart. For multi-instance production, swap to Redis.
 
 ---
 
-### 4d. Add HSTS Preload (LOW)
-
-**File:** `app/entry.server.tsx` — update HSTS header:
-
-```typescript
-// Current:
-"max-age=31536000; includeSubDomains"
-// Change to:
-"max-age=31536000; includeSubDomains; preload"
-```
-
-Then submit your domain to https://hstspreload.org/ so browsers enforce HTTPS even on first visit.
-
----
-
-### 4e. Expand Permissions-Policy (LOW)
-
-**File:** `app/entry.server.tsx` — update to block more unused APIs:
-
-```typescript
-// Current:
-"camera=(), microphone=(), geolocation=()"
-// Change to:
-"accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
-```
-
----
-
-### 4f. Upgrade SameSite Cookie to Strict (LOW)
-
-**File:** `app/services/portal-auth.server.ts` — change:
-
-```typescript
-// Current:
-"SameSite=Lax"
-// Change to:
-"SameSite=Strict"
-```
-
-**Why:** Better CSRF protection. Trade-off: if a consignor clicks a link to your portal from an external site, they'll need to log in again.
-
----
-
-### 4g. Add CSP base-uri and form-action (LOW)
-
-**File:** `app/entry.server.tsx` — append to CSP string:
-
-```
-; base-uri 'self'; form-action 'self'
-```
-
-**Why:** Prevents attackers from changing the base URL or submitting forms to external domains.
-
----
-
-## 5. Resend Email Setup
+## 6. Resend Email Setup
 
 1. Create account at https://resend.com (free tier: 3,000 emails/month)
 2. Verify your sending domain (DNS records)
@@ -167,7 +102,7 @@ Then submit your domain to https://hstspreload.org/ so browsers enforce HTTPS ev
 
 ---
 
-## 6. Domain & HTTPS
+## 7. Domain & HTTPS
 
 - Your production domain MUST use HTTPS (required for Secure cookies, HSTS, Shopify)
 - Configure SSL certificate (most hosting platforms do this automatically)
@@ -175,7 +110,7 @@ Then submit your domain to https://hstspreload.org/ so browsers enforce HTTPS ev
 
 ---
 
-## 7. Monitoring & Maintenance
+## 8. Monitoring & Maintenance
 
 - **OTP cleanup:** Expired OTPs are cleaned opportunistically, but consider a cron job to run `cleanExpiredOtps()` daily
 - **Rate limiter:** Currently in-memory — resets on server restart. For multi-instance production, consider Redis-based rate limiting
@@ -184,7 +119,7 @@ Then submit your domain to https://hstspreload.org/ so browsers enforce HTTPS ev
 
 ---
 
-## 8. Pre-Launch Verification
+## 9. Pre-Launch Verification
 
 - [ ] `COOKIE_SECRET` is set (not the dev fallback)
 - [ ] `RESEND_API_KEY` is set and email delivery works

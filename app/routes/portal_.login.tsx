@@ -37,12 +37,12 @@ export async function action({ request }: ActionFunctionArgs) {
 
     if (intent === "verify-otp") {
       const { verifyOtpSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(verifyOtpSchema, form);
+      const parsed = parseForm(verifyOtpSchema, form);
 
       const { verifyOtp } = await import("~/services/otp.server");
-      const result = await verifyOtp(data.email, data.code);
+      const result = await verifyOtp(parsed.email, parsed.code);
 
-      if ("error" in result) return { error: result.error, email: data.email };
+      if ("error" in result) return { error: result.error, email: parsed.email };
 
       throw redirect("/portal/dashboard", {
         headers: { "Set-Cookie": createSessionCookie(result.consignor.id) },
@@ -51,7 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     return { error: "Invalid request" };
   } catch (err) {
-    if (err instanceof Response) throw err; // redirect
+    if (err instanceof Response) throw err;
     return { error: err instanceof Error ? err.message : "Something went wrong" };
   }
 }
@@ -63,26 +63,28 @@ export default function PortalLogin() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"email" | "verify">("email");
+  const [email, setEmail] = useState(actionData?.email ?? "");
+  // code input is uncontrolled — browser manages it natively
+  const [manualBack, setManualBack] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
 
-  // Sync step from server response
+  // Derive step from action data (not useState) — survives re-renders reliably
+  const step = !manualBack && (actionData?.step === "verify" || (actionData?.error && actionData?.email))
+    ? "verify"
+    : "email";
+
+  // Sync email from server + auto-focus code input
   useEffect(() => {
-    if (actionData?.step === "verify") {
-      setStep("verify");
-      setCode("");
+    if (actionData?.email) setEmail(actionData.email);
+    if (step === "verify") {
+      if (codeRef.current) codeRef.current.value = "";
       setTimeout(() => codeRef.current?.focus(), 100);
     }
-    if (actionData?.email) {
-      setEmail(actionData.email);
-    }
-  }, [actionData]);
+  }, [actionData, step]);
 
   const handleBack = () => {
-    setStep("email");
-    setCode("");
+    setManualBack(true);
+    if (codeRef.current) codeRef.current.value = "";
   };
 
   // Mask email: j***@example.com
@@ -163,7 +165,7 @@ export default function PortalLogin() {
           {step === "verify" && (
             <Form method="post" reloadDocument className="space-y-4">
               <input type="hidden" name="intent" value="verify-otp" />
-              <input type="hidden" name="email" value={email} />
+              <input type="hidden" name="email" value={email || actionData?.email || ""} />
 
               {/* Code sent notice */}
               <div className="px-4 py-3 rounded-xl text-sm bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]">
@@ -179,14 +181,10 @@ export default function PortalLogin() {
                   ref={codeRef}
                   type="text"
                   name="code"
-                  value={code}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setCode(v);
-                  }}
                   placeholder="000000"
                   required
                   maxLength={6}
+                  pattern="\d{6}"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   className="w-full px-4 py-3 rounded-xl glass-input text-sm text-center tracking-[0.3em] font-mono text-lg"
@@ -195,7 +193,7 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || code.length !== 6}
+                disabled={isSubmitting}
                 className="btn-glow w-full py-3 text-center flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (

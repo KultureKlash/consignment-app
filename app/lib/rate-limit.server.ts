@@ -80,11 +80,11 @@ export function getClientIp(request: Request): string {
 
 // ── Pre-configured limiters ──
 
-/** Login: 5 attempts per 15 minutes */
+/** Login: 10 attempts per 15 minutes */
 export function loginRateLimit(request: Request): Response | null {
   return checkRateLimit(getClientIp(request), {
     name: "login",
-    max: 5,
+    max: 10,
     windowSec: 15 * 60,
   });
 }
