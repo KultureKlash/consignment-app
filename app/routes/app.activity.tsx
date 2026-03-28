@@ -4,7 +4,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getActivityFeed } from "~/services/dashboard.server";
 import { ArrowLeft, History } from "lucide-react";
-import ActivityItem from "~/components/ActivityItem";
+import ActivityItem from "~/components/admin/ActivityItem";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);

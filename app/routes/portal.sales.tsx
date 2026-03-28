@@ -5,8 +5,8 @@ import { redirect } from "react-router";
 import { Search, DollarSign, ShoppingBag, TrendingUp, CheckCircle2, Clock, CircleDot, RotateCcw } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { fmt } from "~/lib/currency";
-import { authenticatePortal } from "~/services/portal-auth.server";
-import { getConsignorSales } from "~/services/portal-dashboard.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
+import { getConsignorSales } from "~/services/portal/dashboard.server";
 import type { loader as portalLoader } from "./portal";
 
 export async function loader({ request }: LoaderFunctionArgs) {

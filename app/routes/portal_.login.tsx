@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Form, useActionData, useNavigation, redirect } from "react-router";
 import type { ActionFunctionArgs, LinksFunction } from "react-router";
 import { Loader2, ArrowLeft, Mail, ShieldCheck } from "lucide-react";
-import { createSessionCookie } from "~/services/portal-auth.server";
+import { createSessionCookie } from "~/services/portal/auth.server";
 import portalStyles from "~/portal.css?url";
 
 export const links: LinksFunction = () => [
@@ -63,28 +63,24 @@ export default function PortalLogin() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  const [email, setEmail] = useState(actionData?.email ?? "");
-  // code input is uncontrolled — browser manages it natively
-  const [manualBack, setManualBack] = useState(false);
+  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"email" | "verify">("email");
   const codeRef = useRef<HTMLInputElement>(null);
 
-  // Derive step from action data (not useState) — survives re-renders reliably
-  const step = !manualBack && (actionData?.step === "verify" || (actionData?.error && actionData?.email))
-    ? "verify"
-    : "email";
-
-  // Sync email from server + auto-focus code input
   useEffect(() => {
+    if (actionData?.step === "verify") setStep("verify");
     if (actionData?.email) setEmail(actionData.email);
+  }, [actionData]);
+
+  useEffect(() => {
     if (step === "verify") {
       if (codeRef.current) codeRef.current.value = "";
       setTimeout(() => codeRef.current?.focus(), 100);
     }
-  }, [actionData, step]);
+  }, [step]);
 
   const handleBack = () => {
-    setManualBack(true);
-    if (codeRef.current) codeRef.current.value = "";
+    setStep("email");
   };
 
   // Mask email: j***@example.com
@@ -220,6 +216,11 @@ export default function PortalLogin() {
             </Form>
           )}
         </div>
+      </div>
+
+      {/* Kulture Klash logo */}
+      <div className="fixed bottom-4 right-4 z-10 opacity-60 hover:opacity-100 transition-opacity">
+        <img src="/kulture%20logo.png" alt="Kulture Klash" className="h-20" />
       </div>
     </div>
   );

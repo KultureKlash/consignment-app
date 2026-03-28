@@ -7,9 +7,9 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { createListing, cancelListing } from "~/services/listings.server";
 import { adminEditListing } from "~/services/submission.server";
 import prisma from "~/db.server";
-import CreateListingForm from "~/components/CreateListingForm";
-import ListingsTable from "~/components/ListingsTable";
-import type { EditApproveFields } from "~/components/ListingsTable";
+import CreateListingForm from "~/components/admin/CreateListingForm";
+import ListingsTable from "~/components/admin/ListingsTable";
+import type { EditApproveFields } from "~/components/admin/ListingsTable";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);

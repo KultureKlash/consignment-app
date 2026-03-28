@@ -4,7 +4,7 @@ import { useLoaderData, useRouteLoaderData, useFetcher, useNavigate } from "reac
 import { redirect } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
-import { authenticatePortal } from "~/services/portal-auth.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
 import { updateSubmittedListing } from "~/services/submission.server";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";

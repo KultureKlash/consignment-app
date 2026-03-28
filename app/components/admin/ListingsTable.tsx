@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Package, ChevronRight, Plus, Check, X, Zap, Pencil, Camera } from "lucide-react";
 import { processProductImage } from "~/lib/image-processing";
-import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/listing-ui";
+import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
 import { compareSizes } from "~/lib/size-order";
 import { fmt } from "~/lib/currency";
 

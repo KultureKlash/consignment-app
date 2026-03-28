@@ -4,7 +4,7 @@ import { useLoaderData, useRouteLoaderData, useFetcher, redirect } from "react-r
 import { Settings, User, Mail, Phone, Percent, Save, Check, Palette, Bell, Building2, UserRound, MapPin, FileText } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
-import { authenticatePortal } from "~/services/portal-auth.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
 import type { loader as portalLoader } from "./portal";
 
 const AVATAR_COLORS = [
@@ -92,30 +92,32 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "update-color") {
-    const color = (form.get("color") as string ?? "").trim() || null;
-
-    const { default: prisma } = await import("~/db.server");
-    await prisma.consignor.update({
-      where: { id: consignor.id },
-      data: { avatarColor: color },
-    });
-
-    return { colorUpdated: true };
+    try {
+      const color = (form.get("color") as string ?? "").trim() || null;
+      const { default: prisma } = await import("~/db.server");
+      await prisma.consignor.update({
+        where: { id: consignor.id },
+        data: { avatarColor: color },
+      });
+      return { colorUpdated: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to update color" };
+    }
   }
 
   if (intent === "update-notification-prefs") {
-    const inApp = form.get("inApp") === "1";
-    const email = form.get("email") === "1";
-
-    const { default: prisma } = await import("~/db.server");
-    const prefs: Record<string, boolean> = { inApp, email };
-
-    await prisma.consignor.update({
-      where: { id: consignor.id },
-      data: { notificationPrefs: JSON.stringify(prefs) },
-    });
-
-    return { prefsUpdated: true };
+    try {
+      const inApp = form.get("inApp") === "1";
+      const email = form.get("email") === "1";
+      const { default: prisma } = await import("~/db.server");
+      await prisma.consignor.update({
+        where: { id: consignor.id },
+        data: { notificationPrefs: JSON.stringify({ inApp, email }) },
+      });
+      return { prefsUpdated: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to update preferences" };
+    }
   }
 
   return { error: "Unknown action" };

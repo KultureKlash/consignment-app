@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
-import { authenticatePortal } from "~/services/portal-auth.server";
-import { getVariantMarketData } from "~/services/portal-products.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
+import { getVariantMarketData } from "~/services/portal/products.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);

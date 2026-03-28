@@ -47,6 +47,13 @@ export const verifyOtpSchema = z.object({
 
 // ── Consignor create/update ──
 
+const taxFields = {
+  taxStatus: z.enum(["individual", "business"]).optional(),
+  gstNumber: z.string().max(20).optional().transform((v) => v || null),
+  qstNumber: z.string().max(20).optional().transform((v) => v || null),
+  province: z.string().max(5).optional().transform((v) => v || null),
+};
+
 export const createConsignorSchema = z.object({
   name: shortText("Name"),
   email,
@@ -54,6 +61,7 @@ export const createConsignorSchema = z.object({
     .string()
     .transform((v) => parseFloat(v))
     .refine((v) => !isNaN(v) && v >= 0 && v <= 100, "Fee rate must be between 0 and 100"),
+  ...taxFields,
 });
 
 export const updateConsignorSchema = z.object({
@@ -64,6 +72,7 @@ export const updateConsignorSchema = z.object({
     .transform((v) => parseFloat(v))
     .refine((v) => !isNaN(v) && v >= 0 && v <= 100, "Fee rate must be between 0 and 100"),
   storeOwned: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  ...taxFields,
 });
 
 // ── Portal listing submission ──

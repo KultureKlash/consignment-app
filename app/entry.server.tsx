@@ -16,6 +16,7 @@ export default async function handleRequest(
 ) {
   const url = new URL(request.url);
   const isPortal = url.pathname.startsWith("/portal");
+  const isProd = process.env.NODE_ENV === "production";
 
   // Skip Shopify headers for portal routes (they run outside the Shopify iframe)
   if (!isPortal) {
@@ -39,7 +40,9 @@ export default async function handleRequest(
     responseHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
     responseHeaders.set(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      isProd
+        ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self' ws://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     );
     responseHeaders.set("Cross-Origin-Resource-Policy", "same-origin");
     responseHeaders.set("Cross-Origin-Opener-Policy", "same-origin");

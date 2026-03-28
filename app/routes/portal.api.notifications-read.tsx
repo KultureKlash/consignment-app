@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import prisma from "~/db.server";
-import { authenticatePortal } from "~/services/portal-auth.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
 
 export async function action({ request }: ActionFunctionArgs) {
   const { portalApiRateLimit } = await import("~/lib/rate-limit.server");

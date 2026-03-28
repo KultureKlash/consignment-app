@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { resolveShopifyTaxonomyId, searchShopifyTaxonomy } from "~/services/shopify-taxonomy.server";
+import { resolveShopifyTaxonomyId, searchShopifyTaxonomy } from "~/services/shopify/taxonomy.server";
 
 describe("shopify-taxonomy.server", () => {
   describe("resolveShopifyTaxonomyId", () => {

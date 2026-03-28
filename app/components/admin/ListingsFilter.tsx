@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
-import { inputStyle, searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
-import CustomSelect from "~/components/CustomSelect";
+import { inputStyle, searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
+import CustomSelect from "~/components/admin/CustomSelect";
 
 type Consignor = { id: string; name: string };
 

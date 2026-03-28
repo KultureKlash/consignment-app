@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import CustomSelect from "./CustomSelect";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
+import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 
 type Consignor = { id: string; name: string };
 

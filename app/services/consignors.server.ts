@@ -34,7 +34,15 @@ export async function getConsignorDetail(id: string) {
 /**
  * Create a new consignor with name, email, and fee rate.
  */
-export async function createConsignor(data: { name: string; email: string; feeRate: number }) {
+export async function createConsignor(data: {
+  name: string;
+  email: string;
+  feeRate: number;
+  taxStatus?: string;
+  gstNumber?: string | null;
+  qstNumber?: string | null;
+  province?: string | null;
+}) {
   const existing = await prisma.consignor.findUnique({ where: { email: data.email } });
   if (existing) throw new Error("A consignor with this email already exists");
 
@@ -43,7 +51,15 @@ export async function createConsignor(data: { name: string; email: string; feeRa
   }
 
   return prisma.consignor.create({
-    data: { name: data.name, email: data.email, feeRate: data.feeRate },
+    data: {
+      name: data.name,
+      email: data.email,
+      feeRate: data.feeRate,
+      taxStatus: data.taxStatus || "individual",
+      gstNumber: data.gstNumber || null,
+      qstNumber: data.qstNumber || null,
+      province: data.province || null,
+    },
   });
 }
 
@@ -52,7 +68,16 @@ export async function createConsignor(data: { name: string; email: string; feeRa
  */
 export async function updateConsignor(
   id: string,
-  data: { name?: string; email?: string; feeRate?: number; storeOwned?: boolean },
+  data: {
+    name?: string;
+    email?: string;
+    feeRate?: number;
+    storeOwned?: boolean;
+    taxStatus?: string;
+    gstNumber?: string | null;
+    qstNumber?: string | null;
+    province?: string | null;
+  },
 ) {
   const consignor = await prisma.consignor.findUnique({ where: { id } });
   if (!consignor) throw new Error("Consignor not found");
@@ -77,6 +102,10 @@ export async function updateConsignor(
       ...(data.email !== undefined ? { email: data.email } : {}),
       ...(data.feeRate !== undefined ? { feeRate: data.feeRate } : {}),
       ...(data.storeOwned !== undefined ? { storeOwned: data.storeOwned } : {}),
+      ...(data.taxStatus !== undefined ? { taxStatus: data.taxStatus } : {}),
+      ...(data.gstNumber !== undefined ? { gstNumber: data.gstNumber } : {}),
+      ...(data.qstNumber !== undefined ? { qstNumber: data.qstNumber } : {}),
+      ...(data.province !== undefined ? { province: data.province } : {}),
     },
   });
 }

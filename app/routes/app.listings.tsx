@@ -18,17 +18,17 @@ import {
 } from "~/services/submission.server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
-import ListingsFilter from "~/components/ListingsFilter";
-import ListingsTable from "~/components/ListingsTable";
-import type { EditApproveFields } from "~/components/ListingsTable";
-import Pagination from "~/components/Pagination";
-import QuickAddPopover from "~/components/QuickAddPopover";
+import ListingsFilter from "~/components/admin/ListingsFilter";
+import ListingsTable from "~/components/admin/ListingsTable";
+import type { EditApproveFields } from "~/components/admin/ListingsTable";
+import Pagination from "~/components/shared/Pagination";
+import QuickAddPopover from "~/components/admin/QuickAddPopover";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
   // One-time backfill: fetch image URLs from Shopify for products missing them
-  const { backfillProductImages } = await import("~/services/shopify-products.server");
+  const { backfillProductImages } = await import("~/services/shopify/products.server");
   await backfillProductImages(admin);
 
   const url = new URL(request.url);

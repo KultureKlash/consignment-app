@@ -7,9 +7,10 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
 import { syncInventory } from "~/services/inventory.server";
 import prisma from "~/db.server";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
+import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { fmt } from "~/lib/currency";
+import { computeTax } from "~/lib/tax";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -28,7 +29,16 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const { updateConsignorSchema, parseForm } = await import("~/lib/validation");
       const data = parseForm(updateConsignorSchema, formData);
 
-      await updateConsignor(id, { name: data.name, email: data.email, feeRate: data.feeRate, storeOwned: data.storeOwned ?? false });
+      await updateConsignor(id, {
+        name: data.name,
+        email: data.email,
+        feeRate: data.feeRate,
+        storeOwned: data.storeOwned ?? false,
+        taxStatus: data.taxStatus,
+        gstNumber: data.gstNumber,
+        qstNumber: data.qstNumber,
+        province: data.province,
+      });
       return { success: true, intent };
     }
     if (intent === "suspend") {
@@ -133,6 +143,10 @@ export default function ConsignorDetail() {
   const [email, setEmail] = useState(consignor.email);
   const [feeRatePercent, setFeeRatePercent] = useState(String(Math.round(consignor.feeRate * 100)));
   const [storeOwned, setStoreOwned] = useState(consignor.storeOwned);
+  const [taxStatus, setTaxStatus] = useState(consignor.taxStatus || "individual");
+  const [gstNumber, setGstNumber] = useState(consignor.gstNumber || "");
+  const [qstNumber, setQstNumber] = useState(consignor.qstNumber || "");
+  const [province, setProvince] = useState(consignor.province || "QC");
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState("");
   const [pauseListings, setPauseListings] = useState(true);
@@ -144,7 +158,11 @@ export default function ConsignorDetail() {
     name !== consignor.name ||
     email !== consignor.email ||
     feeRatePercent !== String(Math.round(consignor.feeRate * 100)) ||
-    storeOwned !== consignor.storeOwned;
+    storeOwned !== consignor.storeOwned ||
+    taxStatus !== (consignor.taxStatus || "individual") ||
+    gstNumber !== (consignor.gstNumber || "") ||
+    qstNumber !== (consignor.qstNumber || "") ||
+    province !== (consignor.province || "QC");
 
   useEffect(() => {
     const data = fetcher.data as Record<string, unknown> | undefined;
@@ -175,7 +193,17 @@ export default function ConsignorDetail() {
 
   const handleSave = () => {
     fetcher.submit(
-      { intent: "update", name, email, feeRate: String(parseFloat(feeRatePercent) / 100), storeOwned: String(storeOwned) },
+      {
+        intent: "update",
+        name,
+        email,
+        feeRate: String(parseFloat(feeRatePercent) / 100),
+        storeOwned: String(storeOwned),
+        taxStatus,
+        gstNumber: taxStatus === "business" ? gstNumber : "",
+        qstNumber: taxStatus === "business" ? qstNumber : "",
+        province: taxStatus === "business" ? province : "",
+      },
       { method: "POST" },
     );
   };
@@ -275,6 +303,11 @@ export default function ConsignorDetail() {
             <span style={{ color: "#d1d5db" }}>|</span>
             <span style={{ fontWeight: 600, color: balance > 0 ? "#1a7f37" : "#333" }}>
               Balance: ${fmt(balance)}
+              {consignor.taxStatus === "business" && balance > 0 && (
+                <span style={{ fontWeight: 400, color: "#6d7175", fontSize: "12px" }}>
+                  {" "}(${fmt(computeTax(balance, consignor).total)} with tax)
+                </span>
+              )}
             </span>
           </div>
         </div>
@@ -392,6 +425,81 @@ export default function ConsignorDetail() {
                 <p style={{ fontSize: "11px", color: "#9ca3af", margin: "-8px 0 0 26px" }}>
                   This account will be excluded from payout workflows.
                 </p>
+              )}
+
+              {/* Tax Status */}
+              <div style={{ borderTop: "1px solid rgba(227,227,227,0.4)", paddingTop: "16px" }}>
+                <label style={labelStyle}>Tax Status</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {(["individual", "business"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setTaxStatus(status)}
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        borderRadius: "8px",
+                        border: `1px solid ${taxStatus === status ? "#111827" : "#c4c9d1"}`,
+                        background: taxStatus === status ? "#111827" : "#fff",
+                        color: taxStatus === status ? "#fff" : "#374151",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {status === "individual" ? "Individual" : "Registered Business"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {taxStatus === "business" && (
+                <>
+                  <div>
+                    <label style={labelStyle}>Province</label>
+                    <select
+                      value={province}
+                      onChange={(e) => setProvince(e.target.value)}
+                      onFocus={handleFocus as any}
+                      onBlur={handleBlurStyle as any}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="QC">Quebec (QC)</option>
+                      <option value="ON">Ontario (ON)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>GST/HST Number</label>
+                    <input
+                      type="text"
+                      value={gstNumber}
+                      onChange={(e) => setGstNumber(e.target.value)}
+                      onFocus={handleFocus}
+                      onBlur={handleBlurStyle}
+                      style={inputStyle}
+                      placeholder="e.g. 123456789 RT0001"
+                    />
+                  </div>
+                  {province === "QC" && (
+                    <div>
+                      <label style={labelStyle}>QST Number</label>
+                      <input
+                        type="text"
+                        value={qstNumber}
+                        onChange={(e) => setQstNumber(e.target.value)}
+                        onFocus={handleFocus}
+                        onBlur={handleBlurStyle}
+                        style={inputStyle}
+                        placeholder="e.g. 1234567890 TQ0001"
+                      />
+                    </div>
+                  )}
+                  <p style={{ fontSize: "11px", color: "#9ca3af", margin: "-4px 0 0 0" }}>
+                    Business consignors invoice with GST{province === "QC" ? "/QST" : ""} on their payout.
+                  </p>
+                </>
               )}
             </div>
           </div>

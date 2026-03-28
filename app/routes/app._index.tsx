@@ -7,9 +7,9 @@ import { getDashboardData } from "~/services/dashboard.server";
 import { motion } from "framer-motion";
 import { Package, ShoppingBag, TrendingUp, DollarSign, History, ChevronDown, ChevronUp } from "lucide-react";
 import { fmt } from "~/lib/currency";
-import StatsCard from "~/components/StatsCard";
-import ActionItem from "~/components/ActionItem";
-import ActivityItem from "~/components/ActivityItem";
+import StatsCard from "~/components/admin/StatsCard";
+import ActionItem from "~/components/admin/ActionItem";
+import ActivityItem from "~/components/admin/ActivityItem";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);

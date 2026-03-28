@@ -6,8 +6,8 @@ import { ChevronDown, ChevronRight, Clock, FileText, CheckCircle2, CircleDot, Do
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { fmt } from "~/lib/currency";
-import { authenticatePortal } from "~/services/portal-auth.server";
-import { getConsignorPayouts } from "~/services/portal-dashboard.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
+import { getConsignorPayouts } from "~/services/portal/dashboard.server";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 

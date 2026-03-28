@@ -4,6 +4,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getOrderDetail } from "~/services/order-queries.server";
 import { fmt } from "~/lib/currency";
+import { computeTax } from "~/lib/tax";
 import {
   ArrowLeft, ShoppingBag, DollarSign,
   TrendingUp, Users, Package, Clock, FileText,
@@ -111,7 +112,7 @@ const timelineDotColors: Record<string, string> = {
 
 // ── Stats card ──
 
-function StatCard({ label, value, icon: Icon, accentColor }: { label: string; value: string; icon: React.ElementType; accentColor?: string }) {
+function StatCard({ label, value, subtitle, icon: Icon, accentColor }: { label: string; value: string; subtitle?: string; icon: React.ElementType; accentColor?: string }) {
   return (
     <div style={{
       background: "#fff",
@@ -127,6 +128,9 @@ function StatCard({ label, value, icon: Icon, accentColor }: { label: string; va
       <div style={{ fontSize: "20px", fontWeight: 700, color: accentColor ?? "#1a1a1a", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
         {value}
       </div>
+      {subtitle && (
+        <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "4px" }}>{subtitle}</div>
+      )}
     </div>
   );
 }
@@ -198,7 +202,24 @@ export default function OrderDetail() {
           <StatCard label="Total" value={`$${fmt(order.total)}`} icon={DollarSign} />
           <StatCard label="Items" value={String(summary.itemCount)} icon={ShoppingBag} />
           <StatCard label="Our Cut" value={`$${fmt(summary.totalFees)}`} icon={TrendingUp} accentColor="#059669" />
-          <StatCard label="Consignor Payouts" value={`$${fmt(summary.totalConsignorPayout)}`} icon={Users} />
+          <StatCard
+            label="Consignor Payouts"
+            value={`$${fmt(summary.totalConsignorPayout)}`}
+            icon={Users}
+            subtitle={(() => {
+              // Compute aggregate tax across all items with business consignors
+              let totalWithTax = 0;
+              let hasBusiness = false;
+              for (const item of order.items) {
+                const saleTx = item.transactions.find((tx: any) => tx.type === "sale");
+                if (!saleTx) continue;
+                const tax = computeTax(saleTx.consignorAmount, item.listing.consignor);
+                totalWithTax += tax.total;
+                if (tax.isTaxable) hasBusiness = true;
+              }
+              return hasBusiness ? `$${fmt(totalWithTax)} with tax` : undefined;
+            })()}
+          />
         </div>
 
         {/* Items section */}
@@ -257,11 +278,25 @@ export default function OrderDetail() {
                       <span style={{ fontSize: "12px", color: "#9ca3af" }}> ({(consignor.feeRate * 100).toFixed(0)}%)</span>
                     </div>
                     {saleTx && (
-                      <div style={{ fontSize: "12px", color: "#6d7175" }}>
-                        Fee <span style={{ fontWeight: 600, color: "#059669" }}>${fmt(saleTx.feeAmount)}</span>
-                        <span style={{ color: "#d1d5db" }}> · </span>
-                        Payout <span style={{ fontWeight: 600, color: "#6d7175" }}>${fmt(saleTx.consignorAmount)}</span>
-                      </div>
+                      <>
+                        <div style={{ fontSize: "12px", color: "#6d7175" }}>
+                          Fee <span style={{ fontWeight: 600, color: "#059669" }}>${fmt(saleTx.feeAmount)}</span>
+                          <span style={{ color: "#d1d5db" }}> · </span>
+                          Payout <span style={{ fontWeight: 600, color: "#6d7175" }}>${fmt(saleTx.consignorAmount)}</span>
+                        </div>
+                        {(() => {
+                          const tax = computeTax(saleTx.consignorAmount, consignor);
+                          if (!tax.isTaxable) return null;
+                          return (
+                            <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "1px" }}>
+                              {tax.gst > 0 && `+GST $${fmt(tax.gst)} `}
+                              {tax.qst > 0 && `+QST $${fmt(tax.qst)} `}
+                              {tax.hst > 0 && `+${tax.taxLabel} $${fmt(tax.hst)} `}
+                              = <strong style={{ color: "#6d7175" }}>${fmt(tax.total)}</strong> payable
+                            </div>
+                          );
+                        })()}
+                      </>
                     )}
                   </td>
                   {/* Status */}

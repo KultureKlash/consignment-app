@@ -9,8 +9,9 @@ import { fmt } from "~/lib/currency";
 import {
   DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X, FileText,
 } from "lucide-react";
-import CustomSelect from "~/components/CustomSelect";
-import DateRangeFilter from "~/components/DateRangeFilter";
+import CustomSelect from "~/components/admin/CustomSelect";
+import DateRangeFilter from "~/components/admin/DateRangeFilter";
+import { computeTax } from "~/lib/tax";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -407,13 +408,27 @@ export default function Payouts() {
                       <span style={{ marginLeft: "8px", fontSize: "12px", color: "#9ca3af" }}>
                         {entry.transactions.length} item{entry.transactions.length !== 1 ? "s" : ""}
                       </span>
-                      <div style={{ marginLeft: "auto", display: "flex", alignItems: "baseline", gap: "16px" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#6d7175", fontVariantNumeric: "tabular-nums" }}>
-                          Fee ${fmt(entry.transactions.reduce((sum, tx) => sum + tx.feeAmount, 0))}
-                        </span>
-                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#059669", fontVariantNumeric: "tabular-nums" }}>
-                          ${fmt(entry.total)}
-                        </span>
+                      <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: "16px" }}>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#6d7175", fontVariantNumeric: "tabular-nums" }}>
+                            Fee ${fmt(entry.transactions.reduce((sum, tx) => sum + tx.feeAmount, 0))}
+                          </span>
+                          <span style={{ fontSize: "14px", fontWeight: 700, color: "#059669", fontVariantNumeric: "tabular-nums" }}>
+                            ${fmt(entry.total)}
+                          </span>
+                        </div>
+                        {(() => {
+                          const tax = computeTax(entry.total, entry.consignor);
+                          if (!tax.isTaxable) return null;
+                          return (
+                            <span style={{ fontSize: "11px", color: "#9ca3af", fontVariantNumeric: "tabular-nums" }}>
+                              {tax.qst > 0 && `+GST $${fmt(tax.gst)} +QST $${fmt(tax.qst)}`}
+                              {tax.hst > 0 && `+${tax.taxLabel} $${fmt(tax.hst)}`}
+                              {tax.qst === 0 && tax.hst === 0 && `+GST $${fmt(tax.gst)}`}
+                              {" "}= <strong style={{ color: "#6d7175" }}>${fmt(tax.total)}</strong> total
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -454,6 +469,10 @@ export default function Payouts() {
                           <div style={{ display: "flex", alignItems: "center", padding: "8px 20px 8px 12px", gap: "12px", borderBottom: "1px solid rgba(227,227,227,0.3)" }}>
                             <span style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>
                               {selected.size} selected · ${fmt(selectedAmount)}
+                              {(() => {
+                                const tax = computeTax(selectedAmount, entry.consignor);
+                                return tax.isTaxable ? ` (${fmt(tax.total)} with tax)` : "";
+                              })()}
                             </span>
                             <button
                               onClick={() => handleCreatePayout(entry.consignor.id)}
@@ -641,6 +660,20 @@ export default function Payouts() {
                                 </div>
                               );
                             })}
+                            {/* Tax summary for business consignors */}
+                            {(() => {
+                              const tax = computeTax(payout.amount, payout.consignor);
+                              if (!tax.isTaxable) return null;
+                              return (
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "24px", padding: "10px 20px", borderTop: "1px solid rgba(227,227,227,0.3)", background: "#fefce8", fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
+                                  <span style={{ color: "#6d7175" }}>Subtotal <strong>${fmt(tax.subtotal)}</strong></span>
+                                  {tax.gst > 0 && <span style={{ color: "#6d7175" }}>GST (5%) <strong>${fmt(tax.gst)}</strong></span>}
+                                  {tax.qst > 0 && <span style={{ color: "#6d7175" }}>QST (9.975%) <strong>${fmt(tax.qst)}</strong></span>}
+                                  {tax.hst > 0 && <span style={{ color: "#6d7175" }}>{tax.taxLabel} <strong>${fmt(tax.hst)}</strong></span>}
+                                  <span style={{ fontWeight: 700, color: "#1a1a1a" }}>Total Payable ${fmt(tax.total)}</span>
+                                </div>
+                              );
+                            })()}
                             <div style={{ display: "flex", gap: "8px", padding: "12px 20px 12px 48px", borderTop: "1px solid rgba(227,227,227,0.3)" }}>
                               {payout.status === "pending" && payout.consignor.taxStatus === "business" && (
                                 <button
@@ -765,6 +798,20 @@ export default function Payouts() {
                                 </div>
                               );
                             })}
+                            {/* Tax summary for business consignors */}
+                            {(() => {
+                              const tax = computeTax(payout.amount, payout.consignor);
+                              if (!tax.isTaxable) return null;
+                              return (
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "24px", padding: "10px 20px", borderTop: "1px solid rgba(227,227,227,0.3)", background: "#fefce8", fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
+                                  <span style={{ color: "#6d7175" }}>Subtotal <strong>${fmt(tax.subtotal)}</strong></span>
+                                  {tax.gst > 0 && <span style={{ color: "#6d7175" }}>GST (5%) <strong>${fmt(tax.gst)}</strong></span>}
+                                  {tax.qst > 0 && <span style={{ color: "#6d7175" }}>QST (9.975%) <strong>${fmt(tax.qst)}</strong></span>}
+                                  {tax.hst > 0 && <span style={{ color: "#6d7175" }}>{tax.taxLabel} <strong>${fmt(tax.hst)}</strong></span>}
+                                  <span style={{ fontWeight: 700, color: "#1a1a1a" }}>Total Paid ${fmt(tax.total)}</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

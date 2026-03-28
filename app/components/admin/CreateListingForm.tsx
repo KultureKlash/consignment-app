@@ -4,14 +4,14 @@ import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { CATEGORIES, MAIN_CATEGORIES, autoSuggest, buildCategory } from "~/lib/categories";
 import { processProductImage } from "~/lib/image-processing";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/Dropdown";
-import CustomSelect from "~/components/CustomSelect";
+import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
+import CustomSelect from "~/components/admin/CustomSelect";
 import {
   inputStyle, searchInputStyle, disabledInput, labelStyle,
   chipStyle, chipClear, searchIconWrap,
   handleFocus, handleBlurStyle,
   type ProductResult,
-} from "~/lib/listing-ui";
+} from "~/lib/admin/listing-ui";
 
 type Consignor = {
   id: string;

@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
-import { resolveShopifyTaxonomyId } from "~/services/shopify-taxonomy.server";
+import { resolveShopifyTaxonomyId } from "~/services/shopify/taxonomy.server";
 import { getPrimaryLocationId } from "~/services/inventory.server";
 import { compareSizes } from "~/lib/size-order";
 

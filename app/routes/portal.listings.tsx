@@ -6,7 +6,7 @@ import { Plus, Package, Trash2, Pencil, Search, Eye, EyeOff, ChevronDown, Chevro
 import { InfoTip } from "~/components/portal/InfoTip";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { fmt } from "~/lib/currency";
-import { authenticatePortal } from "~/services/portal-auth.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
 import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal } from "~/services/submission.server";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";

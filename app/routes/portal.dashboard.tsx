@@ -5,8 +5,8 @@ import { DollarSign, Package, ShoppingBag, Clock, TrendingUp } from "lucide-reac
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { fmt } from "~/lib/currency";
-import { authenticatePortal } from "~/services/portal-auth.server";
-import { getConsignorDashboard } from "~/services/portal-dashboard.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
+import { getConsignorDashboard } from "~/services/portal/dashboard.server";
 import type { loader as portalLoader } from "./portal";
 import {
   ResponsiveContainer,

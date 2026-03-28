@@ -3,7 +3,7 @@ import { prisma, createTestConsignor } from "./setup";
 import {
   authenticatePortal,
   createSessionCookie,
-} from "~/services/portal-auth.server";
+} from "~/services/portal/auth.server";
 import { requestOtp, verifyOtp } from "~/services/otp.server";
 import { checkRateLimit } from "~/lib/rate-limit.server";
 import {

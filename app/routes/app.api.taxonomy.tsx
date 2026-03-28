@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
-import { searchShopifyTaxonomy } from "~/services/shopify-taxonomy.server";
+import { searchShopifyTaxonomy } from "~/services/shopify/taxonomy.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);

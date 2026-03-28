@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
-import { ensureShopifyProductAndVariant, updateShopifyProductImage } from "~/services/shopify-products.server";
+import { ensureShopifyProductAndVariant, updateShopifyProductImage } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
 import { generateBarcode, parseCategory } from "~/lib/categories";
 

@@ -5,7 +5,7 @@ import { redirect } from "react-router";
 import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Plus, Package, Lightbulb } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
-import { authenticatePortal } from "~/services/portal-auth.server";
+import { authenticatePortal } from "~/services/portal/auth.server";
 import { submitListing } from "~/services/submission.server";
 import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, autoSuggest } from "~/lib/categories";
 import { fmt } from "~/lib/currency";

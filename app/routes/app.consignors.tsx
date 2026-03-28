@@ -6,7 +6,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorBalance } from "~/services/orders.server";
 import { createConsignor } from "~/services/consignors.server";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
+import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
 import { ChevronRight, Plus, X } from "lucide-react";
@@ -34,7 +34,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const { createConsignorSchema, parseForm } = await import("~/lib/validation");
       const data = parseForm(createConsignorSchema, formData);
 
-      await createConsignor({ name: data.name, email: data.email, feeRate: data.feeRate / 100 });
+      await createConsignor({
+        name: data.name,
+        email: data.email,
+        feeRate: data.feeRate / 100,
+        taxStatus: data.taxStatus,
+        gstNumber: data.gstNumber,
+        qstNumber: data.qstNumber,
+        province: data.province,
+      });
       return { success: true, intent };
     }
     throw new Error("Invalid intent");
@@ -73,6 +81,10 @@ export default function Consignors() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [feeRate, setFeeRate] = useState("15");
+  const [newTaxStatus, setNewTaxStatus] = useState("individual");
+  const [newGstNumber, setNewGstNumber] = useState("");
+  const [newQstNumber, setNewQstNumber] = useState("");
+  const [newProvince, setNewProvince] = useState("QC");
 
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
 
@@ -87,12 +99,25 @@ export default function Consignors() {
       setName("");
       setEmail("");
       setFeeRate("15");
+      setNewTaxStatus("individual");
+      setNewGstNumber("");
+      setNewQstNumber("");
+      setNewProvince("QC");
     }
   }, [fetcher.data, shopify]);
 
   const handleCreate = () => {
     fetcher.submit(
-      { intent: "create", name, email, feeRate },
+      {
+        intent: "create",
+        name,
+        email,
+        feeRate,
+        taxStatus: newTaxStatus,
+        gstNumber: newTaxStatus === "business" ? newGstNumber : "",
+        qstNumber: newTaxStatus === "business" ? newQstNumber : "",
+        province: newTaxStatus === "business" ? newProvince : "",
+      },
       { method: "POST" },
     );
   };
@@ -267,6 +292,78 @@ export default function Consignors() {
                   Platform fee deducted from sales. Consignor keeps {100 - (parseFloat(feeRate) || 0)}%.
                 </span>
               </div>
+
+              {/* Tax Status */}
+              <div>
+                <label style={labelStyle}>Tax Status</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {(["individual", "business"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setNewTaxStatus(status)}
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        borderRadius: "8px",
+                        border: `1px solid ${newTaxStatus === status ? "#111827" : "#c4c9d1"}`,
+                        background: newTaxStatus === status ? "#111827" : "#fff",
+                        color: newTaxStatus === status ? "#fff" : "#374151",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {status === "individual" ? "Individual" : "Registered Business"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {newTaxStatus === "business" && (
+                <>
+                  <div>
+                    <label style={labelStyle}>Province</label>
+                    <select
+                      value={newProvince}
+                      onChange={(e) => setNewProvince(e.target.value)}
+                      onFocus={handleFocus as any}
+                      onBlur={handleBlurStyle as any}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="QC">Quebec (QC)</option>
+                      <option value="ON">Ontario (ON)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>GST/HST Number</label>
+                    <input
+                      type="text"
+                      value={newGstNumber}
+                      onChange={(e) => setNewGstNumber(e.target.value)}
+                      onFocus={handleFocus}
+                      onBlur={handleBlurStyle}
+                      style={inputStyle}
+                      placeholder="e.g. 123456789 RT0001"
+                    />
+                  </div>
+                  {newProvince === "QC" && (
+                    <div>
+                      <label style={labelStyle}>QST Number</label>
+                      <input
+                        type="text"
+                        value={newQstNumber}
+                        onChange={(e) => setNewQstNumber(e.target.value)}
+                        onFocus={handleFocus}
+                        onBlur={handleBlurStyle}
+                        style={inputStyle}
+                        placeholder="e.g. 1234567890 TQ0001"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" }}>
               <button

@@ -5,9 +5,9 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { ChevronRight, Search } from "lucide-react";
-import CustomSelect from "~/components/CustomSelect";
-import DateRangeFilter from "~/components/DateRangeFilter";
-import { searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/listing-ui";
+import CustomSelect from "~/components/admin/CustomSelect";
+import DateRangeFilter from "~/components/admin/DateRangeFilter";
+import { searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import { fmt } from "~/lib/currency";
 import type { Prisma } from "@prisma/client";
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { prisma } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
-import { ensureShopifyProductAndVariant } from "~/services/shopify-products.server";
+import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 
 describe("shopify-products.server", () => {
   describe("ensureShopifyProductAndVariant", () => {
