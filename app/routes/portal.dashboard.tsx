@@ -195,7 +195,7 @@ export default function PortalDashboard() {
               </div>
               <div className="text-right">
                 <p className="text-lg md:text-2xl font-bold text-primary glow-text">
-                  ${currentMonthEarnings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  ${fmt(currentMonthEarnings)}
                 </p>
                 <p className="text-[10px] md:text-xs text-muted-foreground">This month</p>
               </div>
@@ -215,7 +215,7 @@ export default function PortalDashboard() {
                       color: "hsl(0, 0%, 92%)",
                       boxShadow: "0 0 20px hsl(0, 0%, 70%, 0.15)",
                     }}
-                    formatter={(value) => [`$${Number(value).toLocaleString()}`, storeOwned ? "Profit" : "Earnings"]}
+                    formatter={(value) => [`$${fmt(Number(value))}`, storeOwned ? "Profit" : "Earnings"]}
                   />
                   <Line
                     type="monotone"

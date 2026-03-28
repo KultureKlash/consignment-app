@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Clock, FileText, CheckCircle2, CircleDot, Do
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { fmt } from "~/lib/currency";
+import { computeTax } from "~/lib/tax";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { getConsignorPayouts } from "~/services/portal/dashboard.server";
 import prisma from "~/db.server";
@@ -276,7 +277,15 @@ export default function PortalPayouts() {
                             {new Date(payout.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                           </span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums shrink-0">${fmt(payout.amount)}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-bold tabular-nums">${fmt(payout.amount)}</span>
+                          {!isIndividual && (() => {
+                            const tax = computeTax(payout.amount, consignor);
+                            return tax.isTaxable ? (
+                              <div className="text-[10px] text-muted-foreground tabular-nums">${fmt(tax.total)} with tax</div>
+                            ) : null;
+                          })()}
+                        </div>
                       </div>
                     </button>
                     {isOpen && (
@@ -347,6 +356,22 @@ export default function PortalPayouts() {
                             </div>
                           );
                         })}
+                        {/* Tax summary for business consignors */}
+                        {!isIndividual && (() => {
+                          const tax = computeTax(payout.amount, consignor);
+                          if (!tax.isTaxable) return null;
+                          return (
+                            <div className="px-6 md:px-10 py-3 border-t border-[rgba(255,255,255,0.06)] bg-white/[0.03]">
+                              <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs tabular-nums">
+                                <span className="text-muted-foreground">Subtotal <strong className="text-foreground">${fmt(tax.subtotal)}</strong></span>
+                                {tax.gst > 0 && <span className="text-muted-foreground">GST (5%) <strong className="text-foreground">${fmt(tax.gst)}</strong></span>}
+                                {tax.qst > 0 && <span className="text-muted-foreground">QST (9.975%) <strong className="text-foreground">${fmt(tax.qst)}</strong></span>}
+                                {tax.hst > 0 && <span className="text-muted-foreground">{tax.taxLabel} <strong className="text-foreground">${fmt(tax.hst)}</strong></span>}
+                                <span className="font-bold text-primary">Total Payable ${fmt(tax.total)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -388,7 +413,15 @@ export default function PortalPayouts() {
                             {new Date(payout.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                           </span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums shrink-0">${fmt(payout.amount)}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-bold tabular-nums">${fmt(payout.amount)}</span>
+                          {!isIndividual && (() => {
+                            const tax = computeTax(payout.amount, consignor);
+                            return tax.isTaxable ? (
+                              <div className="text-[10px] text-muted-foreground tabular-nums">${fmt(tax.total)} with tax</div>
+                            ) : null;
+                          })()}
+                        </div>
                       </div>
                     </button>
                     {isOpen && (
@@ -431,6 +464,22 @@ export default function PortalPayouts() {
                             </div>
                           );
                         })}
+                        {/* Tax summary for business consignors */}
+                        {!isIndividual && (() => {
+                          const tax = computeTax(payout.amount, consignor);
+                          if (!tax.isTaxable) return null;
+                          return (
+                            <div className="px-6 md:px-10 py-3 border-t border-[rgba(255,255,255,0.06)] bg-white/[0.03]">
+                              <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs tabular-nums">
+                                <span className="text-muted-foreground">Subtotal <strong className="text-foreground">${fmt(tax.subtotal)}</strong></span>
+                                {tax.gst > 0 && <span className="text-muted-foreground">GST (5%) <strong className="text-foreground">${fmt(tax.gst)}</strong></span>}
+                                {tax.qst > 0 && <span className="text-muted-foreground">QST (9.975%) <strong className="text-foreground">${fmt(tax.qst)}</strong></span>}
+                                {tax.hst > 0 && <span className="text-muted-foreground">{tax.taxLabel} <strong className="text-foreground">${fmt(tax.hst)}</strong></span>}
+                                <span className="font-bold text-primary">Total Paid ${fmt(tax.total)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
