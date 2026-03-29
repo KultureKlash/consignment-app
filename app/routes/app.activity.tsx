@@ -8,7 +8,7 @@ import ActivityItem from "~/components/admin/ActivityItem";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  const feed = await getActivityFeed(0);
+  const feed = await getActivityFeed(50);
   return { feed };
 };
 
