@@ -6,57 +6,121 @@ const KEYWORD_RULES: Array<{
   main?: string;
   sub?: string;
 }> = [
-  // Nike
-  { keywords: ["dunk", "air force", "af1", "air max", "vapormax", "jordan", "aj1", "aj4", "blazer"],
+  // ── Nike / Jordan (top brand — 40% of inventory) ──
+  { keywords: ["air jordan", "jordan 1", "jordan 4", "jordan 5", "jordan 11", "aj1", "aj4"],
+    brand: "Air Jordan", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["jordan retro"],
+    brand: "Air Jordan", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["dunk", "air force", "af1", "air max", "vapormax", "blazer", "cortez"],
     brand: "Nike", main: "Footwear", sub: "Sneakers" },
-  { keywords: ["nike tech", "nike hoodie", "nike jogger"],
+  { keywords: ["kobe"],
+    brand: "Nike", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["nike sb"],
+    brand: "Nike", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["nike tech", "nike hoodie", "nike jogger", "nike pant", "nike short"],
     brand: "Nike", main: "Apparel" },
 
-  // Adidas
-  { keywords: ["yeezy", "yeezy slide", "yeezy foam"],
-    brand: "Adidas", main: "Footwear", sub: "Sneakers" },
+  // ── Adidas / YEEZY ──
+  { keywords: ["yeezy slide"],
+    brand: "YEEZY", main: "Footwear", sub: "Slides" },
+  { keywords: ["yeezy foam"],
+    brand: "YEEZY", main: "Footwear", sub: "Slides" },
+  { keywords: ["yeezy 350", "yeezy 500", "yeezy 700", "yeezy boost", "yeezy"],
+    brand: "YEEZY", main: "Footwear", sub: "Sneakers" },
   { keywords: ["samba", "gazelle", "campus", "superstar", "stan smith", "adidas forum"],
     brand: "Adidas", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["adidas"],
+    brand: "Adidas", main: "Footwear", sub: "Sneakers" },
 
-  // New Balance
+  // ── New Balance ──
   { keywords: ["new balance", "nb 550", "nb 2002r", "nb 990", "nb 530"],
     brand: "New Balance", main: "Footwear", sub: "Sneakers" },
 
-  // ASICS
+  // ── ASICS ──
   { keywords: ["gel-kayano", "gel-1130", "gel-nyc", "asics"],
     brand: "ASICS", main: "Footwear", sub: "Sneakers" },
 
-  // Luxury / Designer
+  // ── Designer / Streetwear Apparel (high volume in your inventory) ──
+  { keywords: ["chrome hearts"],
+    brand: "Chrome Hearts" },
+  { keywords: ["gallery dept"],
+    brand: "Gallery Dept." },
+  { keywords: ["hellstar"],
+    brand: "Hellstar", main: "Apparel" },
+  { keywords: ["amiri"],
+    brand: "Amiri" },
+  { keywords: ["sp5der"],
+    brand: "Sp5der", main: "Apparel" },
+  { keywords: ["rhude"],
+    brand: "Rhude" },
+  { keywords: ["denim tears"],
+    brand: "Denim Tears", main: "Apparel" },
+  { keywords: ["off-white", "off white"],
+    brand: "OFF-WHITE" },
+  { keywords: ["bape", "a bathing ape"],
+    brand: "BAPE" },
+  { keywords: ["who decides war"],
+    brand: "Who Decides War", main: "Apparel" },
+  { keywords: ["purple brand"],
+    brand: "Purple Brand", main: "Apparel" },
+  { keywords: ["casablanca"],
+    brand: "CASABLANCA" },
+
+  // ── Luxury ──
+  { keywords: ["moncler"],
+    brand: "Moncler" },
+  { keywords: ["dior"],
+    brand: "Dior" },
   { keywords: ["louis vuitton", "lv"],
     brand: "Louis Vuitton" },
   { keywords: ["gucci"],
     brand: "Gucci" },
+  { keywords: ["goyard"],
+    brand: "Goyard", main: "Accessories", sub: "Bags" },
   { keywords: ["balenciaga", "triple s", "track runner"],
-    brand: "Balenciaga", main: "Footwear", sub: "Sneakers" },
+    brand: "Balenciaga" },
+  { keywords: ["prada"],
+    brand: "Prada" },
+  { keywords: ["lanvin"],
+    brand: "LANVIN" },
+  { keywords: ["canada goose"],
+    brand: "Canada Goose", main: "Apparel", sub: "Puffer Jackets" },
 
-  // Other footwear
-  { keywords: ["ugg", "ugg tasman", "ugg ultra mini"],
-    brand: "UGG", main: "Footwear", sub: "Boots" },
-  { keywords: ["birkenstock", "boston clog"],
-    brand: "Birkenstock", main: "Footwear", sub: "Sandals" },
-  { keywords: ["crocs", "clog"],
-    brand: "Crocs", main: "Footwear", sub: "Slides" },
-  { keywords: ["timberland", "timbs"],
-    brand: "Timberland", main: "Footwear", sub: "Boots" },
-
-  // Apparel brands
+  // ── Streetwear ──
   { keywords: ["supreme"],
     brand: "Supreme" },
   { keywords: ["stussy", "stüssy"],
     brand: "Stussy" },
   { keywords: ["essentials", "fear of god"],
-    brand: "Fear of God", main: "Apparel" },
+    brand: "Fear of God Essentials", main: "Apparel" },
   { keywords: ["trapstar"],
     brand: "Trapstar", main: "Apparel" },
   { keywords: ["corteiz"],
     brand: "Corteiz", main: "Apparel" },
 
-  // Headwear keywords
+  // ── Other Footwear Brands ──
+  { keywords: ["ugg tasman", "ugg ultra mini", "ugg"],
+    brand: "UGG", main: "Footwear", sub: "Boots" },
+  { keywords: ["birkenstock", "boston clog"],
+    brand: "Birkenstock", main: "Footwear", sub: "Sandals" },
+  { keywords: ["crocs"],
+    brand: "Crocs", main: "Footwear", sub: "Slides" },
+  { keywords: ["timberland", "timbs"],
+    brand: "Timberland", main: "Footwear", sub: "Boots" },
+  { keywords: ["salomon"],
+    brand: "Salomon", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["vans old skool", "vans sk8", "vans"],
+    brand: "Vans", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["converse", "chuck taylor"],
+    brand: "Converse", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["puma"],
+    brand: "Puma", main: "Footwear", sub: "Sneakers" },
+  { keywords: ["reebok"],
+    brand: "Reebok", main: "Footwear", sub: "Sneakers" },
+
+  // ── Headwear ──
+  { keywords: ["trucker hat", "trucker cap"],
+    main: "Headwear", sub: "Trucker Hats" },
   { keywords: ["fitted", "59fifty", "new era"],
     brand: "New Era", main: "Headwear", sub: "Fitted Hats" },
   { keywords: ["snapback"],
@@ -65,11 +129,11 @@ const KEYWORD_RULES: Array<{
     main: "Headwear", sub: "Beanies" },
   { keywords: ["bucket hat"],
     main: "Headwear", sub: "Bucket Hats" },
-  { keywords: ["cap"],
+  { keywords: ["cap", "hat"],
     main: "Headwear", sub: "Caps" },
 
-  // Accessory keywords
-  { keywords: ["bag", "tote", "backpack", "duffle"],
+  // ── Accessory keywords ──
+  { keywords: ["bag", "tote", "backpack", "duffle", "duffel"],
     main: "Accessories", sub: "Bags" },
   { keywords: ["wallet", "card holder"],
     main: "Accessories", sub: "Wallets" },
@@ -80,7 +144,7 @@ const KEYWORD_RULES: Array<{
   { keywords: ["watch"],
     main: "Accessories", sub: "Watches" },
 
-  // Generic footwear
+  // ── Generic footwear ──
   { keywords: ["sneaker", "shoe", "trainer", "runner"],
     main: "Footwear", sub: "Sneakers" },
   { keywords: ["boot"],
@@ -90,29 +154,45 @@ const KEYWORD_RULES: Array<{
   { keywords: ["sandal"],
     main: "Footwear", sub: "Sandals" },
 
-  // Generic apparel
+  // ── Generic apparel (ordered specific → generic) ──
+  { keywords: ["jersey"],
+    main: "Apparel", sub: "Jerseys" },
+  { keywords: ["polo"],
+    main: "Apparel", sub: "Polos" },
+  { keywords: ["long sleeve", "longsleeve"],
+    main: "Apparel", sub: "Long Sleeves" },
   { keywords: ["hoodie", "hoody"],
     main: "Apparel", sub: "Hoodies" },
   { keywords: ["sweatshirt", "crewneck", "crew neck"],
     main: "Apparel", sub: "Sweatshirts" },
   { keywords: ["sweater", "knit"],
     main: "Apparel", sub: "Sweaters" },
-  { keywords: ["puffer", "puffer jacket"],
+  { keywords: ["puffer"],
     main: "Apparel", sub: "Puffer Jackets" },
   { keywords: ["parka"],
     main: "Apparel", sub: "Parkas" },
+  { keywords: ["varsity", "letterman"],
+    main: "Apparel", sub: "Varsity Jackets" },
   { keywords: ["vest", "gilet"],
     main: "Apparel", sub: "Vests" },
-  { keywords: ["tee", "t-shirt", "tshirt"],
-    main: "Apparel", sub: "T-Shirts" },
+  { keywords: ["jacket", "coat"],
+    main: "Apparel", sub: "Jackets" },
+  { keywords: ["sweatpant", "sweat pant", "flare pant", "track pant"],
+    main: "Apparel", sub: "Sweatpants" },
   { keywords: ["jeans", "denim"],
     main: "Apparel", sub: "Jeans" },
-  { keywords: ["jogger short", "jogger shorts"],
-    main: "Apparel", sub: "Jogger Shorts" },
+  { keywords: ["cargo"],
+    main: "Apparel", sub: "Pants" },
+  { keywords: ["pant", "trouser"],
+    main: "Apparel", sub: "Pants" },
+  { keywords: ["short"],
+    main: "Apparel", sub: "Shorts" },
+  { keywords: ["tee", "t-shirt", "tshirt"],
+    main: "Apparel", sub: "T-Shirts" },
   { keywords: ["outfit set", "set", "tracksuit"],
     main: "Apparel", sub: "Outfit Sets" },
-  { keywords: ["varsity", "varsity jacket", "letterman"],
-    main: "Apparel", sub: "Varsity Jacket" },
+  { keywords: ["shirt"],
+    main: "Apparel", sub: "T-Shirts" },
 ];
 
 /**

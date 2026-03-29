@@ -7,7 +7,7 @@ import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { submitListing } from "~/services/submission.server";
-import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, autoSuggest } from "~/lib/categories";
+import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, parseCategory, autoSuggest } from "~/lib/categories";
 import { fmt } from "~/lib/currency";
 import type { loader as portalLoader } from "./portal";
 
@@ -102,11 +102,11 @@ export default function PortalListingNew() {
   const [manualMode, setManualMode] = useState(false);
 
   // Form fields — prefill from product if coming from quick-add
-  const prefillCategoryParts = prefillProduct?.category?.split(" > ") ?? [];
+  const prefillCat = prefillProduct?.category ? parseCategory(prefillProduct.category) : null;
   const [title, setTitle] = useState(prefillProduct?.title ?? "");
   const [brand, setBrand] = useState(prefillProduct?.brand ?? "");
-  const [mainCategory, setMainCategory] = useState(prefillCategoryParts[0] ?? "");
-  const [subCategory, setSubCategory] = useState(prefillCategoryParts[1] ?? "");
+  const [mainCategory, setMainCategory] = useState(prefillCat?.main ?? "");
+  const [subCategory, setSubCategory] = useState(prefillCat?.sub ?? "");
   const [styleId, setStyleId] = useState(prefillProduct?.styleId ?? "");
   const [size, setSize] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
@@ -201,9 +201,9 @@ export default function PortalListingNew() {
     setBrand(product.brand ?? "");
     setStyleId(product.styleId ?? "");
     if (product.category) {
-      const parts = product.category.split(" > ");
-      setMainCategory(parts[0] ?? "");
-      setSubCategory(parts[1] ?? "");
+      const cat = parseCategory(product.category);
+      setMainCategory(cat.main ?? "");
+      setSubCategory(cat.sub ?? "");
     }
     setShowSearch(false);
     setSearchQuery("");

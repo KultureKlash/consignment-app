@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
-import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
+import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
 import { inputStyle, searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import CustomSelect from "~/components/admin/CustomSelect";
 
@@ -54,10 +54,10 @@ export default function ListingsFilter({
     return () => clearTimeout(timer);
   }, [searchValue]);
 
-  // Derive main/sub from combined category param (e.g. "Footwear > Sneakers")
-  const categoryParts = category.split(" > ");
-  const mainCategory = categoryParts[0] || "";
-  const subCategory = categoryParts[1] || "";
+  // Derive main/sub from category param (e.g. "Sneakers" or legacy "Footwear > Sneakers")
+  const categoryParsed = category ? parseCategory(category) : { main: "", sub: undefined };
+  const mainCategory = categoryParsed.main || "";
+  const subCategory = categoryParsed.sub || "";
   const subOptions = mainCategory ? (CATEGORIES[mainCategory] ?? []) : [];
 
   const hasFilters = (status && status !== "active") || category || consignorId || initialSearch;
@@ -112,7 +112,7 @@ export default function ListingsFilter({
                 // Toggle off — go back to main category only
                 onFilterChange({ category: mainCategory, page: "1" });
               } else {
-                onFilterChange({ category: `${mainCategory} > ${val}`, page: "1" });
+                onFilterChange({ category: val, page: "1" });
               }
             }}
             placeholder="Subcategory"

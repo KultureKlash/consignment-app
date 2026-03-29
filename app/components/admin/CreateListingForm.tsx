@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Search, Camera, User, Package, Tag, Barcode } from "lucide-react";
 import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { CATEGORIES, MAIN_CATEGORIES, autoSuggest, buildCategory } from "~/lib/categories";
+import { CATEGORIES, MAIN_CATEGORIES, autoSuggest, buildCategory, parseCategory } from "~/lib/categories";
 import { processProductImage } from "~/lib/image-processing";
 import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
 import CustomSelect from "~/components/admin/CustomSelect";
@@ -779,9 +779,9 @@ export default function CreateListingForm({ consignors, knownBrands }: Props) {
                         size: "", gtin: "", price: "", quantity: "1",
                       });
                       if (p.category) {
-                        const parts = p.category.split(" > ");
-                        setMainCategory(parts[0]);
-                        setSubCategory(parts[1] ?? "");
+                        const cat = parseCategory(p.category);
+                        setMainCategory(cat.main);
+                        setSubCategory(cat.sub ?? "");
                         setCategoryManual(true);
                       } else {
                         setMainCategory("");

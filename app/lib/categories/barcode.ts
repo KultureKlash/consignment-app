@@ -3,6 +3,7 @@ import crypto from "crypto";
 // ── Subcategory abbreviations (controlled by us, finite set) ─────
 
 const SUB_ABBREVIATIONS: Record<string, string> = {
+  // Footwear
   "Sneakers": "SNK",
   "Athletic Shoes": "ATH",
   "Boots": "BTS",
@@ -10,29 +11,39 @@ const SUB_ABBREVIATIONS: Record<string, string> = {
   "Slides": "SLD",
   "Loafers": "LFR",
   "Heels": "HLS",
+  // Apparel
   "T-Shirts": "TEE",
+  "Long Sleeves": "LSV",
   "Hoodies": "HOD",
   "Sweatshirts": "SWT",
   "Sweaters": "SWR",
+  "Jackets": "JKT",
   "Puffer Jackets": "PFJ",
   "Parkas": "PRK",
+  "Varsity Jackets": "VJK",
   "Vests": "VST",
   "Jeans": "JNS",
+  "Pants": "PNT",
+  "Sweatpants": "SWP",
+  "Shorts": "SHT",
   "Jogger Shorts": "JGS",
+  "Jerseys": "JRS",
+  "Polos": "PLO",
   "Outfit Sets": "SET",
-  "Varsity Jacket": "VJK",
+  // Accessories
   "Bags": "BAG",
   "Wallets": "WLT",
   "Belts": "BLT",
   "Sunglasses": "SUN",
   "Jewelry": "JWL",
   "Watches": "WCH",
-  "Hats": "HAT",
+  // Headwear
   "Caps": "CAP",
   "Beanies": "BNE",
   "Bucket Hats": "BKT",
   "Fitted Hats": "FIT",
   "Snapbacks": "SNP",
+  "Trucker Hats": "TRK",
 };
 
 // ── Abbreviation helpers ─────────────────────────────────────────
