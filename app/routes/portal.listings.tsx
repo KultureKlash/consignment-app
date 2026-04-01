@@ -23,6 +23,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const statusFilter = url.searchParams.get("status") ?? "all";
   const showInactive = url.searchParams.get("inactive") === "1";
   const search = url.searchParams.get("search")?.trim() ?? "";
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+  const PAGE_SIZE = 25;
 
   // Build where clause
   const where: Record<string, unknown> = { consignorId: consignor.id };
@@ -50,14 +52,27 @@ export async function loader({ request }: LoaderFunctionArgs) {
     ];
   }
 
-  const listings = await prisma.listing.findMany({
+  const allListings = await prisma.listing.findMany({
     where,
     include: {
       variant: { include: { product: true } },
     },
     orderBy: { createdAt: "desc" },
-    take: 100,
   });
+
+  // Group by product to paginate by groups
+  const groupMap = new Map<string, typeof allListings>();
+  for (const l of allListings) {
+    const pid = l.variant.product.id;
+    const list = groupMap.get(pid) || [];
+    list.push(l);
+    groupMap.set(pid, list);
+  }
+  const totalGroups = groupMap.size;
+  const totalPages = Math.max(1, Math.ceil(totalGroups / PAGE_SIZE));
+  const groupKeys = [...groupMap.keys()];
+  const pageKeys = groupKeys.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const listings = pageKeys.flatMap((k) => groupMap.get(k) || []);
 
   // Count by status for tabs
   const counts = await prisma.listing.groupBy({
@@ -84,7 +99,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  return { consignor, listings, statusCounts, statusFilter, showInactive, search, lowestPrices };
+  return { consignor, listings, statusCounts, statusFilter, showInactive, search, lowestPrices, page, totalPages, totalGroups };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -298,14 +313,66 @@ const TABS = [
 ];
 
 export default function PortalListings() {
-  const { consignor, listings, statusCounts, statusFilter, showInactive, search: initialSearch, lowestPrices } = useLoaderData<typeof loader>();
+  const { consignor, listings, statusCounts, statusFilter, showInactive, search: initialSearch, lowestPrices, page, totalPages } = useLoaderData<typeof loader>();
   const parentData = useRouteLoaderData<typeof portalLoader>("routes/portal");
   const fetcher = useFetcher();
   const [searchParams, setSearchParams] = useSearchParams();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmWithdraw, setConfirmWithdraw] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState(initialSearch);
-  const groups = groupByProduct(listings as unknown as ListingRow[]);
+  const serverGroups = groupByProduct(listings as unknown as ListingRow[]);
+
+  // Mobile infinite scroll: accumulate groups across pages
+  const [mobileGroups, setMobileGroups] = useState<ProductGroup[]>(serverGroups);
+  const [mobileLoading, setMobileLoading] = useState(false);
+  const mobilePage = useRef(page);
+  const scrollSentinel = useRef<HTMLDivElement>(null);
+  const loadMoreFetcher = useFetcher<typeof loader>();
+
+  // Reset mobile groups when filters/search change
+  useEffect(() => {
+    setMobileGroups(serverGroups);
+    mobilePage.current = page;
+  }, [statusFilter, showInactive, initialSearch]);
+
+  // Append new groups when loadMoreFetcher returns
+  useEffect(() => {
+    if (loadMoreFetcher.data && loadMoreFetcher.state === "idle") {
+      const newListings = loadMoreFetcher.data.listings as unknown as ListingRow[];
+      const newGroups = groupByProduct(newListings);
+      setMobileGroups((prev) => {
+        const existingIds = new Set(prev.map((g) => g.productId));
+        const unique = newGroups.filter((g) => !existingIds.has(g.productId));
+        return [...prev, ...unique];
+      });
+      setMobileLoading(false);
+    }
+  }, [loadMoreFetcher.data, loadMoreFetcher.state]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const el = scrollSentinel.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && mobilePage.current < totalPages && !mobileLoading) {
+          mobilePage.current++;
+          setMobileLoading(true);
+          const params = new URLSearchParams(searchParams);
+          params.set("page", String(mobilePage.current));
+          loadMoreFetcher.load(`/portal/listings?${params.toString()}`);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [totalPages, mobileLoading, searchParams]);
+
+  // Desktop uses server groups directly, mobile uses accumulated
+  const groups = serverGroups; // desktop
+  const mGroups = mobileGroups; // mobile
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [mobileDetail, setMobileDetail] = useState<string | null>(null);
@@ -548,9 +615,9 @@ export default function PortalListings() {
               })}
             </div>
 
-            {/* Mobile cards */}
+            {/* Mobile cards — infinite scroll */}
             <div className="md:hidden divide-y divide-[rgba(255,255,255,0.06)]">
-              {groups.map((group) => {
+              {mGroups.map((group) => {
                 const isOpen = expandedGroups.has(group.productId);
 
                 return (
@@ -609,6 +676,50 @@ export default function PortalListings() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Mobile infinite scroll sentinel */}
+        <div ref={scrollSentinel} className="md:hidden h-4">
+          {mobileLoading && (
+            <div className="flex justify-center py-4">
+              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+
+        {/* Desktop pagination */}
+        {totalPages > 1 && (
+          <div className="hidden md:flex items-center justify-center gap-2 pt-4">
+            {page > 1 && (
+              <button
+                onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set("page", String(page - 1)); return p; })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1] transition-colors cursor-pointer"
+              >
+                Previous
+              </button>
+            )}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setSearchParams((prev) => { const params = new URLSearchParams(prev); params.set("page", String(p)); return params; })}
+                className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  p === page
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1]"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            {page < totalPages && (
+              <button
+                onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set("page", String(page + 1)); return p; })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1] transition-colors cursor-pointer"
+              >
+                Next
+              </button>
+            )}
           </div>
         )}
 
