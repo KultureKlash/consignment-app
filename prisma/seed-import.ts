@@ -200,6 +200,10 @@ async function main() {
   }
   console.log(`  ✓ ${listingCount} listings (${listingSkipped} skipped)`);
 
+  console.log("\nDone! Database seeded with consignors, products, variants, and listings.");
+  console.log("Orders, transactions, and payouts start fresh from real activity.");
+  return;
+
   // ── 5. Orders ──
   console.log("Seeding orders...");
   const orderMap = new Map<string, string>(); // shopifyOrderId -> id

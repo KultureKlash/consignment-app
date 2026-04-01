@@ -7,11 +7,12 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/payouts.server";
 import { fmt } from "~/lib/currency";
 import {
-  DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X, FileText,
+  DollarSign, Clock, CheckCircle2, ChevronDown, ChevronRight, X, FileText, Download,
 } from "lucide-react";
 import CustomSelect from "~/components/admin/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
 import { computeTax } from "~/lib/tax";
+import { generateCsv, downloadCsv } from "~/lib/csv";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -176,9 +177,8 @@ export default function Payouts() {
       }
       case "custom": {
         if (filterDateFrom && filterDateTo) {
-          const end = new Date(filterDateTo);
-          end.setDate(end.getDate() + 1);
-          return { start: new Date(filterDateFrom), end };
+          const end = new Date(filterDateTo + "T23:59:59");
+          return { start: new Date(filterDateFrom + "T00:00:00"), end };
         }
         return {};
       }
@@ -297,6 +297,39 @@ export default function Payouts() {
     fetcher.submit({ intent: "cancel", payoutId }, { method: "POST" });
   };
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  const downloadUnpaid = () => {
+    const headers = ["Consignor", "Email", "Order #", "Product", "Size", "Date Sold", "Sale", "Fee", "Payout", "Status"];
+    const rows = filteredUnpaid.flatMap((entry) =>
+      entry.transactions.map((tx: any) => [
+        entry.consignor.name, entry.consignor.email,
+        tx.orderItem?.order?.orderNumber ?? "", tx.orderItem?.listing?.variant?.product?.title ?? "", tx.orderItem?.listing?.variant?.size ?? "",
+        tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "",
+        tx.grossAmount.toFixed(2), tx.feeAmount.toFixed(2), tx.consignorAmount.toFixed(2), "Unpaid",
+      ]),
+    );
+    downloadCsv(`payouts-unpaid-${today}.csv`, generateCsv(headers, rows));
+  };
+
+  const downloadPayouts = (payoutList: any[], label: string) => {
+    const headers = ["Consignor", "Email", "Order #", "Product", "Size", "Date Sold", "Sale", "Fee", "Payout", "Status", "Payout Date"];
+    const rows = payoutList.flatMap((p: any) =>
+      p.items.map((pi: any) => {
+        const tx = pi.transaction;
+        const statusLabel = p.status === "paid" ? "Paid" : p.status === "invoiced" ? "Invoice Received" : "Awaiting Invoice";
+        return [
+          p.consignor.name, p.consignor.email,
+          tx.orderItem?.order?.orderNumber ?? "", tx.orderItem?.listing?.variant?.product?.title ?? "", tx.orderItem?.listing?.variant?.size ?? "",
+          tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "",
+          tx.grossAmount.toFixed(2), tx.feeAmount.toFixed(2), tx.consignorAmount.toFixed(2),
+          statusLabel, new Date(p.createdAt).toLocaleDateString(),
+        ];
+      }),
+    );
+    downloadCsv(`payouts-${label}-${today}.csv`, generateCsv(headers, rows));
+  };
+
   return (
     <s-page>
       <div style={{ padding: "0" }}>
@@ -367,9 +400,16 @@ export default function Payouts() {
           <div style={sectionHeaderStyle}>
             <DollarSign size={15} color="#6d7175" />
             <h2 style={sectionTitleStyle}>Unpaid Balances</h2>
-            <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
-              {filteredUnpaid.length} consignor{filteredUnpaid.length !== 1 ? "s" : ""}
-            </span>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
+                {filteredUnpaid.length} consignor{filteredUnpaid.length !== 1 ? "s" : ""}
+              </span>
+              {filteredUnpaid.length > 0 && (
+                <button onClick={downloadUnpaid} title="Download CSV" style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#9ca3af", transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}>
+                  <Download size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {filteredUnpaid.length === 0 ? (
@@ -563,9 +603,16 @@ export default function Payouts() {
               <div style={sectionHeaderStyle}>
                 <Clock size={15} color="#d97706" />
                 <h2 style={sectionTitleStyle}>Pending Payouts</h2>
-                <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
-                  {pendingPayouts.length} payout{pendingPayouts.length !== 1 ? "s" : ""}
-                </span>
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
+                    {pendingPayouts.length} payout{pendingPayouts.length !== 1 ? "s" : ""}
+                  </span>
+                  {pendingPayouts.length > 0 && (
+                    <button onClick={() => downloadPayouts(pendingPayouts, "pending")} title="Download CSV" style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#9ca3af", transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}>
+                      <Download size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {pendingPayouts.length === 0 ? (
@@ -724,9 +771,16 @@ export default function Payouts() {
               <div style={sectionHeaderStyle}>
                 <CheckCircle2 size={15} color="#059669" />
                 <h2 style={sectionTitleStyle}>Payout History</h2>
-                <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
-                  {paidPayouts.length} payout{paidPayouts.length !== 1 ? "s" : ""}
-                </span>
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
+                    {paidPayouts.length} payout{paidPayouts.length !== 1 ? "s" : ""}
+                  </span>
+                  {paidPayouts.length > 0 && (
+                    <button onClick={() => downloadPayouts(paidPayouts, "history")} title="Download CSV" style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#9ca3af", transition: "color 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}>
+                      <Download size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {paidPayouts.length === 0 ? (

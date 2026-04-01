@@ -31,7 +31,7 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
   const [showCalendar, setShowCalendar] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<DateRange | undefined>(
-    from && to ? { from: new Date(from), to: new Date(to) } : undefined,
+    from && to ? { from: new Date(from + 'T12:00:00'), to: new Date(to + 'T12:00:00') } : undefined,
   );
 
   // Close on outside click
@@ -49,7 +49,7 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
   // Sync range from props
   useEffect(() => {
     if (from && to) {
-      setRange({ from: new Date(from), to: new Date(to) });
+      setRange({ from: new Date(from + 'T12:00:00'), to: new Date(to + 'T12:00:00') });
     } else {
       setRange(undefined);
     }
@@ -58,7 +58,7 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
   const activePreset = PRESETS.find((p) => p.value === preset);
   let displayLabel = activePreset?.label ?? "All time";
   if (preset === "custom" && from && to) {
-    displayLabel = `${formatShort(new Date(from))} – ${formatShort(new Date(to))}`;
+    displayLabel = `${formatShort(new Date(from + 'T12:00:00'))} – ${formatShort(new Date(to + 'T12:00:00'))}`;
   }
 
   function selectPreset(value: string) {
@@ -77,8 +77,8 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
       setShowCalendar(false);
       onChange({
         dateRange: "custom",
-        from: range.from.toISOString().slice(0, 10),
-        to: range.to.toISOString().slice(0, 10),
+        from: `${range.from.getFullYear()}-${String(range.from.getMonth() + 1).padStart(2, "0")}-${String(range.from.getDate()).padStart(2, "0")}`,
+        to: `${range.to.getFullYear()}-${String(range.to.getMonth() + 1).padStart(2, "0")}-${String(range.to.getDate()).padStart(2, "0")}`,
       });
     }
   }

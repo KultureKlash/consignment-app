@@ -261,3 +261,97 @@ input[type="number"] {
   from { opacity: 0; filter: blur(4px); }
   to { opacity: 1; filter: blur(0); }
 }
+
+/* DayPicker dark theme for portal */
+.portal-calendar .rdp-root {
+  --rdp-accent-color: hsl(185, 72%, 55%);
+  --rdp-accent-background-color: hsl(185, 72%, 55%, 0.12);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-range_middle-background-color: hsl(185, 72%, 55%, 0.08);
+  --rdp-range_middle-color: hsl(210, 20%, 92%);
+  --rdp-range_start-color: hsl(220, 25%, 8%);
+  --rdp-range_end-color: hsl(220, 25%, 8%);
+  --rdp-range_start-background: hsl(185, 72%, 55%, 0.5);
+  --rdp-range_end-background: hsl(185, 72%, 55%, 0.5);
+  --rdp-outside-opacity: 0.3;
+  font-size: 13px;
+}
+.portal-calendar .rdp-month {
+  padding: 4px;
+}
+.portal-calendar .rdp-month_caption {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0 12px;
+  color: hsl(210, 20%, 92%);
+}
+.portal-calendar .rdp-weekday {
+  color: hsl(215, 15%, 50%);
+  font-size: 11px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  width: 36px;
+}
+.portal-calendar .rdp-day {
+  color: hsl(210, 20%, 85%);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+}
+.portal-calendar .rdp-day button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+.portal-calendar .rdp-button_previous,
+.portal-calendar .rdp-button_next {
+  color: hsl(210, 20%, 75%);
+  border-radius: 8px;
+}
+.portal-calendar .rdp-button_previous:hover,
+.portal-calendar .rdp-button_next:hover {
+  background: hsl(215, 20%, 22%);
+}
+.portal-calendar .rdp-day:hover:not(.rdp-selected):not(.rdp-disabled) {
+  background: hsl(215, 20%, 22%);
+}
+/* Range start/end — subtle glow, not solid */
+.portal-calendar .rdp-range_start .rdp-day_button,
+.portal-calendar .rdp-range_end .rdp-day_button {
+  background: hsl(185, 72%, 55%, 0.35);
+  color: hsl(185, 72%, 75%);
+  font-weight: normal;
+  font-size: inherit;
+  box-shadow: 0 0 12px hsl(185, 72%, 55%, 0.2);
+}
+/* Range middle — very subtle tint */
+.portal-calendar .rdp-range_middle .rdp-day_button {
+  background: hsl(185, 72%, 55%, 0.08);
+  color: hsl(210, 20%, 85%);
+  font-weight: normal;
+  font-size: inherit;
+  border-radius: 0;
+}
+/* Prevent any selected day from becoming bold/large */
+.portal-calendar .rdp-selected .rdp-day_button {
+  font-weight: normal;
+  font-size: inherit;
+}
+.portal-calendar .rdp-range_start .rdp-day_button {
+  border-radius: 8px 0 0 8px;
+}
+.portal-calendar .rdp-range_end .rdp-day_button {
+  border-radius: 0 8px 8px 0;
+}
+/* Single day selected (start == end) */
+.portal-calendar .rdp-range_start.rdp-range_end .rdp-day_button {
+  border-radius: 8px;
+}
+.portal-calendar .rdp-disabled {
+  opacity: 0.2;
+}
+.portal-calendar .rdp-today:not(.rdp-selected) {
+  color: hsl(185, 72%, 55%);
+  font-weight: 700;
+}

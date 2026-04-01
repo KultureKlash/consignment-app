@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useSearchParams } from "react-router";
 import { redirect } from "react-router";
-import { Search, DollarSign, ShoppingBag, TrendingUp, CheckCircle2, Clock, CircleDot, RotateCcw } from "lucide-react";
+import { Search, DollarSign, ShoppingBag, TrendingUp, CheckCircle2, Clock, CircleDot, RotateCcw, Download } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
+import { DateRangePicker } from "~/components/portal/DateRangePicker";
 import { fmt } from "~/lib/currency";
+import { downloadStatement } from "~/lib/pdf";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { getConsignorSales } from "~/services/portal/dashboard.server";
 import type { loader as portalLoader } from "./portal";
@@ -23,7 +25,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }, consignor.storeOwned);
 
   return {
-    consignor: { name: consignor.name },
+    consignor: { name: consignor.name, taxStatus: consignor.taxStatus, province: consignor.province },
     ...data,
     filters: { search, status },
   };
@@ -78,6 +80,9 @@ export default function PortalSales() {
   const parentData = useRouteLoaderData<typeof portalLoader>("routes/portal");
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState(filters.search);
+  const [datePreset, setDatePreset] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Sync search from URL
   useEffect(() => { setSearchValue(filters.search); }, [filters.search]);
@@ -103,6 +108,44 @@ export default function PortalSales() {
   }
 
   const activeTab = filters.status || "all";
+
+  // Date filtering
+  const getDateRange = (): { from: Date; to: Date } | null => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (datePreset === "today") return { from: startOfToday, to: now };
+    if (datePreset === "7d") return { from: new Date(startOfToday.getTime() - 6 * 86400000), to: now };
+    if (datePreset === "30d") return { from: new Date(startOfToday.getTime() - 29 * 86400000), to: now };
+    if (datePreset === "custom" && filterDateFrom && filterDateTo) {
+      return { from: new Date(filterDateFrom + "T00:00:00"), to: new Date(filterDateTo + "T23:59:59") };
+    }
+    return null;
+  };
+
+  const dateRange = getDateRange();
+  const filteredSales = dateRange
+    ? sales.filter((s: any) => { const d = new Date(s.date); return d >= dateRange.from && d <= dateRange.to; })
+    : sales;
+
+  const handleDownloadPdf = () => {
+    const headers = storeOwned
+      ? ["Product", "Size", "Order #", "Date", "Sale", "Cost", "Profit"]
+      : ["Product", "Size", "Order #", "Date", "Sale", "Fee", "My Payout"];
+    const rows = filteredSales.map((s: any) => [
+      s.product, s.size, s.orderNumber || "—",
+      formatDate(s.date),
+      `$${fmt(s.salePrice)}`,
+      storeOwned ? `$${fmt(s.cost)}` : `$${fmt(s.fee)}`,
+      storeOwned ? `$${fmt(s.profit)}` : `$${fmt(s.payout)}`,
+    ]);
+    const subtotal = filteredSales.reduce((sum: number, s: any) => sum + (storeOwned ? s.profit : s.payout), 0);
+    downloadStatement({
+      title: "Sales Report",
+      consignorName: consignor.name,
+      headers, rows,
+      totals: storeOwned ? undefined : { subtotal, consignor: consignor as any },
+    });
+  };
 
   return (
     <div>
@@ -167,7 +210,18 @@ export default function PortalSales() {
         </div>
 
         {/* Filter bar */}
-        <div className="flex flex-col md:flex-row gap-3 animate-slide-up" style={{ animationDelay: "240ms" }}>
+        <div className="flex flex-col md:flex-row gap-3 animate-slide-up items-stretch md:items-center" style={{ animationDelay: "240ms" }}>
+          {/* Date range */}
+          <DateRangePicker
+            preset={datePreset}
+            from={filterDateFrom}
+            to={filterDateTo}
+            onChange={({ dateRange, from, to }) => {
+              setDatePreset(dateRange);
+              setFilterDateFrom(from ?? "");
+              setFilterDateTo(to ?? "");
+            }}
+          />
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -197,10 +251,16 @@ export default function PortalSales() {
               </button>
             ))}
           </div>
+
+          {filteredSales.length > 0 && (
+            <button onClick={handleDownloadPdf} title="Download PDF" className="p-2 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer shrink-0">
+              <Download className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Sales table / cards */}
-        {sales.length === 0 ? (
+        {filteredSales.length === 0 ? (
           <div className="glass-panel rounded-2xl p-12 text-center animate-slide-up" style={{ animationDelay: "320ms" }}>
             <ShoppingBag className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
@@ -238,7 +298,7 @@ export default function PortalSales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map((sale) => (
+                  {filteredSales.map((sale) => (
                     <tr key={sale.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                       <td className="text-sm font-medium px-4 py-3.5 text-left">{sale.product}</td>
                       <td className="text-sm text-muted-foreground px-4 py-3.5 text-center whitespace-nowrap">{sale.size}</td>
@@ -262,7 +322,7 @@ export default function PortalSales() {
 
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">
-              {sales.map((sale, i) => (
+              {filteredSales.map((sale, i) => (
                 <div
                   key={sale.id}
                   className="glass-panel rounded-xl p-4 animate-slide-up"

@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search, Download } from "lucide-react";
 import CustomSelect from "~/components/admin/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
 import { searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import { fmt } from "~/lib/currency";
+import { generateCsv, downloadCsv } from "~/lib/csv";
 import type { Prisma } from "@prisma/client";
 
 const STATUS_OPTIONS = [
@@ -165,6 +166,25 @@ export default function Orders() {
     return () => clearTimeout(timer);
   }, [searchValue]);
 
+  const handleDownloadCsv = () => {
+    const headers = ["Order #", "Date", "Total", "Items", "Status"];
+    const rows = orders.map((o: any) => {
+      const badge = getStatusBadge(o);
+      const itemSummary = o.items.length === 1
+        ? `${o.items[0].listing.variant.product.title} (${o.items[0].listing.variant.size})`
+        : `${o.items.length} items`;
+      return [
+        displayOrderName(o),
+        formatDate(o.createdAt),
+        o.total.toFixed(2),
+        itemSummary,
+        badge.label,
+      ];
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    downloadCsv(`orders-${today}.csv`, generateCsv(headers, rows));
+  };
+
   function updateFilter(updates: Record<string, string>) {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -251,6 +271,12 @@ export default function Orders() {
             >
               Clear filters
             </span>
+          )}
+
+          {orders.length > 0 && (
+            <button onClick={handleDownloadCsv} title="Download CSV" style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 2px", color: "#9ca3af", transition: "color 0.15s", marginLeft: "auto" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}>
+              <Download size={14} />
+            </button>
           )}
         </div>
 

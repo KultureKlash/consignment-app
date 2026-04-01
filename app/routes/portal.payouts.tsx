@@ -2,11 +2,13 @@ import { useState } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useFetcher } from "react-router";
 import { redirect } from "react-router";
-import { ChevronDown, ChevronRight, Clock, FileText, CheckCircle2, CircleDot, DollarSign, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, FileText, CheckCircle2, CircleDot, DollarSign, Send, Download } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
+import { DateRangePicker } from "~/components/portal/DateRangePicker";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
+import { downloadStatement } from "~/lib/pdf";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { getConsignorPayouts } from "~/services/portal/dashboard.server";
 import prisma from "~/db.server";
@@ -99,12 +101,74 @@ export default function PortalPayouts() {
   }
 
   const isIndividual = consignor.taxStatus !== "business";
-  const activePayouts = payouts.filter((p) => p.status === "pending" || p.status === "invoiced");
-  const paidPayouts = payouts.filter((p) => p.status === "paid");
 
-  const totalActive = activePayouts.reduce((s, p) => s + p.amount, 0);
-  const totalPaid = paidPayouts.reduce((s, p) => s + p.amount, 0);
-  const totalUnbatched = unbatchedTxs.reduce((s, tx) => s + tx.consignorAmount, 0);
+  // Date filter state
+  const [datePreset, setDatePreset] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  const getDateRange = (): { from: Date; to: Date } | null => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (datePreset === "today") return { from: startOfToday, to: now };
+    if (datePreset === "7d") return { from: new Date(startOfToday.getTime() - 6 * 86400000), to: now };
+    if (datePreset === "30d") return { from: new Date(startOfToday.getTime() - 29 * 86400000), to: now };
+    if (datePreset === "custom" && filterDateFrom && filterDateTo) {
+      return { from: new Date(filterDateFrom + "T00:00:00"), to: new Date(filterDateTo + "T23:59:59") };
+    }
+    return null;
+  };
+
+  const isInRange = (dateStr: string): boolean => {
+    const range = getDateRange();
+    if (!range) return true;
+    const d = new Date(dateStr);
+    return d >= range.from && d <= range.to;
+  };
+
+  const filteredUnbatched = unbatchedTxs.filter((tx: any) => isInRange(tx.createdAt));
+  const filteredActive = payouts.filter((p) => (p.status === "pending" || p.status === "invoiced") && isInRange(p.createdAt as any));
+  const filteredPaid = payouts.filter((p) => p.status === "paid" && isInRange(p.createdAt as any));
+
+  const totalActive = filteredActive.reduce((s, p) => s + p.amount, 0);
+  const totalPaid = filteredPaid.reduce((s, p) => s + p.amount, 0);
+  const totalUnbatched = filteredUnbatched.reduce((s: number, tx: any) => s + tx.consignorAmount, 0);
+
+  const getPeriodLabel = () => {
+    if (datePreset === "all") return undefined;
+    if (datePreset === "today") return new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    if (datePreset === "7d") return "Last 7 days";
+    if (datePreset === "30d") return "Last 30 days";
+    if (filterDateFrom && filterDateTo) {
+      return `${new Date(filterDateFrom + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(filterDateTo + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    }
+    return undefined;
+  };
+
+  const downloadPayoutItems = (payoutList: any[], label: string) => {
+    const headers = ["Product", "Size", "Order #", "Date Sold", "Sale", "Fee", "My Payout", "Payout Date"];
+    const rows = payoutList.flatMap((p: any) =>
+      p.items.map((pi: any) => {
+        const tx = pi.transaction;
+        return [
+          tx.orderItem?.listing?.variant?.product?.title ?? "Unknown",
+          tx.orderItem?.listing?.variant?.size ?? "",
+          tx.orderItem?.order?.orderNumber ?? "",
+          tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "",
+          `$${tx.grossAmount.toFixed(2)}`, `$${tx.feeAmount.toFixed(2)}`, `$${tx.consignorAmount.toFixed(2)}`,
+          new Date(p.createdAt).toLocaleDateString(),
+        ];
+      }),
+    );
+    const subtotal = payoutList.reduce((s: number, p: any) => s + p.amount, 0);
+    downloadStatement({
+      title: `Payout Statement — ${label}`,
+      consignorName: consignor.name,
+      period: getPeriodLabel(),
+      headers, rows,
+      totals: { subtotal, consignor },
+    });
+  };
 
   return (
     <div>
@@ -124,7 +188,7 @@ export default function PortalPayouts() {
         <div className="hidden md:grid grid-cols-3 gap-4">
           {[
             { label: "Unbatched", display: `$${fmt(totalUnbatched)}`, icon: CircleDot, color: "text-muted-foreground", tip: "Sales earnings not yet grouped into a payout by the admin." },
-            { label: isIndividual ? "Pending" : "Awaiting Invoice", display: String(activePayouts.length), icon: Clock, color: "text-[hsl(var(--warning))]", tip: isIndividual ? "Number of payouts being processed for payment." : "Number of payouts awaiting your invoice. Send your invoice so we can process payment." },
+            { label: isIndividual ? "Pending" : "Awaiting Invoice", display: String(filteredActive.length), icon: Clock, color: "text-[hsl(var(--warning))]", tip: isIndividual ? "Number of payouts being processed for payment." : "Number of payouts awaiting your invoice. Send your invoice so we can process payment." },
             { label: "Paid Out", display: `$${fmt(totalPaid)}`, icon: CheckCircle2, color: "text-[hsl(var(--success))]", tip: "Total amount that has been paid to you." },
           ].map((stat, i) => (
             <div key={stat.label} className="stat-card animate-slide-up !p-5" style={{ animationDelay: `${i * 80}ms` }}>
@@ -176,14 +240,28 @@ export default function PortalPayouts() {
               <InfoTip text={isIndividual ? "Payouts being processed for payment." : "Payouts awaiting your invoice. Send your invoice so we can process payment."} />
             </div>
             <div className="flex items-end justify-between mt-auto pt-3">
-              <p className="text-xl font-bold tracking-tight tabular-nums">{activePayouts.length}</p>
+              <p className="text-xl font-bold tracking-tight tabular-nums">{filteredActive.length}</p>
               <Clock className="w-4 h-4 text-[hsl(var(--warning))]/60" />
             </div>
           </div>
         </div>
 
+        {/* Date filter toolbar */}
+        <div className="flex items-center justify-between animate-slide-up" style={{ animationDelay: "300ms" }}>
+          <DateRangePicker
+            preset={datePreset}
+            from={filterDateFrom}
+            to={filterDateTo}
+            onChange={({ dateRange, from, to }) => {
+              setDatePreset(dateRange);
+              setFilterDateFrom(from ?? "");
+              setFilterDateTo(to ?? "");
+            }}
+          />
+        </div>
+
         {/* Unbatched Sales */}
-        {unbatchedTxs.length > 0 && (
+        {filteredUnbatched.length > 0 && (
           <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "320ms" }}>
             <button
               onClick={() => setShowUnbatched(!showUnbatched)}
@@ -193,7 +271,7 @@ export default function PortalPayouts() {
                 {showUnbatched ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                 <div className="text-left">
                   <h3 className="text-sm font-semibold flex items-center gap-1.5">Unbatched Sales <InfoTip text="These are your earned commissions from sales that haven't been grouped into a payout yet. The admin will batch them when ready." /></h3>
-                  <p className="text-xs text-muted-foreground">{unbatchedTxs.length} sale{unbatchedTxs.length !== 1 ? "s" : ""} not yet in a payout</p>
+                  <p className="text-xs text-muted-foreground">{filteredUnbatched.length} sale{filteredUnbatched.length !== 1 ? "s" : ""} not yet in a payout</p>
                 </div>
               </div>
               <span className="text-sm font-bold tabular-nums">${fmt(totalUnbatched)}</span>
@@ -209,7 +287,7 @@ export default function PortalPayouts() {
                     <span className="text-right">Payout</span>
                     <span className="text-right">Date</span>
                   </div>
-                  {unbatchedTxs.map((tx) => (
+                  {filteredUnbatched.map((tx) => (
                     <div key={tx.id} className="grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-6 py-3 border-b border-[rgba(255,255,255,0.04)] text-sm">
                       <div className="min-w-0 truncate">
                         <span className="font-medium">{tx.orderItem?.listing?.variant?.product?.title ?? "Unknown"}</span>
@@ -226,7 +304,7 @@ export default function PortalPayouts() {
                 </div>
                 {/* Mobile cards */}
                 <div className="md:hidden divide-y divide-[rgba(255,255,255,0.06)]">
-                  {unbatchedTxs.map((tx) => (
+                  {filteredUnbatched.map((tx) => (
                     <div key={tx.id} className="px-4 py-3">
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-sm font-medium truncate mr-2">{tx.orderItem?.listing?.variant?.product?.title ?? "Unknown"}</span>
@@ -245,14 +323,14 @@ export default function PortalPayouts() {
         )}
 
         {/* Active Payouts (pending + invoiced) */}
-        {activePayouts.length > 0 && (
+        {filteredActive.length > 0 && (
           <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "400ms" }}>
             <div className="px-4 md:px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
               <h3 className="text-sm md:text-base font-semibold flex items-center gap-1.5">Active Payouts <InfoTip text={isIndividual ? "Payouts being processed. You'll be paid directly — no invoice needed." : "Payouts awaiting your invoice. Click 'Mark Invoice Sent' once you've sent it."} /></h3>
-              <p className="text-xs text-muted-foreground">{activePayouts.length} payout{activePayouts.length !== 1 ? "s" : ""} in progress</p>
+              <p className="text-xs text-muted-foreground">{filteredActive.length} payout{filteredActive.length !== 1 ? "s" : ""} in progress</p>
             </div>
             <div className="divide-y divide-[rgba(255,255,255,0.06)]">
-              {activePayouts.map((payout) => {
+              {filteredActive.map((payout) => {
                 const isOpen = expandedPayout === payout.id;
                 return (
                   <div key={payout.id}>
@@ -383,18 +461,25 @@ export default function PortalPayouts() {
 
         {/* Payout History (paid) */}
         <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "480ms" }}>
-          <div className="px-4 md:px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
-            <h3 className="text-sm md:text-base font-semibold">Payout History</h3>
-            <p className="text-xs text-muted-foreground">Completed payouts</p>
+          <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
+            <div>
+              <h3 className="text-sm md:text-base font-semibold">Payout History</h3>
+              <p className="text-xs text-muted-foreground">Completed payouts</p>
+            </div>
+            {filteredPaid.length > 0 && (
+              <button onClick={() => downloadPayoutItems(filteredPaid, "Payout History")} title="Download PDF" className="p-1 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer">
+                <Download className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {paidPayouts.length === 0 ? (
+          {filteredPaid.length === 0 ? (
             <div className="px-6 py-12 text-center text-muted-foreground text-sm">
               No completed payouts yet. Paid payouts will appear here.
             </div>
           ) : (
             <div className="divide-y divide-[rgba(255,255,255,0.06)]">
-              {paidPayouts.map((payout) => {
+              {filteredPaid.map((payout) => {
                 const isOpen = expandedPayout === payout.id;
                 return (
                   <div key={payout.id}>
