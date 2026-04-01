@@ -22,7 +22,7 @@ const AVATAR_COLORS = [
 
 const PROVINCES = [
   { code: "QC", name: "Quebec",  gst: 5, pst: 9.975, hst: 0,  tax: 14.975 },
-  { code: "ON", name: "Ontario", gst: 0, pst: 0,     hst: 13, tax: 13     },
+  { code: "ON", name: "Ontario", gst: 5, pst: 0,     hst: 0,  tax: 5      },
 ];
 
 function getInitials(name: string): string {

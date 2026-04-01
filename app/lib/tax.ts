@@ -4,15 +4,8 @@
 export const GST_RATE = 0.05; // 5% federal GST
 export const QST_RATE = 0.09975; // 9.975% Quebec QST
 
-// HST rates by province (combined federal + provincial)
-// Add more provinces here when needed
-const HST_RATES: Record<string, number> = {
-  ON: 0.13, // Ontario 13%
-  // NS: 0.15, // Nova Scotia 15%
-  // NB: 0.15, // New Brunswick 15%
-  // NL: 0.15, // Newfoundland & Labrador 15%
-  // PE: 0.15, // Prince Edward Island 15%
-};
+// Ontario consignors invoice with GST only (5%) since the supply is in Quebec.
+// No HST — HST only applies for intra-provincial supplies.
 
 export interface TaxBreakdown {
   subtotal: number;
@@ -21,14 +14,13 @@ export interface TaxBreakdown {
   hst: number;
   total: number;
   isTaxable: boolean;
-  taxLabel: string; // e.g. "GST + QST", "HST (13%)", "GST"
+  taxLabel: string;
 }
 
 /**
  * Compute tax on a consignor payout.
  * - QC businesses: GST (5%) + QST (9.975%)
- * - HST provinces (ON, NS, NB, NL, PE): HST (13-15%)
- * - Other provinces (AB, BC, MB, SK): GST only (5%)
+ * - All other provinces (ON, etc.): GST only (5%) — supply is in QC, no HST
  * - Individuals: no tax
  */
 export function computeTax(
@@ -53,18 +45,7 @@ export function computeTax(
     };
   }
 
-  // HST provinces (ON, NS, NB, NL, PE)
-  const hstRate = HST_RATES[prov];
-  if (hstRate) {
-    const hst = round2(subtotal * hstRate);
-    return {
-      subtotal, gst: 0, qst: 0, hst,
-      total: round2(subtotal + hst),
-      isTaxable, taxLabel: `HST (${(hstRate * 100).toFixed(0)}%)`,
-    };
-  }
-
-  // All other provinces (AB, BC, MB, SK): GST only
+  // All other provinces: GST only (5%)
   const gst = round2(subtotal * GST_RATE);
   return {
     subtotal, gst, qst: 0, hst: 0,
