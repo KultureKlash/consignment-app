@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useFetcher, Link, useSearchParams } from "react-router";
 import { redirect } from "react-router";
-import { Plus, Package, Trash2, Pencil, Search, Eye, EyeOff, ChevronDown, ChevronRight, PackageX, ArrowLeft, ExternalLink } from "lucide-react";
+import { Plus, Package, Trash2, Pencil, Search, Eye, EyeOff, ChevronDown, ChevronRight, ChevronLeft, PackageX, ArrowLeft, ExternalLink } from "lucide-react";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { fmt } from "~/lib/currency";
@@ -346,8 +346,16 @@ export default function PortalListings() {
         return [...prev, ...unique];
       });
       setMobileLoading(false);
+      mobileLoadingRef.current = false;
     }
   }, [loadMoreFetcher.data, loadMoreFetcher.state]);
+
+  // Refs to avoid stale closures in IntersectionObserver
+  const totalPagesRef = useRef(totalPages);
+  const mobileLoadingRef = useRef(false);
+  const searchParamsRef = useRef(searchParams);
+  totalPagesRef.current = totalPages;
+  searchParamsRef.current = searchParams;
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -356,10 +364,11 @@ export default function PortalListings() {
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && mobilePage.current < totalPages && !mobileLoading) {
+        if (entries[0].isIntersecting && mobilePage.current < totalPagesRef.current && !mobileLoadingRef.current) {
           mobilePage.current++;
+          mobileLoadingRef.current = true;
           setMobileLoading(true);
-          const params = new URLSearchParams(searchParams);
+          const params = new URLSearchParams(searchParamsRef.current);
           params.set("page", String(mobilePage.current));
           loadMoreFetcher.load(`/portal/listings?${params.toString()}`);
         }
@@ -368,7 +377,7 @@ export default function PortalListings() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [totalPages, mobileLoading, searchParams]);
+  }, []); // stable — runs once, uses refs
 
   // Desktop uses server groups directly, mobile uses accumulated
   const groups = serverGroups; // desktop
@@ -688,38 +697,30 @@ export default function PortalListings() {
           )}
         </div>
 
-        {/* Desktop pagination */}
+        {/* Desktop pagination — compact glass pill */}
         {totalPages > 1 && (
-          <div className="hidden md:flex items-center justify-center gap-2 pt-4">
-            {page > 1 && (
+          <div className="hidden md:flex items-center justify-center pt-5">
+            <div className="inline-flex items-center glass-panel rounded-full px-1.5 py-1.5 gap-1">
               <button
                 onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set("page", String(page - 1)); return p; })}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1] transition-colors cursor-pointer"
+                disabled={page <= 1}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/[0.08] transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-default"
               >
-                Previous
+                <ChevronLeft className="w-4 h-4" />
               </button>
-            )}
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setSearchParams((prev) => { const params = new URLSearchParams(prev); params.set("page", String(p)); return params; })}
-                className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                  p === page
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1]"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-            {page < totalPages && (
+              <div className="px-3 text-xs tabular-nums">
+                <span className="text-foreground font-semibold">{page}</span>
+                <span className="text-muted-foreground/50 mx-1.5">/</span>
+                <span className="text-muted-foreground">{totalPages}</span>
+              </div>
               <button
                 onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set("page", String(page + 1)); return p; })}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.06] border border-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.1] transition-colors cursor-pointer"
+                disabled={page >= totalPages}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/[0.08] transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-default"
               >
-                Next
+                <ChevronRight className="w-4 h-4" />
               </button>
-            )}
+            </div>
           </div>
         )}
 
