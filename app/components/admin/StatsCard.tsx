@@ -13,53 +13,21 @@ export interface StatsCardProps {
 type ColorTheme = {
   iconBg: string;
   iconColor: string;
-  accentGradient: string;
-  hoverBorder: string;
-  glowShadow: string;
+  accentLine: string;
 };
 
 function getTheme(color?: string): ColorTheme {
   switch (color) {
     case "green":
-      return {
-        iconBg: "linear-gradient(135deg, #064e3b, #065f46)",
-        iconColor: "#ffffff",
-        accentGradient: "linear-gradient(90deg, #065f46, #047857, transparent)",
-        hoverBorder: "rgba(6, 95, 70, 0.35)",
-        glowShadow: "0 8px 24px -4px rgba(6, 78, 59, 0.15), 0 2px 6px rgba(6, 78, 59, 0.08)",
-      };
+      return { iconBg: "#ecfdf5", iconColor: "#059669", accentLine: "#059669" };
     case "blue":
-      return {
-        iconBg: "linear-gradient(135deg, #1e3a5f, #1e40af)",
-        iconColor: "#ffffff",
-        accentGradient: "linear-gradient(90deg, #1e40af, #2563eb, transparent)",
-        hoverBorder: "rgba(30, 64, 175, 0.35)",
-        glowShadow: "0 8px 24px -4px rgba(30, 58, 95, 0.15), 0 2px 6px rgba(30, 58, 95, 0.08)",
-      };
+      return { iconBg: "#eff6ff", iconColor: "#2563eb", accentLine: "#2563eb" };
     case "purple":
-      return {
-        iconBg: "linear-gradient(135deg, #3b0764, #5b21b6)",
-        iconColor: "#ffffff",
-        accentGradient: "linear-gradient(90deg, #5b21b6, #7c3aed, transparent)",
-        hoverBorder: "rgba(91, 33, 182, 0.35)",
-        glowShadow: "0 8px 24px -4px rgba(59, 7, 100, 0.15), 0 2px 6px rgba(59, 7, 100, 0.08)",
-      };
+      return { iconBg: "#f5f3ff", iconColor: "#7c3aed", accentLine: "#7c3aed" };
     case "amber":
-      return {
-        iconBg: "linear-gradient(135deg, #78350f, #92400e)",
-        iconColor: "#ffffff",
-        accentGradient: "linear-gradient(90deg, #92400e, #b45309, transparent)",
-        hoverBorder: "rgba(146, 64, 14, 0.35)",
-        glowShadow: "0 8px 24px -4px rgba(120, 53, 15, 0.15), 0 2px 6px rgba(120, 53, 15, 0.08)",
-      };
+      return { iconBg: "#fffbeb", iconColor: "#d97706", accentLine: "#d97706" };
     default:
-      return {
-        iconBg: "linear-gradient(135deg, #1e293b, #334155)",
-        iconColor: "#ffffff",
-        accentGradient: "linear-gradient(90deg, #334155, #475569, transparent)",
-        hoverBorder: "rgba(51, 65, 85, 0.35)",
-        glowShadow: "0 8px 24px -4px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05)",
-      };
+      return { iconBg: "#f8fafc", iconColor: "#64748b", accentLine: "#64748b" };
   }
 }
 
@@ -74,65 +42,75 @@ export default function StatsCard({ label, value, trend, icon: Icon, color, tip 
       style={{
         position: "relative",
         background: "#ffffff",
-        border: `1px solid ${hovered ? t.hoverBorder : "rgba(0, 0, 0, 0.06)"}`,
-        borderRadius: "14px",
+        borderRadius: "16px",
         padding: "20px 22px",
+        border: "1px solid #f0f0f0",
         boxShadow: hovered
-          ? t.glowShadow
-          : "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
+          ? "0 8px 30px rgba(0,0,0,0.08)"
+          : "0 1px 3px rgba(0,0,0,0.04)",
         transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        transform: hovered ? "translateY(-2px)" : "translateY(0)",
         cursor: "default",
         overflow: "hidden",
       }}
     >
-      {/* Icon */}
+      {/* Accent line — top */}
       <div style={{
-        width: "36px",
-        height: "36px",
-        borderRadius: "10px",
-        background: t.iconBg,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: "14px",
-        transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-        transform: hovered ? "scale(1.08)" : "scale(1)",
-      }}>
-        <Icon size={17} color={t.iconColor} strokeWidth={2} />
+        position: "absolute",
+        top: 0, left: "20px", right: "20px",
+        height: "2px",
+        background: t.accentLine,
+        opacity: hovered ? 0.6 : 0.2,
+        transition: "opacity 0.3s ease",
+        borderRadius: "0 0 2px 2px",
+      }} />
+
+      {/* Top row: label + icon */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
+        <p style={{
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "#94a3b8",
+          letterSpacing: "0.01em",
+          margin: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+        }}>
+          {label}
+          {tip && (
+            <span title={tip} style={{ cursor: "help", display: "inline-flex", opacity: 0.5 }}>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <text x="8" y="11.5" textAnchor="middle" fontSize="10" fontWeight="600" fill="currentColor">i</text>
+              </svg>
+            </span>
+          )}
+        </p>
+        <div style={{
+          width: "36px",
+          height: "36px",
+          borderRadius: "10px",
+          background: t.iconBg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "transform 0.3s ease",
+          transform: hovered ? "scale(1.05)" : "scale(1)",
+        }}>
+          <Icon size={17} color={t.iconColor} strokeWidth={2} />
+        </div>
       </div>
 
-      {/* Label */}
-      <p style={{
-        fontSize: "12px",
-        fontWeight: 500,
-        color: "#8c9196",
-        letterSpacing: "0.02em",
-        margin: "0 0 4px",
-        display: "flex",
-        alignItems: "center",
-        gap: "4px",
-      }}>
-        {label}
-        {tip && (
-          <span title={tip} style={{ cursor: "help", display: "inline-flex" }}>
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="7" stroke="#c4c9d1" strokeWidth="1.5" />
-              <text x="8" y="11.5" textAnchor="middle" fontSize="10" fontWeight="600" fill="#9ca3af">i</text>
-            </svg>
-          </span>
-        )}
-      </p>
-
-      {/* Value + Trend */}
+      {/* Value */}
       <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
         <span style={{
-          fontSize: "24px",
+          fontSize: "26px",
           fontWeight: 700,
           letterSpacing: "-0.03em",
           color: "#1a1a1a",
           fontVariantNumeric: "tabular-nums",
-          lineHeight: 1.1,
+          lineHeight: 1,
         }}>
           {value}
         </span>
@@ -142,25 +120,13 @@ export default function StatsCard({ label, value, trend, icon: Icon, color, tip 
             fontWeight: 600,
             color: "#059669",
             background: "#ecfdf5",
-            padding: "2px 6px",
+            padding: "2px 7px",
             borderRadius: "6px",
           }}>
             {trend}
           </span>
         )}
       </div>
-
-      {/* Accent bar */}
-      <div style={{
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: "3px",
-        background: t.accentGradient,
-        opacity: hovered ? 0.9 : 0.35,
-        transition: "opacity 0.3s ease",
-      }} />
     </div>
   );
 }

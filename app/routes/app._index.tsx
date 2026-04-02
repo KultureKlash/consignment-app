@@ -28,15 +28,15 @@ const itemVariants = {
 
 const sectionCard: React.CSSProperties = {
   background: "#ffffff",
-  border: "1px solid rgba(0, 0, 0, 0.06)",
-  borderRadius: "14px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
+  border: "1px solid #f0f0f0",
+  borderRadius: "16px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   overflow: "hidden",
 };
 
 const sectionHeader: React.CSSProperties = {
   padding: "16px 22px",
-  borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+  borderBottom: "1px solid #f5f5f5",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -45,14 +45,14 @@ const sectionHeader: React.CSSProperties = {
 const sectionTitle: React.CSSProperties = {
   fontSize: "12px",
   fontWeight: 700,
-  color: "#64748b",
+  color: "#94a3b8",
   textTransform: "uppercase",
-  letterSpacing: "0.06em",
+  letterSpacing: "0.05em",
   margin: 0,
 };
 
 export default function Dashboard() {
-  const { totalSales, totalOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, updatedAt, activityFeed } =
+  const { totalSales, totalOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
   const [showAllActivity, setShowAllActivity] = useState(false);
   const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
@@ -67,7 +67,7 @@ export default function Dashboard() {
     { label: "Inventory Value",  value: `$${fmt(Number(inventoryValue))}`,    icon: Package,     color: "purple", tip: "Total asking price of all active listings currently for sale." },
   ];
 
-  const actionTotal = submittedCount + awaitingDropoffCount + withdrawalRequestCount;
+  const actionTotal = submittedCount + awaitingDropoffCount + withdrawalRequestCount + pendingPickupCount;
 
   return (
     <s-page>
@@ -124,13 +124,16 @@ export default function Dashboard() {
                 </div>
                 <div style={{ padding: "6px 8px", display: "flex", flexDirection: "column", gap: "2px" }}>
                   <Link to="/app/listings?status=submitted" style={{ textDecoration: "none" }}>
-                    <ActionItem label="Awaiting Approval" count={submittedCount} color="#2563eb" subtitle="Submitted by consignors" />
+                    <ActionItem label="Awaiting Approval" count={submittedCount} color="#059669" subtitle="Submitted by consignors" />
                   </Link>
                   <Link to="/app/listings?status=approved_awaiting_dropoff" style={{ textDecoration: "none" }}>
                     <ActionItem label="Awaiting Drop-off" count={awaitingDropoffCount} color="#d97706" subtitle="Approved, pending item arrival" />
                   </Link>
                   <Link to="/app/listings?status=withdrawal_requested" style={{ textDecoration: "none" }}>
                     <ActionItem label="Withdrawal Requests" count={withdrawalRequestCount} color="#ea580c" subtitle="Requires review" />
+                  </Link>
+                  <Link to="/app/listings?status=pending_pickup" style={{ textDecoration: "none" }}>
+                    <ActionItem label="Awaiting Pickup" count={pendingPickupCount} color="#0891b2" subtitle="Ready for consignor collection" />
                   </Link>
                 </div>
               </div>

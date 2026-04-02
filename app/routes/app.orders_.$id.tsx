@@ -4,6 +4,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getOrderDetail } from "~/services/order-queries.server";
 import { fmt } from "~/lib/currency";
+import { sectionCard, sectionHeader, sectionTitle } from "~/lib/admin/listing-ui";
 import { computeTax } from "~/lib/tax";
 import {
   ArrowLeft, ShoppingBag, DollarSign,
@@ -18,30 +19,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 // ── Shared styles ──
 
-const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(227,227,227,0.6)",
-  borderRadius: "12px",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-};
-
-const sectionHeaderStyle: React.CSSProperties = {
-  padding: "14px 20px",
-  borderBottom: "1px solid rgba(227,227,227,0.5)",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#1a1a1a",
-  textTransform: "uppercase",
-  letterSpacing: "0.03em",
-  margin: 0,
-};
+// sectionCard, sectionHeader, sectionTitle imported from listing-ui
 
 // ── Helpers ──
 
@@ -224,9 +202,9 @@ export default function OrderDetail() {
 
         {/* Items section */}
         <div style={{ ...sectionCard, marginBottom: "24px" }}>
-          <div style={sectionHeaderStyle}>
+          <div style={sectionHeader}>
             <Package size={15} color="#6d7175" />
-            <h2 style={sectionTitleStyle}>Items</h2>
+            <h2 style={sectionTitle}>Items</h2>
             <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
               {summary.itemCount} item{summary.itemCount !== 1 ? "s" : ""}
               {summary.refundedCount > 0 ? ` · ${summary.refundedCount} refunded` : ""}
@@ -320,9 +298,9 @@ export default function OrderDetail() {
         <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "24px" }}>
           {/* Financial Ledger */}
           <div style={sectionCard}>
-            <div style={sectionHeaderStyle}>
+            <div style={sectionHeader}>
               <FileText size={15} color="#6d7175" />
-              <h2 style={sectionTitleStyle}>Financial Ledger</h2>
+              <h2 style={sectionTitle}>Financial Ledger</h2>
             </div>
             <div>
               {(() => {
@@ -392,9 +370,9 @@ export default function OrderDetail() {
 
           {/* Timeline */}
           <div style={sectionCard}>
-            <div style={sectionHeaderStyle}>
+            <div style={sectionHeader}>
               <Clock size={15} color="#6d7175" />
-              <h2 style={sectionTitleStyle}>Timeline</h2>
+              <h2 style={sectionTitle}>Timeline</h2>
             </div>
             <div style={{ padding: "20px" }}>
               {timeline.map((event, i) => {

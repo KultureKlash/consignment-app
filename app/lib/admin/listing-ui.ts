@@ -150,6 +150,33 @@ export function handleBlurStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelec
   e.currentTarget.style.boxShadow = "none";
 }
 
+// ── Unified section/card styles ──────────────────────────
+
+export const sectionCard: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #f0f0f0",
+  borderRadius: "16px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  overflow: "hidden",
+};
+
+export const sectionHeader: React.CSSProperties = {
+  padding: "16px 22px",
+  borderBottom: "1px solid #f5f5f5",
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+};
+
+export const sectionTitle: React.CSSProperties = {
+  fontSize: "12px",
+  fontWeight: 700,
+  color: "#94a3b8",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  margin: 0,
+};
+
 // ── Types ───────────────────────────────────────────────
 
 export type ProductResult = {

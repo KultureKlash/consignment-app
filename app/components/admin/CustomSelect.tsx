@@ -12,6 +12,7 @@ type CustomSelectProps = {
   hasError?: boolean;
   searchable?: boolean;
   actionItem?: { label: string; onSelect: () => void };
+  chipStyle?: React.CSSProperties;
 };
 
 const triggerStyle: React.CSSProperties = {
@@ -59,6 +60,7 @@ export default function CustomSelect({
   hasError = false,
   searchable = false,
   actionItem,
+  chipStyle,
 }: CustomSelectProps) {
   // Normalize options to { label, value } pairs
   const normalizedOptions: OptionItem[] = options.map((opt) =>
@@ -118,7 +120,7 @@ export default function CustomSelect({
     setTimeout(() => setOpen(false), 200);
   };
 
-  const baseStyle = disabled ? disabledTriggerStyle : triggerStyle;
+  const baseStyle = chipStyle ?? (disabled ? disabledTriggerStyle : triggerStyle);
   const errorOverride = hasError && !disabled ? { borderColor: "#ef4444" } : {};
   const focusRef = useRef(false);
 
@@ -162,7 +164,7 @@ export default function CustomSelect({
         }}>
           {value ? selectedLabel : placeholder}
         </span>
-        <span style={chevronStyle} />
+        <span style={chipStyle ? { ...chevronStyle, borderLeftWidth: "3px", borderRightWidth: "3px", borderTopWidth: "4px", marginLeft: "4px" } : chevronStyle} />
       </div>
 
       <Dropdown anchorRef={anchorRef} open={open}>

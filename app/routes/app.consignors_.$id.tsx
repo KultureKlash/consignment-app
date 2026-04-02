@@ -7,7 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
 import { syncInventory } from "~/services/inventory.server";
 import prisma from "~/db.server";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
+import { inputStyle, labelStyle, handleFocus, handleBlurStyle, sectionCard, sectionHeader, sectionTitle } from "~/lib/admin/listing-ui";
 import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X, ExternalLink } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
@@ -90,30 +90,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 };
 
-const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(227,227,227,0.6)",
-  borderRadius: "12px",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-  overflow: "hidden",
-};
-
-const sectionHeader: React.CSSProperties = {
-  padding: "16px 24px",
-  borderBottom: "1px solid rgba(227,227,227,0.5)",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const sectionTitle: React.CSSProperties = {
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#1a1a1a",
-  textTransform: "uppercase",
-  letterSpacing: "0.03em",
-  margin: 0,
-};
+// sectionCard, sectionHeader, sectionTitle imported from listing-ui
 
 const statRow: React.CSSProperties = {
   display: "flex",

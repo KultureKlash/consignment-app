@@ -23,7 +23,7 @@ export async function getDashboardData() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [salesAgg, totalOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount] = await Promise.all([
+  const [salesAgg, totalOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount] = await Promise.all([
     prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { grossAmount: true } }),
     prisma.order.count(),
     prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
@@ -32,6 +32,7 @@ export async function getDashboardData() {
     prisma.listing.count({ where: { status: "submitted" } }),
     prisma.listing.count({ where: { status: "approved_awaiting_dropoff" } }),
     prisma.listing.count({ where: { status: "withdrawal_requested" } }),
+    prisma.listing.count({ where: { status: "pending_pickup" } }),
   ]);
 
   const totalSales = salesAgg._sum.grossAmount ?? 0;
@@ -80,6 +81,7 @@ export async function getDashboardData() {
     submittedCount,
     awaitingDropoffCount,
     withdrawalRequestCount,
+    pendingPickupCount,
     updatedAt: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
     activityFeed,
   };

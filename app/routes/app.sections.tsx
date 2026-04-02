@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
-import { inputStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
+import { inputStyle, handleFocus, handleBlurStyle, sectionCard } from "~/lib/admin/listing-ui";
 import { Plus, Pencil, Trash2, Check, X, MapPin } from "lucide-react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -52,13 +52,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(227,227,227,0.6)",
-  borderRadius: "12px",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-  overflow: "hidden",
-};
+// sectionCard imported from listing-ui
 
 export default function Sections() {
   const { sections } = useLoaderData<typeof loader>();
