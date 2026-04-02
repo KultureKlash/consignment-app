@@ -12,11 +12,16 @@ import {
 import CustomSelect from "~/components/admin/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
 import { computeTax } from "~/lib/tax";
+import prisma from "~/db.server";
 import { generateCsv, downloadCsv } from "~/lib/csv";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return getPayoutsPageData();
+  const [data, allConsignors] = await Promise.all([
+    getPayoutsPageData(),
+    prisma.consignor.findMany({ where: { storeOwned: false }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
+  return { ...data, allConsignors };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -131,7 +136,7 @@ function StatCard({ label, value, icon: Icon, accentColor }: { label: string; va
 // ── Component ──
 
 export default function Payouts() {
-  const { unpaidByConsignor, payouts, stats } = useLoaderData<typeof loader>();
+  const { unpaidByConsignor, payouts, stats, allConsignors } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
   const shopify = useAppBridge();
 
@@ -144,15 +149,10 @@ export default function Payouts() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  // Build consignor options from all data
-  const allConsignorNames = new Map<string, string>();
-  for (const entry of unpaidByConsignor) allConsignorNames.set(entry.consignor.id, entry.consignor.name);
-  for (const p of payouts) allConsignorNames.set(p.consignorId, p.consignor.name);
+  // Build consignor options from all consignors (not just those with data)
   const consignorOptions = [
     { label: "All Consignors", value: "" },
-    ...Array.from(allConsignorNames.entries())
-      .sort((a, b) => a[1].localeCompare(b[1]))
-      .map(([id, name]) => ({ label: name, value: id })),
+    ...allConsignors.map((c) => ({ label: c.name, value: c.id })),
   ];
 
   const hasFilters = filterConsignor !== "" || datePreset !== "all";

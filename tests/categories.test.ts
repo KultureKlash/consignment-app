@@ -24,23 +24,23 @@ describe("categories", () => {
       expect(result.subCategory).toBe("Sneakers");
     });
 
-    it("detects Air Jordan as Nike Footwear > Sneakers", () => {
+    it("detects Air Jordan as Air Jordan Footwear > Sneakers", () => {
       const result = autoSuggest("Air Jordan 1 Retro High OG Bred");
-      expect(result.brand).toBe("Nike");
+      expect(result.brand).toBe("Air Jordan");
       expect(result.mainCategory).toBe("Footwear");
       expect(result.subCategory).toBe("Sneakers");
     });
 
-    it("detects Yeezy as Adidas Footwear > Sneakers", () => {
+    it("detects Yeezy as YEEZY Footwear > Sneakers", () => {
       const result = autoSuggest("Yeezy Boost 350 V2 Zebra");
-      expect(result.brand).toBe("Adidas");
+      expect(result.brand).toBe("YEEZY");
       expect(result.mainCategory).toBe("Footwear");
       expect(result.subCategory).toBe("Sneakers");
     });
 
-    it("detects Yeezy Slide as Adidas Footwear", () => {
+    it("detects Yeezy Slide as YEEZY Footwear", () => {
       const result = autoSuggest("Yeezy Slide Onyx");
-      expect(result.brand).toBe("Adidas");
+      expect(result.brand).toBe("YEEZY");
       expect(result.mainCategory).toBe("Footwear");
     });
 
@@ -60,7 +60,7 @@ describe("categories", () => {
 
     it("detects hoodie as Apparel", () => {
       const result = autoSuggest("Essentials Hoodie Black");
-      expect(result.brand).toBe("Fear of God");
+      expect(result.brand).toBe("Fear of God Essentials");
       expect(result.mainCategory).toBe("Apparel");
       expect(result.subCategory).toBe("Hoodies");
     });
@@ -114,21 +114,27 @@ describe("categories", () => {
   });
 
   describe("buildCategory / parseCategory", () => {
-    it("builds main + sub", () => {
-      expect(buildCategory("Footwear", "Sneakers")).toBe("Footwear > Sneakers");
+    it("builds main + sub (returns sub only)", () => {
+      expect(buildCategory("Footwear", "Sneakers")).toBe("Sneakers");
     });
 
     it("builds main only", () => {
       expect(buildCategory("Apparel")).toBe("Apparel");
     });
 
-    it("parses main + sub", () => {
+    it("parses legacy format (main > sub)", () => {
       const { main, sub } = parseCategory("Footwear > Sneakers");
       expect(main).toBe("Footwear");
       expect(sub).toBe("Sneakers");
     });
 
-    it("parses main only", () => {
+    it("parses new format (sub only) with reverse lookup", () => {
+      const { main, sub } = parseCategory("Sneakers");
+      expect(main).toBe("Footwear");
+      expect(sub).toBe("Sneakers");
+    });
+
+    it("parses main category name", () => {
       const { main, sub } = parseCategory("Apparel");
       expect(main).toBe("Apparel");
       expect(sub).toBeUndefined();
@@ -136,7 +142,7 @@ describe("categories", () => {
   });
 
   describe("isFootwear", () => {
-    it("returns true for 'Footwear > Sneakers'", () => {
+    it("returns true for legacy 'Footwear > Sneakers'", () => {
       expect(isFootwear("Footwear > Sneakers")).toBe(true);
     });
 
@@ -144,7 +150,19 @@ describe("categories", () => {
       expect(isFootwear("Footwear")).toBe(true);
     });
 
-    it("returns false for 'Apparel > T-Shirts'", () => {
+    it("returns true for new format 'Sneakers'", () => {
+      expect(isFootwear("Sneakers")).toBe(true);
+    });
+
+    it("returns true for 'Boots'", () => {
+      expect(isFootwear("Boots")).toBe(true);
+    });
+
+    it("returns false for 'T-Shirts'", () => {
+      expect(isFootwear("T-Shirts")).toBe(false);
+    });
+
+    it("returns false for legacy 'Apparel > T-Shirts'", () => {
       expect(isFootwear("Apparel > T-Shirts")).toBe(false);
     });
 
@@ -191,7 +209,7 @@ describe("categories", () => {
       expect(abbreviateSubcategory("Fitted Hats")).toBe("FIT");
       expect(abbreviateSubcategory("Puffer Jackets")).toBe("PFJ");
       expect(abbreviateSubcategory("Jeans")).toBe("JNS");
-      expect(abbreviateSubcategory("Varsity Jacket")).toBe("VJK");
+      expect(abbreviateSubcategory("Varsity Jackets")).toBe("VJK");
     });
 
     it("abbreviates unknown subcategories to first 3 chars", () => {

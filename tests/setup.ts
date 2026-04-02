@@ -17,6 +17,7 @@ beforeEach(async () => {
   await prisma.variant.deleteMany();
   await prisma.product.deleteMany();
   await prisma.consignor.deleteMany();
+  await prisma.storeSection.deleteMany();
 });
 
 afterAll(async () => {

@@ -64,9 +64,20 @@ model Product {
 
   shopifyProductId  String?  @unique
 
+  sectionId         String?
+  section           StoreSection? @relation(fields: [sectionId], references: [id])
+
   variants          Variant[]
 
   createdAt         DateTime @default(now())
+}
+
+model StoreSection {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  products  Product[]
+  createdAt DateTime  @default(now())
 }
 
 model Variant {

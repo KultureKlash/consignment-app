@@ -6,12 +6,16 @@ import CustomSelect from "~/components/admin/CustomSelect";
 
 type Consignor = { id: string; name: string };
 
+type Section = { id: string; name: string };
+
 type Props = {
   search: string;
   status: string;
   category: string;
   consignorId: string;
+  sectionId?: string;
   consignors: Consignor[];
+  sections?: Section[];
   onFilterChange: (params: Record<string, string>) => void;
 };
 
@@ -21,12 +25,12 @@ const STATUS_OPTIONS = [
   { label: "Awaiting Drop-off", value: "approved_awaiting_dropoff" },
   { label: "Active", value: "active" },
   { label: "Paused", value: "paused" },
-  { label: "Pending", value: "pending_sale" },
+  { label: "Pending Sale", value: "pending_sale" },
   { label: "Sold", value: "sold" },
   { label: "Rejected", value: "rejected" },
   { label: "Cancelled", value: "cancelled" },
-  { label: "Withdrawal Requested", value: "withdrawal_requested" },
-  { label: "Pending Pickup", value: "pending_pickup" },
+  { label: "Withdrawal", value: "withdrawal_requested" },
+  { label: "Pickup", value: "pending_pickup" },
   { label: "Withdrawn", value: "withdrawn" },
 ];
 
@@ -35,7 +39,9 @@ export default function ListingsFilter({
   status,
   category,
   consignorId,
+  sectionId = "",
   consignors,
+  sections = [],
   onFilterChange,
 }: Props) {
   const [searchValue, setSearchValue] = useState(initialSearch);
@@ -60,15 +66,15 @@ export default function ListingsFilter({
   const subCategory = categoryParsed.sub || "";
   const subOptions = mainCategory ? (CATEGORIES[mainCategory] ?? []) : [];
 
-  const hasFilters = (status && status !== "active") || category || consignorId || initialSearch;
+  const hasFilters = (status && status !== "active") || category || consignorId || sectionId || initialSearch;
 
   const consignorNames = consignors.map((c) => c.name);
   const selectedConsignorName = consignors.find((c) => c.id === consignorId)?.name ?? "";
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end", marginBottom: "16px" }}>
-      {/* Search */}
-      <div style={{ flex: "1 1 240px", position: "relative" }}>
+    <div style={{ marginBottom: "16px" }}>
+      {/* Search — full width on top */}
+      <div style={{ position: "relative", marginBottom: "8px" }}>
         <span style={searchIconWrap}><Search size={16} /></span>
         <input
           type="text"
@@ -81,81 +87,96 @@ export default function ListingsFilter({
         />
       </div>
 
-      {/* Status */}
-      <div style={{ flex: "0 0 150px" }}>
-        <CustomSelect
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(val) => onFilterChange({ status: val === status ? "all" : val, page: "1" })}
-          placeholder="Status"
-        />
-      </div>
-
-      {/* Category */}
-      <div style={{ flex: "0 0 150px" }}>
-        <CustomSelect
-          options={MAIN_CATEGORIES}
-          value={mainCategory}
-          onChange={(val) => onFilterChange({ category: val === mainCategory ? "" : val, page: "1" })}
-          placeholder="Category"
-        />
-      </div>
-
-      {/* Subcategory — only when a main category is selected */}
-      {mainCategory && subOptions.length > 0 && (
-        <div style={{ flex: "0 0 160px" }}>
+      {/* Filter row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+        {/* Status */}
+        <div style={{ width: "130px" }}>
           <CustomSelect
-            options={subOptions}
-            value={subCategory}
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={(val) => onFilterChange({ status: val === status ? "all" : val, page: "1" })}
+            placeholder="Status"
+          />
+        </div>
+
+        {/* Category */}
+        <div style={{ width: "130px" }}>
+          <CustomSelect
+            options={MAIN_CATEGORIES}
+            value={mainCategory}
+            onChange={(val) => onFilterChange({ category: val === mainCategory ? "" : val, page: "1" })}
+            placeholder="Category"
+          />
+        </div>
+
+        {/* Subcategory — only when a main category is selected */}
+        {mainCategory && subOptions.length > 0 && (
+          <div style={{ width: "150px" }}>
+            <CustomSelect
+              options={subOptions}
+              value={subCategory}
+              onChange={(val) => {
+                if (val === subCategory) {
+                  onFilterChange({ category: mainCategory, page: "1" });
+                } else {
+                  onFilterChange({ category: val, page: "1" });
+                }
+              }}
+              placeholder="Subcategory"
+              searchable
+            />
+          </div>
+        )}
+
+        {/* Consignor */}
+        <div style={{ width: "160px" }}>
+          <CustomSelect
+            options={consignorNames}
+            value={selectedConsignorName}
             onChange={(val) => {
-              if (val === subCategory) {
-                // Toggle off — go back to main category only
-                onFilterChange({ category: mainCategory, page: "1" });
-              } else {
-                onFilterChange({ category: val, page: "1" });
-              }
+              const c = consignors.find((c) => c.name === val);
+              onFilterChange({
+                consignorId: c && c.id !== consignorId ? c.id : "",
+                page: "1",
+              });
             }}
-            placeholder="Subcategory"
+            placeholder="Consignor"
             searchable
           />
         </div>
-      )}
 
-      {/* Consignor */}
-      <div style={{ flex: "0 0 170px" }}>
-        <CustomSelect
-          options={consignorNames}
-          value={selectedConsignorName}
-          onChange={(val) => {
-            const c = consignors.find((c) => c.name === val);
-            onFilterChange({
-              consignorId: c && c.id !== consignorId ? c.id : "",
-              page: "1",
-            });
-          }}
-          placeholder="Consignor"
-          searchable
-        />
-      </div>
+        {/* Section filter */}
+        {sections.length > 0 && (
+          <div style={{ width: "120px" }}>
+            <CustomSelect
+              options={sections.map((s) => ({ label: s.name, value: s.id }))}
+              value={sectionId}
+              onChange={(val) => onFilterChange({ sectionId: val === sectionId ? "" : val, page: "1" })}
+              placeholder="Section"
+              searchable
+            />
+          </div>
+        )}
 
-      {/* Clear filters */}
-      {hasFilters && (
-        <span
-          onClick={() => {
-            setSearchValue("");
-            onFilterChange({ search: "", status: "active", category: "", consignorId: "", page: "1" });
-          }}
-          style={{
-            fontSize: "13px",
-            color: "#4f46e5",
-            fontWeight: 500,
-            cursor: "pointer",
+        {/* Clear filters */}
+        {hasFilters && (
+          <span
+            onClick={() => {
+              setSearchValue("");
+              onFilterChange({ search: "", status: "active", category: "", consignorId: "", sectionId: "", page: "1" });
+            }}
+            style={{
+              fontSize: "13px",
+              color: "#4f46e5",
+              fontWeight: 500,
+              cursor: "pointer",
             padding: "10px 0",
           }}
         >
           Clear filters
         </span>
-      )}
+        )}
+      </div>
     </div>
   );
 }

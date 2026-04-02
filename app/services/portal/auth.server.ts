@@ -56,6 +56,23 @@ export async function authenticatePortal(request: Request) {
   return consignor;
 }
 
+/** Create a short-lived signed token for admin impersonation (expires in 30 seconds). */
+export function createImpersonationToken(consignorId: string): string {
+  const payload = `imp:${consignorId}:${Date.now()}`;
+  return sign(payload);
+}
+
+/** Verify an impersonation token. Returns consignorId or null if invalid/expired. */
+export function verifyImpersonationToken(token: string): string | null {
+  const payload = unsign(token);
+  if (!payload || !payload.startsWith("imp:")) return null;
+  const parts = payload.split(":");
+  if (parts.length !== 3) return null;
+  const timestamp = parseInt(parts[2], 10);
+  if (Date.now() - timestamp > 30_000) return null; // 30 second expiry
+  return parts[1];
+}
+
 /** Build a Set-Cookie header to create a signed portal session. */
 export function createSessionCookie(consignorId: string): string {
   const signedValue = sign(consignorId);

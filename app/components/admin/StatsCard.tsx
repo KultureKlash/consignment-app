@@ -7,6 +7,7 @@ export interface StatsCardProps {
   trend?: string;
   icon: LucideIcon;
   color?: string;
+  tip?: string;
 }
 
 type ColorTheme = {
@@ -62,7 +63,7 @@ function getTheme(color?: string): ColorTheme {
   }
 }
 
-export default function StatsCard({ label, value, trend, icon: Icon, color }: StatsCardProps) {
+export default function StatsCard({ label, value, trend, icon: Icon, color, tip }: StatsCardProps) {
   const [hovered, setHovered] = useState(false);
   const t = getTheme(color);
 
@@ -108,8 +109,19 @@ export default function StatsCard({ label, value, trend, icon: Icon, color }: St
         color: "#8c9196",
         letterSpacing: "0.02em",
         margin: "0 0 4px",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
       }}>
         {label}
+        {tip && (
+          <span title={tip} style={{ cursor: "help", display: "inline-flex" }}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="#c4c9d1" strokeWidth="1.5" />
+              <text x="8" y="11.5" textAnchor="middle" fontSize="10" fontWeight="600" fill="#9ca3af">i</text>
+            </svg>
+          </span>
+        )}
       </p>
 
       {/* Value + Trend */}

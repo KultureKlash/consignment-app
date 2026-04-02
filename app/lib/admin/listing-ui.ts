@@ -88,6 +88,7 @@ export const statusBadge = (status: string): React.CSSProperties => {
     color: c.text,
     border: `1px solid ${c.border}`,
     textTransform: "capitalize",
+    whiteSpace: "nowrap",
   };
 };
 
@@ -132,8 +133,8 @@ export function statusLabel(status: string): string {
     sold: "sold",
     cancelled: "cancelled",
     rejected: "rejected",
-    withdrawal_requested: "withdrawal requested",
-    pending_pickup: "pending pickup",
+    withdrawal_requested: "withdrawal",
+    pending_pickup: "pickup",
     withdrawn: "withdrawn",
   };
   return labels[status] ?? status;

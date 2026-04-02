@@ -6,6 +6,7 @@ export type ListingFilters = {
   status?: string;
   category?: string;
   consignorId?: string;
+  sectionId?: string;
   sortBy?: "date" | "price" | "status";
   sortDir?: "asc" | "desc";
   page?: number;
@@ -15,7 +16,7 @@ export type ListingFilters = {
 
 const LISTING_INCLUDE = {
   consignor: true,
-  variant: { include: { product: true } },
+  variant: { include: { product: { include: { section: true } } } },
 } as const;
 
 export async function queryListings(filters: ListingFilters) {
@@ -60,6 +61,10 @@ export async function queryListings(filters: ListingFilters) {
 
   if (consignorId) {
     conditions.push({ consignorId });
+  }
+
+  if (filters.sectionId) {
+    conditions.push({ variant: { product: { sectionId: filters.sectionId } } });
   }
 
   const where: Prisma.ListingWhereInput = conditions.length > 0 ? { AND: conditions } : {};

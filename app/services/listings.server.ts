@@ -112,6 +112,31 @@ export async function cancelListing({
   return updated;
 }
 
+export async function restoreListing({
+  admin,
+  listingId,
+}: {
+  admin: AdminApiContext;
+  listingId: string;
+}) {
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { variant: true, consignor: true },
+  });
+  if (!listing) throw new Error("Listing not found");
+  if (listing.status !== "cancelled") throw new Error("Only cancelled listings can be restored");
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: "active" },
+    include: { consignor: true },
+  });
+
+  await syncInventory({ admin, variant: listing.variant });
+
+  return updated;
+}
+
 /**
  * Bulk cancel listings: updates DB in one transaction, then syncs each
  * affected variant to Shopify once (not per listing) with retries.

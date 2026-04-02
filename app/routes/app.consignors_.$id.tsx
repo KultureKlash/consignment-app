@@ -8,7 +8,7 @@ import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsign
 import { syncInventory } from "~/services/inventory.server";
 import prisma from "~/db.server";
 import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
-import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X, ExternalLink } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
 
@@ -270,6 +270,30 @@ export default function ConsignorDetail() {
             onMouseLeave={(e) => { if (hasChanges && !isSubmitting) { e.currentTarget.style.background = "#111827"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)"; e.currentTarget.style.transform = "translateY(0)"; } }}
           >
             {isSubmitting ? "Saving..." : "Save Changes"}
+          </button>
+          <button
+            onClick={() => {
+              fetch("/app/api/impersonate", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `consignorId=${encodeURIComponent(consignor.id)}`,
+              })
+                .then((r) => r.json())
+                .then((data) => { if (data.url) window.open(data.url, "_blank"); })
+                .catch(() => shopify.toast.show("Failed to open portal"));
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              padding: "10px 18px", fontSize: "13px", fontWeight: 500,
+              color: "#6d7175", background: "rgba(17,24,39,0.04)",
+              border: "1px solid rgba(17,24,39,0.12)", borderRadius: "10px",
+              cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(17,24,39,0.08)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(17,24,39,0.04)"; }}
+          >
+            <ExternalLink size={14} />
+            View Portal
           </button>
         </div>
 

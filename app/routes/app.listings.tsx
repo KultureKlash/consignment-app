@@ -4,7 +4,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { cancelListing, bulkCancelListings, createListing } from "~/services/listings.server";
+import { cancelListing, bulkCancelListings, createListing, restoreListing } from "~/services/listings.server";
 import {
   approveListing,
   rejectListing,
@@ -40,12 +40,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const sortDir = (url.searchParams.get("sortDir") as "asc" | "desc") || "desc";
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
 
-  const [result, consignors] = await Promise.all([
+  const sectionId = url.searchParams.get("sectionId") ?? "";
+
+  const [result, consignors, sections] = await Promise.all([
     queryListings({
       search: search || undefined,
       status: status && status !== "all" ? status : undefined,
       category: category || undefined,
       consignorId: consignorId || undefined,
+      sectionId: sectionId || undefined,
       sortBy,
       sortDir,
       page,
@@ -53,9 +56,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       grouped: true,
     }),
     prisma.consignor.findMany({ select: { id: true, name: true, storeOwned: true }, orderBy: { name: "asc" } }),
+    prisma.storeSection.findMany({ select: { id: true, name: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
-  return { ...result, consignors, filters: { search, status, category, consignorId }, sortBy, sortDir };
+  return { ...result, consignors, sections, filters: { search, status, category, consignorId, sectionId }, sortBy, sortDir };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -180,6 +184,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { intent };
     }
 
+    if (intent === "set-section") {
+      const productId = formData.get("productId") as string;
+      const sectionId = (formData.get("sectionId") as string) || null;
+      await prisma.product.update({ where: { id: productId }, data: { sectionId } });
+      return { intent };
+    }
+
+    if (intent === "restore") {
+      await restoreListing({ admin, listingId: formData.get("listingId") as string });
+      return { intent };
+    }
+
     throw new Error("Invalid intent");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -188,12 +204,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Listings() {
-  const { listings, total, page, totalPages, consignors, filters, sortBy, sortDir } = useLoaderData<typeof loader>();
+  const { listings, total, page, totalPages, consignors, sections, filters, sortBy, sortDir } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const cancelFetcher = useFetcher();
   const addFetcher = useFetcher();
   const approvalFetcher = useFetcher();
+  const sectionFetcher = useFetcher();
   const shopify = useAppBridge();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [quickAdd, setQuickAdd] = useState<{ productId: string; anchorEl: HTMLElement } | null>(null);
@@ -286,6 +303,10 @@ export default function Listings() {
 
   const handleCancel = (listingId: string) => {
     cancelFetcher.submit({ intent: "cancel", listingId }, { method: "POST" });
+  };
+
+  const handleRestore = (listingId: string) => {
+    cancelFetcher.submit({ intent: "restore", listingId }, { method: "POST" });
   };
 
   const handleBulkCancel = () => {
@@ -401,7 +422,9 @@ export default function Listings() {
           status={filters.status}
           category={filters.category}
           consignorId={filters.consignorId}
+          sectionId={filters.sectionId}
           consignors={consignors}
+          sections={sections}
           onFilterChange={handleFilterChange}
         />
 
@@ -460,11 +483,11 @@ export default function Listings() {
               {/* Show bulk cancel if any selected are active */}
               {listings.some((l) => selectedIds.has(l.id) && l.status === "active") && (
                 <BulkActionButton
-                  label={cancelLoading ? "Cancelling..." : "Cancel selected"}
+                  label={cancelLoading ? "Deleting..." : "Delete selected"}
                   onClick={handleBulkCancel}
                   disabled={cancelLoading}
-                  bg="#111827"
-                  bgHover="#374151"
+                  bg="#7f1d1d"
+                  bgHover="#991b1b"
                 />
               )}
             </div>
@@ -475,6 +498,7 @@ export default function Listings() {
           listings={listings}
           grouped
           onCancel={handleCancel}
+          onRestore={handleRestore}
           onApprove={handleApprove}
           onReject={handleReject}
           onActivate={handleActivate}
@@ -490,6 +514,13 @@ export default function Listings() {
           onSortChange={handleSortChange}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
+          sections={sections}
+          onSectionChange={(productId, sectionId) => {
+            sectionFetcher.submit(
+              { intent: "set-section", productId, sectionId: sectionId ?? "" },
+              { method: "POST" },
+            );
+          }}
         />
 
         {quickAdd && quickAddData && (

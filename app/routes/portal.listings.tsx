@@ -146,8 +146,8 @@ const STATUS_LABELS: Record<string, string> = {
   sold: "Sold",
   cancelled: "Cancelled",
   rejected: "Rejected",
-  withdrawal_requested: "Withdrawal Requested",
-  pending_pickup: "Pending Pickup",
+  withdrawal_requested: "Withdrawing",
+  pending_pickup: "Pickup Ready",
   withdrawn: "Withdrawn",
 };
 
@@ -276,6 +276,21 @@ type ProductGroup = {
   listings: ListingRow[];
 };
 
+// Status priority: lower = shown first. Active/in-process on top, final statuses at bottom.
+const STATUS_PRIORITY: Record<string, number> = {
+  active: 0,
+  pending_sale: 1,
+  submitted: 2,
+  approved_awaiting_dropoff: 3,
+  withdrawal_requested: 4,
+  pending_pickup: 5,
+  paused: 6,
+  rejected: 7,
+  cancelled: 8,
+  sold: 9,
+  withdrawn: 10,
+};
+
 function groupByProduct(listings: ListingRow[]): ProductGroup[] {
   const map = new Map<string, ProductGroup>();
   for (const l of listings) {
@@ -292,6 +307,15 @@ function groupByProduct(listings: ListingRow[]): ProductGroup[] {
       map.set(pid, group);
     }
     group.listings.push(l);
+  }
+  // Sort within each group: by status priority, then newest first
+  for (const group of map.values()) {
+    group.listings.sort((a, b) => {
+      const pa = STATUS_PRIORITY[a.status] ?? 99;
+      const pb = STATUS_PRIORITY[b.status] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
   return Array.from(map.values());
 }
@@ -476,7 +500,7 @@ export default function PortalListings() {
               const count = tab.key === "all"
                 ? (showInactive ? totalCount : activeCount)
                 : tab.key === "withdrawals"
-                  ? (statusCounts["withdrawal_requested"] ?? 0) + (statusCounts["pending_pickup"] ?? 0) + (statusCounts["withdrawn"] ?? 0)
+                  ? (statusCounts["withdrawal_requested"] ?? 0) + (statusCounts["pending_pickup"] ?? 0)
                   : (statusCounts[tab.key] ?? 0);
               return (
                 <Link
@@ -561,7 +585,12 @@ export default function PortalListings() {
                           </span>
                         )}
                         <div className="min-w-0 text-left">
-                          <div className="truncate font-medium leading-tight">{group.title}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate font-medium leading-tight">{group.title}</span>
+                            {group.listings.some((l) => l.status === "withdrawal_requested" || l.status === "pending_pickup") && (
+                              <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.5)] shrink-0" title="Withdrawal in progress" />
+                            )}
+                          </div>
                           {group.brand && <div className="truncate text-[11px] text-muted-foreground leading-tight">{group.brand}</div>}
                         </div>
                         <span className="shrink-0 ml-auto text-xs text-muted-foreground tabular-nums mr-2">
@@ -648,7 +677,12 @@ export default function PortalListings() {
                           </span>
                         )}
                         <div className="flex-1 min-w-0 text-left">
-                          <div className="truncate text-sm font-medium">{group.title}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-medium">{group.title}</span>
+                            {group.listings.some((l) => l.status === "withdrawal_requested" || l.status === "pending_pickup") && (
+                              <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.5)] shrink-0" title="Withdrawal in progress" />
+                            )}
+                          </div>
                           {group.brand && <div className="truncate text-[11px] text-muted-foreground">{group.brand}</div>}
                         </div>
                         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">

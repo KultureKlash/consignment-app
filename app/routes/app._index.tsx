@@ -59,12 +59,12 @@ export default function Dashboard() {
 
   const stats = [
     // Col 1: Totals        | Col 2: Earnings breakdown | Col 3: Operations
-    { label: "Total Revenue",    value: `$${fmt(Number(totalSales))}`,        icon: DollarSign,  color: "blue"   },
-    { label: "Consignment Fees", value: `$${fmt(Number(consignmentFees))}`,   icon: TrendingUp,  color: "green"  },
-    { label: "Total Orders",     value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "purple" },
-    { label: "Total Earnings",   value: `$${fmt(Number(totalEarnings))}`,     icon: TrendingUp,  color: "amber"  },
-    { label: "Store Profit",     value: `$${fmt(Number(storeProfit))}`,       icon: ShoppingBag,  color: "green"  },
-    { label: "Inventory Value",  value: `$${fmt(Number(inventoryValue))}`,    icon: Package,     color: "purple" },
+    { label: "Total Revenue",    value: `$${fmt(Number(totalSales))}`,        icon: DollarSign,  color: "blue",   tip: "Total sale price of all sold items across all consignors." },
+    { label: "Consignment Fees", value: `$${fmt(Number(consignmentFees))}`,   icon: TrendingUp,  color: "green",  tip: "Total fees earned from consignment sales (your commission)." },
+    { label: "Total Orders",     value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "purple", tip: "Total number of orders received from customers." },
+    { label: "Total Earnings",   value: `$${fmt(Number(totalEarnings))}`,     icon: TrendingUp,  color: "amber",  tip: "Consignment fees + store-owned profit combined." },
+    { label: "Store Profit",     value: `$${fmt(Number(storeProfit))}`,       icon: ShoppingBag,  color: "green",  tip: "Profit from store-owned inventory (sale price minus cost)." },
+    { label: "Inventory Value",  value: `$${fmt(Number(inventoryValue))}`,    icon: Package,     color: "purple", tip: "Total asking price of all active listings currently for sale." },
   ];
 
   const actionTotal = submittedCount + awaitingDropoffCount + withdrawalRequestCount;
