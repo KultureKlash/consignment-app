@@ -76,7 +76,7 @@ describe("categories", () => {
       const result = autoSuggest("Supreme Shoulder Bag Red");
       expect(result.brand).toBe("Supreme");
       expect(result.mainCategory).toBe("Accessories");
-      expect(result.subCategory).toBe("Bags");
+      expect(result.subCategory).toBe("Handbags");
     });
 
     it("returns empty for unrecognized title", () => {

@@ -1,12 +1,12 @@
 export const CATEGORIES: Record<string, string[]> = {
-  Footwear: ["Sneakers", "Athletic Shoes", "Boots", "Sandals", "Slides", "Loafers", "Heels"],
+  Footwear: ["Sneakers", "Slides", "Boots"],
   Apparel: [
     "T-Shirts", "Long Sleeves", "Hoodies", "Sweatshirts", "Sweaters",
-    "Jackets", "Puffer Jackets", "Parkas", "Varsity Jackets", "Vests",
-    "Jeans", "Pants", "Sweatpants", "Shorts", "Jogger Shorts",
-    "Jerseys", "Polos", "Outfit Sets",
+    "Jackets", "Puffer Jackets", "Varsity Jackets", "Vests",
+    "Jeans", "Pants", "Sweatpants", "Shorts",
+    "Tracksuits", "Jerseys", "Polos",
   ],
-  Accessories: ["Bags", "Wallets", "Belts", "Sunglasses", "Jewelry", "Watches"],
+  Accessories: ["Handbags", "Saddle Bags", "Messenger Bags", "Backpacks", "Pouches", "Wallets", "Card Holders", "Belts", "Sunglasses"],
   Headwear: ["Caps", "Beanies", "Bucket Hats", "Fitted Hats", "Snapbacks", "Trucker Hats"],
 };
 

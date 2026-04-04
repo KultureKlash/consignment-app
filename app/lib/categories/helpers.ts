@@ -28,7 +28,7 @@ export function parseCategory(category: string): { main: string; sub?: string } 
 }
 
 const FOOTWEAR_TYPES = new Set([
-  "Sneakers", "Athletic Shoes", "Boots", "Sandals", "Slides", "Loafers", "Heels",
+  "Sneakers", "Slides", "Boots",
 ]);
 
 /**

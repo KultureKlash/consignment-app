@@ -6,48 +6,47 @@ const taxonomyCache = new Map<string, string | null>();
 
 // Maps our subcategory names to Shopify taxonomy search terms
 // All terms must resolve under "Apparel & Accessories" in Shopify's taxonomy
+// Simple search terms verified against real Shopify taxonomy API.
+// Each term returns the correct "Apparel & Accessories" subcategory as first result.
 const TAXONOMY_SEARCH_TERMS: Record<string, string> = {
-  // Footwear — all under Apparel & Accessories > Shoes
-  "Sneakers": "apparel accessories shoes sneakers",
-  "Athletic Shoes": "apparel accessories shoes athletic",
-  "Boots": "apparel accessories shoes boots",
-  "Sandals": "apparel accessories shoes sandals",
-  "Slides": "apparel accessories shoes sandals",
-  "Loafers": "apparel accessories shoes loafers",
-  "Heels": "apparel accessories shoes heels",
-  // Apparel — all under Apparel & Accessories > Clothing
-  "T-Shirts": "apparel accessories clothing shirts tops",
-  "Long Sleeves": "apparel accessories clothing shirts tops",
-  "Hoodies": "apparel accessories clothing outerwear hoodies",
-  "Sweatshirts": "apparel accessories clothing outerwear",
-  "Sweaters": "apparel accessories clothing sweaters",
-  "Jackets": "apparel accessories clothing outerwear coats jackets",
-  "Puffer Jackets": "apparel accessories clothing outerwear coats jackets",
-  "Parkas": "apparel accessories clothing outerwear coats jackets",
-  "Varsity Jackets": "apparel accessories clothing outerwear coats jackets",
-  "Vests": "apparel accessories clothing outerwear vests",
-  "Jeans": "apparel accessories clothing pants jeans",
-  "Pants": "apparel accessories clothing pants",
-  "Sweatpants": "apparel accessories clothing pants",
-  "Shorts": "apparel accessories clothing shorts",
-  "Jogger Shorts": "apparel accessories clothing shorts",
-  "Jerseys": "apparel accessories clothing shirts tops",
-  "Polos": "apparel accessories clothing shirts tops",
-  "Outfit Sets": "apparel accessories clothing sets",
-  // Accessories — all under Apparel & Accessories > Accessories
-  "Bags": "apparel accessories handbags wallets cases bags",
-  "Wallets": "apparel accessories handbags wallets",
-  "Belts": "apparel accessories belts",
-  "Sunglasses": "apparel accessories eyewear sunglasses",
-  "Jewelry": "apparel accessories jewelry",
-  "Watches": "apparel accessories jewelry watches",
-  // Headwear — all under Apparel & Accessories > Clothing Accessories > Hats
-  "Caps": "apparel accessories clothing accessories hats caps",
-  "Beanies": "apparel accessories clothing accessories hats caps",
-  "Bucket Hats": "apparel accessories clothing accessories hats caps",
-  "Fitted Hats": "apparel accessories clothing accessories hats caps",
-  "Snapbacks": "apparel accessories clothing accessories hats caps",
-  "Trucker Hats": "apparel accessories clothing accessories hats caps",
+  // Footwear
+  "Sneakers": "sneakers",
+  "Slides": "sandals",
+  "Boots": "boots",
+  // Apparel
+  "T-Shirts": "t-shirts",
+  "Long Sleeves": "t-shirts",
+  "Hoodies": "hoodies",
+  "Sweatshirts": "sweatshirts",
+  "Sweaters": "sweaters clothing",
+  "Jackets": "coats jackets",
+  "Puffer Jackets": "coats jackets",
+  "Varsity Jackets": "coats jackets",
+  "Vests": "vests",
+  "Jeans": "jeans",
+  "Pants": "pants",
+  "Sweatpants": "pants",
+  "Shorts": "shorts",
+  "Jerseys": "t-shirts",
+  "Polos": "t-shirts",
+  "Tracksuits": "outerwear",
+  // Accessories
+  "Handbags": "handbags",
+  "Saddle Bags": "handbags",
+  "Messenger Bags": "handbags",
+  "Backpacks": "backpacks",
+  "Pouches": "handbags",
+  "Wallets": "wallets",
+  "Card Holders": "wallets",
+  "Belts": "belts",
+  "Sunglasses": "sunglasses",
+  // Headwear
+  "Caps": "hats",
+  "Beanies": "hats",
+  "Bucket Hats": "hats",
+  "Fitted Hats": "hats",
+  "Snapbacks": "hats",
+  "Trucker Hats": "hats",
 };
 
 /**
