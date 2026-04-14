@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { TABS, ACTIVE_STATUSES } from "./helpers";
+import { TABS, ACTIVE_STATUSES } from "./listingHelpers";
 
 interface StatusTabsProps {
   statusFilter: string;

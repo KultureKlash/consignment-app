@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
-import { inputStyle, handleFocus, handleBlurStyle, sectionCard } from "~/lib/admin/listing-ui";
 import { Plus, Pencil, Trash2, Check, X, MapPin } from "lucide-react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -51,8 +50,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return { error: err instanceof Error ? err.message : "Unknown error", intent };
   }
 };
-
-// sectionCard imported from listing-ui
 
 export default function Sections() {
   const { sections } = useLoaderData<typeof loader>();
@@ -104,14 +101,7 @@ export default function Sections() {
     return (
       <div
         key={section.id}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "10px 20px",
-          borderBottom: "1px solid rgba(227,227,227,0.3)",
-          fontSize: "13px",
-        }}
+        className="flex items-center gap-3 px-5 py-2.5 border-b border-gray-200/30 text-[13px]"
       >
         {isEditing ? (
           <>
@@ -120,39 +110,37 @@ export default function Sections() {
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleRename(section.id); if (e.key === "Escape") setEditingId(null); }}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
-              style={{ ...inputStyle, flex: 1, padding: "6px 10px", fontSize: "13px" }}
+              className="admin-input flex-1 !py-1.5 !px-2.5 !text-[13px]"
               autoFocus
             />
-            <button onClick={() => handleRename(section.id)} disabled={isSubmitting} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#059669" }}>
+            <button onClick={() => handleRename(section.id)} disabled={isSubmitting} className="bg-transparent border-0 cursor-pointer p-1 text-emerald-600">
               <Check size={14} />
             </button>
-            <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6d7175" }}>
+            <button onClick={() => setEditingId(null)} className="bg-transparent border-0 cursor-pointer p-1 text-gray-500">
               <X size={14} />
             </button>
           </>
         ) : (
           <>
             <MapPin size={13} color="#9ca3af" />
-            <span style={{ flex: 1, fontWeight: 500, color: "#1a1a1a" }}>{section.name}</span>
-            <span style={{ fontSize: "11px", color: "#9ca3af", minWidth: "60px" }}>
-              {count > 0 ? `${count} product${count !== 1 ? "s" : ""}` : "—"}
+            <span className="flex-1 font-medium text-gray-900">{section.name}</span>
+            <span className="text-[11px] text-gray-400 min-w-[60px]">
+              {count > 0 ? `${count} product${count !== 1 ? "s" : ""}` : "\u2014"}
             </span>
             <button
               onClick={() => { setEditingId(section.id); setEditName(section.name); }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#9ca3af", transition: "color 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}
+              className="bg-transparent border-0 cursor-pointer p-1 text-gray-400 transition-colors duration-150 hover:text-gray-900"
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => setConfirmDelete(section.id)}
               disabled={count > 0}
-              style={{ background: "none", border: "none", cursor: count > 0 ? "default" : "pointer", padding: "4px", color: count > 0 ? "#e5e7eb" : "#9ca3af", transition: "color 0.15s" }}
-              onMouseEnter={(e) => { if (count === 0) e.currentTarget.style.color = "#dc2626"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = count > 0 ? "#e5e7eb" : "#9ca3af"; }}
+              className={`bg-transparent border-0 p-1 transition-colors duration-150 ${
+                count > 0
+                  ? "text-gray-200 cursor-default"
+                  : "text-gray-400 cursor-pointer hover:text-red-600"
+              }`}
               title={count > 0 ? "Remove products first" : "Delete section"}
             >
               <Trash2 size={13} />
@@ -166,39 +154,26 @@ export default function Sections() {
   return (
     <s-page heading="Store Sections">
       <s-section>
-        <p style={{ fontSize: "13px", color: "#6d7175", marginBottom: "16px" }}>
+        <p className="text-[13px] text-gray-500 mb-4">
           Manage where products are located in the store. Assign sections to products from the Listings page.
         </p>
 
         {/* Add new section */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
+        <div className="flex gap-2 mb-6">
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             placeholder="New section name (e.g. Rack G, K1)"
-            style={{ ...inputStyle, flex: 1 }}
+            className="admin-input flex-1"
           />
           <button
             onClick={handleCreate}
             disabled={!newName.trim() || isSubmitting}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "10px 18px",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#fff",
-              background: newName.trim() ? "#111827" : "#9ca3af",
-              border: "none",
-              borderRadius: "8px",
-              cursor: newName.trim() ? "pointer" : "default",
-              fontFamily: "inherit",
-            }}
+            className={`admin-btn-primary flex items-center gap-1.5 !px-4.5 !py-2.5 !text-[13px] ${
+              !newName.trim() ? "!bg-gray-400 !cursor-default hover:!bg-gray-400 hover:!shadow-none hover:!translate-y-0" : ""
+            }`}
           >
             <Plus size={14} />
             Add
@@ -207,10 +182,10 @@ export default function Sections() {
 
         {/* Clothing Racks */}
         {racks.length > 0 && (
-          <div style={{ ...sectionCard, marginBottom: "16px" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(227,227,227,0.5)", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Clothing Floor</span>
-              <span style={{ fontSize: "11px", color: "#9ca3af" }}>{racks.length} rack{racks.length !== 1 ? "s" : ""}</span>
+          <div className="admin-card mb-4">
+            <div className="px-5 py-3 border-b border-gray-200/50 flex items-center gap-2">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Clothing Floor</span>
+              <span className="text-[11px] text-gray-400">{racks.length} rack{racks.length !== 1 ? "s" : ""}</span>
             </div>
             {racks.map(renderSection)}
           </div>
@@ -218,10 +193,10 @@ export default function Sections() {
 
         {/* Shoe Storage */}
         {shoes.length > 0 && (
-          <div style={{ ...sectionCard, marginBottom: "16px" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(227,227,227,0.5)", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Shoe Storage</span>
-              <span style={{ fontSize: "11px", color: "#9ca3af" }}>{shoes.length} shelves</span>
+          <div className="admin-card mb-4">
+            <div className="px-5 py-3 border-b border-gray-200/50 flex items-center gap-2">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Shoe Storage</span>
+              <span className="text-[11px] text-gray-400">{shoes.length} shelves</span>
             </div>
             {shoes.map(renderSection)}
           </div>
@@ -229,9 +204,9 @@ export default function Sections() {
 
         {/* Other */}
         {other.length > 0 && (
-          <div style={sectionCard}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(227,227,227,0.5)" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Other</span>
+          <div className="admin-card">
+            <div className="px-5 py-3 border-b border-gray-200/50">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Other</span>
             </div>
             {other.map(renderSection)}
           </div>
@@ -240,13 +215,13 @@ export default function Sections() {
 
       {/* Delete confirmation */}
       {confirmDelete && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setConfirmDelete(null)}>
-          <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "360px", width: "90%", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>Delete Section?</h3>
-            <p style={{ fontSize: "13px", color: "#6d7175", marginBottom: "16px" }}>This section will be permanently removed.</p>
-            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <button onClick={() => setConfirmDelete(null)} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-              <button onClick={() => handleDelete(confirmDelete)} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 600, borderRadius: "8px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>Delete</button>
+        <div className="admin-modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-xl p-6 max-w-[360px] w-[90%] shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold mb-2">Delete Section?</h3>
+            <p className="text-[13px] text-gray-500 mb-4">This section will be permanently removed.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmDelete(null)} className="admin-btn-secondary !px-4 !py-2 !text-[13px]">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} className="admin-btn-danger !px-4 !py-2 !text-[13px]">Delete</button>
             </div>
           </div>
         </div>

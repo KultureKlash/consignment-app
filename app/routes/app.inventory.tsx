@@ -49,7 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     switch (intent) {
       case "create": {
-        const styleId = (formData.get("styleId") as string ?? "").trim().toUpperCase() || undefined;
+        const sku = (formData.get("sku") as string ?? "").trim().toUpperCase() || undefined;
         const title = (formData.get("title") as string ?? "").trim();
         const brand = (formData.get("brand") as string ?? "").trim() || undefined;
         const category = (formData.get("category") as string ?? "").trim() || undefined;
@@ -90,7 +90,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const cost = costRaw ? Number(costRaw) : undefined;
 
         const listing = await createListing({
-          admin, styleId, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData, cost,
+          admin, sku, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData, cost,
         });
 
         return { listing, intent, quantity };
@@ -111,7 +111,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           title: (formData.get("title") as string) || undefined,
           brand: (formData.get("brand") as string) || undefined,
           category: (formData.get("category") as string) || undefined,
-          styleId: (formData.get("styleId") as string) || undefined,
+          sku: (formData.get("sku") as string) || undefined,
           size: (formData.get("size") as string) || undefined,
           gtin: (formData.get("gtin") as string) || undefined,
           price: formData.get("price") ? Number(formData.get("price")) : undefined,

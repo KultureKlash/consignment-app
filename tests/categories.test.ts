@@ -267,10 +267,10 @@ describe("categories", () => {
     });
   });
 
-  describe("catalog service — footwear path (with styleId)", () => {
+  describe("catalog service — footwear path (with sku)", () => {
     it("saves category on product creation", async () => {
       const product = await findOrCreateProduct({
-        styleId: "CAT-TEST-001",
+        sku: "CAT-TEST-001",
         title: "Test Product",
         brand: "TestBrand",
         category: "Footwear > Sneakers",
@@ -281,13 +281,13 @@ describe("categories", () => {
 
     it("existing product keeps its category", async () => {
       await findOrCreateProduct({
-        styleId: "CAT-TEST-002",
+        sku: "CAT-TEST-002",
         title: "Test Product",
         category: "Apparel > Hoodies",
       });
 
       const product = await findOrCreateProduct({
-        styleId: "CAT-TEST-002",
+        sku: "CAT-TEST-002",
         title: "Test Product",
         category: "Footwear > Boots",
       });
@@ -296,15 +296,15 @@ describe("categories", () => {
     });
   });
 
-  describe("catalog service — non-footwear path (no styleId)", () => {
-    it("creates product without styleId", async () => {
+  describe("catalog service — non-footwear path (no sku)", () => {
+    it("creates product without sku", async () => {
       const product = await findOrCreateProduct({
         title: "Gallery Dept Le Bar Tee",
         brand: "Gallery Dept",
         category: "Apparel > T-Shirts",
       });
 
-      expect(product.styleId).toBeNull();
+      expect(product.sku).toBeNull();
       expect(product.title).toBe("Gallery Dept Le Bar Tee");
       expect(product.brand).toBe("Gallery Dept");
       expect(product.category).toBe("Apparel > T-Shirts");
@@ -351,7 +351,7 @@ describe("categories", () => {
 
       await createListing({
         admin,
-        styleId: "CAT-LST-001",
+        sku: "CAT-LST-001",
         title: "Nike Air Max 90",
         brand: "Nike",
         category: "Footwear > Sneakers",
@@ -361,7 +361,7 @@ describe("categories", () => {
         consignorId: consignor.id,
       });
 
-      const product = await prisma.product.findUnique({ where: { styleId: "CAT-LST-001" } });
+      const product = await prisma.product.findUnique({ where: { sku: "CAT-LST-001" } });
       expect(product?.category).toBe("Footwear > Sneakers");
       expect(product?.brand).toBe("Nike");
     });
@@ -393,7 +393,7 @@ describe("categories", () => {
 
       await createListing({
         admin,
-        styleId: "FW-BARCODE-001",
+        sku: "FW-BARCODE-001",
         title: "Nike Dunk Panda",
         brand: "Nike",
         category: "Footwear > Sneakers",
@@ -413,7 +413,7 @@ describe("categories", () => {
 
       await createListing({
         admin,
-        styleId: "NO-CAT-001",
+        sku: "NO-CAT-001",
         title: "Unknown Product",
         size: "OS",
         gtin: "MANUAL-GTIN",
@@ -421,7 +421,7 @@ describe("categories", () => {
         consignorId: consignor.id,
       });
 
-      const product = await prisma.product.findUnique({ where: { styleId: "NO-CAT-001" } });
+      const product = await prisma.product.findUnique({ where: { sku: "NO-CAT-001" } });
       expect(product?.category).toBeNull();
       const variant = await prisma.variant.findFirst();
       expect(variant?.gtin).toBe("MANUAL-GTIN");

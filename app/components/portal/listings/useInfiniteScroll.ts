@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useFetcher } from "react-router";
-import { groupByProduct } from "./helpers";
-import type { ListingRow, ProductGroup } from "./helpers";
+import { groupByProduct } from "./listingHelpers";
+import type { ListingRow, ProductGroup } from "./listingHelpers";
 import type { loader } from "~/routes/portal.listings";
 
 export function useInfiniteScroll(

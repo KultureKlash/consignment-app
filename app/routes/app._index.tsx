@@ -26,31 +26,6 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
-const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #f0f0f0",
-  borderRadius: "16px",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-};
-
-const sectionHeader: React.CSSProperties = {
-  padding: "16px 22px",
-  borderBottom: "1px solid #f5f5f5",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-};
-
-const sectionTitle: React.CSSProperties = {
-  fontSize: "12px",
-  fontWeight: 700,
-  color: "#94a3b8",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  margin: 0,
-};
-
 export default function Dashboard() {
   const { totalSales, totalOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
@@ -71,30 +46,30 @@ export default function Dashboard() {
 
   return (
     <s-page>
-      <div style={{ padding: "0" }}>
+      <div className="p-0">
         {/* Header */}
-        <header style={{ marginBottom: "28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <header className="mb-7 flex items-end justify-between">
           <div>
-            <h1 style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.025em", color: "#0f172a", margin: 0 }}>
+            <h1 className="text-[22px] font-bold tracking-tight text-gray-900 m-0">
               Operations
             </h1>
-            <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px", fontWeight: 400 }}>
+            <p className="text-[13px] text-slate-400 mt-1 font-normal">
               Overview of your consignment ecosystem.
             </p>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8", margin: "0 0 2px" }}>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
               Last Updated
             </p>
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "#334155", fontVariantNumeric: "tabular-nums", margin: 0 }}>
+            <p className="text-sm font-semibold text-slate-700 tabular-nums m-0">
               {updatedAt}
             </p>
           </div>
         </header>
 
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-7">
           {/* Stats Grid — 2 rows of 3 */}
-          <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+          <section className="grid grid-cols-3 gap-4">
             {stats.map((s) => (
               <motion.div key={s.label} variants={itemVariants}>
                 <StatsCard {...s} />
@@ -103,36 +78,33 @@ export default function Dashboard() {
           </section>
 
           {/* Bottom Two-Column Layout */}
-          <div style={{ display: "grid", gridTemplateColumns: "5fr 7fr", gap: "20px" }}>
+          <div className="grid gap-5" style={{ gridTemplateColumns: "5fr 7fr" }}>
             {/* Action Required */}
             <motion.section variants={itemVariants}>
-              <div style={sectionCard}>
-                <div style={sectionHeader}>
-                  <h2 style={sectionTitle}>Action Required</h2>
-                  <span style={{
-                    padding: "3px 10px",
-                    background: actionTotal > 0 ? "#fef2f2" : "#f8fafc",
-                    color: actionTotal > 0 ? "#dc2626" : "#94a3b8",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    borderRadius: "9999px",
-                    border: `1px solid ${actionTotal > 0 ? "rgba(220, 38, 38, 0.15)" : "rgba(0, 0, 0, 0.04)"}`,
-                    fontVariantNumeric: "tabular-nums",
-                  }}>
+              <div className="admin-card">
+                <div className="admin-card-header justify-between">
+                  <h2 className="admin-card-title">Action Required</h2>
+                  <span
+                    className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full tabular-nums border ${
+                      actionTotal > 0
+                        ? "bg-red-50 text-red-600 border-red-600/15"
+                        : "bg-slate-50 text-slate-400 border-black/[0.04]"
+                    }`}
+                  >
                     {actionTotal} Total
                   </span>
                 </div>
-                <div style={{ padding: "6px 8px", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <Link to="/app/listings?status=submitted" style={{ textDecoration: "none" }}>
+                <div className="px-2 py-1.5 flex flex-col gap-0.5">
+                  <Link to="/app/listings?status=submitted" className="no-underline">
                     <ActionItem label="Awaiting Approval" count={submittedCount} color="#059669" subtitle="Submitted by consignors" />
                   </Link>
-                  <Link to="/app/listings?status=approved_awaiting_dropoff" style={{ textDecoration: "none" }}>
+                  <Link to="/app/listings?status=approved_awaiting_dropoff" className="no-underline">
                     <ActionItem label="Awaiting Drop-off" count={awaitingDropoffCount} color="#d97706" subtitle="Approved, pending item arrival" />
                   </Link>
-                  <Link to="/app/listings?status=withdrawal_requested" style={{ textDecoration: "none" }}>
+                  <Link to="/app/listings?status=withdrawal_requested" className="no-underline">
                     <ActionItem label="Withdrawal Requests" count={withdrawalRequestCount} color="#ea580c" subtitle="Requires review" />
                   </Link>
-                  <Link to="/app/listings?status=pending_pickup" style={{ textDecoration: "none" }}>
+                  <Link to="/app/listings?status=pending_pickup" className="no-underline">
                     <ActionItem label="Awaiting Pickup" count={pendingPickupCount} color="#0891b2" subtitle="Ready for consignor collection" />
                   </Link>
                 </div>
@@ -141,24 +113,16 @@ export default function Dashboard() {
 
             {/* Activity Feed */}
             <motion.section variants={itemVariants}>
-              <div style={sectionCard}>
-                <div style={{ ...sectionHeader, justifyContent: "flex-start", gap: "8px" }}>
-                  <div style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "8px",
-                    background: "#f1f5f9",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
+              <div className="admin-card">
+                <div className="admin-card-header justify-start gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
                     <History size={14} color="#64748b" strokeWidth={2} />
                   </div>
-                  <h2 style={sectionTitle}>Activity Feed</h2>
+                  <h2 className="admin-card-title">Activity Feed</h2>
                 </div>
-                <div style={{ padding: "8px 22px 20px" }}>
+                <div className="px-5 py-2 pb-5">
                   {activityFeed.length === 0 ? (
-                    <div style={{ color: "#94a3b8", fontSize: "13px", padding: "32px 0", textAlign: "center" }}>
+                    <div className="text-slate-400 text-[13px] py-8 text-center">
                       No activity yet. Create your first listing to get started.
                     </div>
                   ) : (
@@ -167,36 +131,10 @@ export default function Dashboard() {
                     ))
                   )}
                   {activityFeed.length > 5 && (
-                    <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                    <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => setShowAllActivity(!showAllActivity)}
-                        style={{
-                          flex: 1,
-                          padding: "8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "#64748b",
-                          border: "1px solid rgba(0, 0, 0, 0.06)",
-                          borderRadius: "10px",
-                          background: "transparent",
-                          cursor: "pointer",
-                          transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                          fontFamily: "inherit",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "4px",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#f8fafc";
-                          e.currentTarget.style.color = "#334155";
-                          e.currentTarget.style.borderColor = "rgba(0, 0, 0, 0.1)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "#64748b";
-                          e.currentTarget.style.borderColor = "rgba(0, 0, 0, 0.06)";
-                        }}
+                        className="flex-1 py-2 px-2 text-xs font-semibold text-slate-500 border border-black/[0.06] rounded-[10px] bg-transparent cursor-pointer transition-all duration-200 font-[inherit] flex items-center justify-center gap-1 hover:bg-slate-50 hover:text-slate-700 hover:border-black/10"
                       >
                         {showAllActivity ? (
                           <><ChevronUp size={14} /> Show less</>
@@ -206,10 +144,10 @@ export default function Dashboard() {
                       </button>
                     </div>
                   )}
-                  <div style={{ textAlign: "center", marginTop: "10px" }}>
+                  <div className="text-center mt-2.5">
                     <Link
                       to="/app/activity"
-                      style={{ fontSize: "12px", fontWeight: 600, color: "#94a3b8", textDecoration: "none" }}
+                      className="text-xs font-semibold text-slate-400 no-underline hover:text-slate-600"
                     >
                       View all activity →
                     </Link>

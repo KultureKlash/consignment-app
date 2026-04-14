@@ -129,25 +129,27 @@ export default function Payouts() {
 
   return (
     <s-page>
-      <div style={{ padding: "0" }}>
-        <header style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.02em", color: "#1a1a1a", margin: 0 }}>Payouts</h1>
-          <p style={{ fontSize: "13px", color: "#6d7175", marginTop: "4px" }}>Manage consignor payouts and track payment status.</p>
+      <div className="p-0">
+        <header className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900 m-0">Payouts</h1>
+          <p className="text-[13px] text-gray-500 mt-1">Manage consignor payouts and track payment status.</p>
         </header>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <StatCard label="Outstanding" value={`$${fmt(filteredStats.totalOutstanding)}`} icon={DollarSign} accentColor="#059669" bgTint="#f0fdf4" />
           <StatCard label="Awaiting Invoice" value={`$${fmt(filteredStats.totalPending)}`} icon={Clock} accentColor="#d97706" bgTint="#fffbeb" />
           <StatCard label="Invoice Received" value={`$${fmt(filteredStats.totalInvoiced)}`} icon={FileText} accentColor="#2563eb" bgTint="#eff6ff" />
           <StatCard label="Paid Out" value={`$${fmt(filteredStats.totalPaid)}`} icon={CheckCircle2} accentColor="#059669" bgTint="#ecfdf5" />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-          <div style={{ width: "220px" }}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-[220px]">
             <CustomSelect options={consignorOptions} value={filterConsignor} onChange={setFilterConsignor} placeholder="All Consignors" searchable />
           </div>
           <DateRangeFilter preset={datePreset} from={filterDateFrom} to={filterDateTo} onChange={({ dateRange, from, to }) => { setDatePreset(dateRange); setFilterDateFrom(from ?? ""); setFilterDateTo(to ?? ""); }} />
           {hasFilters && (
-            <button onClick={() => { setFilterConsignor(""); setDatePreset("all"); setFilterDateFrom(""); setFilterDateTo(""); }}
-              style={{ display: "flex", alignItems: "center", gap: "4px", padding: "10px 14px", fontSize: "13px", fontWeight: 500, color: "#6d7175", background: "transparent", border: "1px solid #c4c9d1", borderRadius: "8px", cursor: "pointer", fontFamily: "inherit" }}>
+            <button
+              onClick={() => { setFilterConsignor(""); setDatePreset("all"); setFilterDateFrom(""); setFilterDateTo(""); }}
+              className="admin-btn-secondary flex items-center gap-1 !px-3.5 !py-2.5 !text-[13px]"
+            >
               <X size={14} /> Clear
             </button>
           )}

@@ -24,38 +24,26 @@ export default function BulkActionBar({
   if (selectedIds.size === 0) return null;
 
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "8px 8px 8px 16px",
-      background: "#fff",
-      border: "1px solid rgba(227,227,227,0.6)",
-      borderRadius: "10px",
-      marginBottom: "12px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <span style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a" }}>
+    <div className="flex items-center justify-between pl-4 pr-2 py-2 bg-white border border-gray-200/60 rounded-[10px] mb-3 shadow-sm">
+      <div className="flex items-center gap-4">
+        <span className="text-[13px] font-semibold text-gray-900">
           {selectedIds.size} selected
         </span>
         <span
           onClick={onClearSelection}
-          style={{ fontSize: "12px", color: "#9ca3af", cursor: "pointer", fontWeight: 500 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "#6d7175"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}
+          className="text-xs text-gray-400 cursor-pointer font-medium hover:text-gray-500 transition-colors"
         >
           Clear
         </span>
       </div>
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div className="flex gap-2">
         {listings.some((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.SUBMITTED) && (
           <BulkActionButton
             label={approvalLoading ? "Approving..." : "Approve selected"}
             onClick={onBulkApprove}
             disabled={approvalLoading}
-            bg="#0d9488"
-            bgHover="#0f766e"
+            bg="bg-teal-600"
+            bgHover="hover:bg-teal-700"
           />
         )}
         {listings.some((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.APPROVED) && (
@@ -63,8 +51,8 @@ export default function BulkActionBar({
             label={approvalLoading ? "Checking in..." : "Check in selected"}
             onClick={onBulkCheckin}
             disabled={approvalLoading}
-            bg="#2c6ecb"
-            bgHover="#1e5aab"
+            bg="bg-blue-600"
+            bgHover="hover:bg-blue-700"
           />
         )}
         {listings.some((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.ACTIVE) && (
@@ -72,8 +60,8 @@ export default function BulkActionBar({
             label={cancelLoading ? "Deleting..." : "Delete selected"}
             onClick={onBulkCancel}
             disabled={cancelLoading}
-            bg="#7f1d1d"
-            bgHover="#991b1b"
+            bg="bg-red-900"
+            bgHover="hover:bg-red-800"
           />
         )}
       </div>
@@ -92,20 +80,7 @@ function BulkActionButton({ label, onClick, disabled, bg, bgHover }: {
     <button
       onClick={onClick}
       disabled={disabled}
-      style={{
-        padding: "7px 16px",
-        fontSize: "12px",
-        fontWeight: 600,
-        borderRadius: "10px",
-        border: "none",
-        background: disabled ? bgHover : bg,
-        color: "#fff",
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontFamily: "inherit",
-        transition: "all 0.2s ease",
-      }}
-      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)"; } }}
-      onMouseLeave={(e) => { if (!disabled) { e.currentTarget.style.background = bg; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } }}
+      className={`px-4 py-[7px] text-xs font-semibold rounded-[10px] border-none text-white cursor-pointer font-[inherit] transition-all duration-200 ease-in-out ${bg} ${bgHover} hover:-translate-y-px hover:shadow-md disabled:opacity-80 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none`}
     >
       {label}
     </button>

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import type { Listing, EditApproveFields } from "./types";
-import { editInputStyle, editLabelStyle } from "./helpers";
 
 export function EditListingModal({ listing, mode, onConfirm, onCancel }: {
   listing: Listing;
@@ -18,65 +17,56 @@ export function EditListingModal({ listing, mode, onConfirm, onCancel }: {
 
   const canSubmit = size.trim() && Number(price) > 0;
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.borderColor = "#7c3aed";
-    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.1)";
-  };
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.borderColor = "#d1d5db";
-    e.currentTarget.style.boxShadow = "none";
-  };
-
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-      <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "420px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <Pencil size={16} color="#7c3aed" />
-          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>
+    <div className="admin-modal-overlay p-4">
+      <div className="admin-modal max-w-[420px] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Pencil size={16} className="text-purple-600" />
+          <h3 className="text-[15px] font-semibold m-0">
             {mode === "edit-approve" ? "Edit & Approve" : "Edit Listing"}
           </h3>
         </div>
-        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
+        <p className="text-[13px] text-gray-500 mt-0 mb-4">
           {mode === "edit-approve" ? "Fix variant details, then approve." : "Edit variant details."}
         </p>
 
         {/* Product info (read-only) */}
-        <div style={{ padding: "10px 12px", borderRadius: "8px", background: "#f9fafb", marginBottom: "16px", fontSize: "12px" }}>
-          <div style={{ fontWeight: 600, color: "#1a1a1a" }}>{listing.variant.product.title}</div>
-          <div style={{ color: "#6d7175", marginTop: "2px" }}>
+        <div className="px-3 py-2.5 rounded-lg bg-gray-50 mb-4 text-xs">
+          <div className="font-semibold text-gray-900">{listing.variant.product.title}</div>
+          <div className="text-gray-500 mt-0.5">
             {listing.consignor.name}
-            {isStoreOwned && <span style={{ marginLeft: "6px", padding: "1px 6px", borderRadius: "4px", background: "#dbeafe", color: "#1e40af", fontWeight: 600, fontSize: "10px" }}>Store</span>}
+            {isStoreOwned && <span className="ml-1.5 px-1.5 py-px rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">Store</span>}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={editLabelStyle}>Size</label>
-              <input value={size} onChange={(e) => setSize(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+              <label className="admin-label text-[11px] uppercase tracking-wide">Size</label>
+              <input value={size} onChange={(e) => setSize(e.target.value)} className="admin-input" />
             </div>
             <div>
-              <label style={editLabelStyle}>GTIN / Barcode</label>
-              <input value={gtin} onChange={(e) => setGtin(e.target.value)} style={{ ...editInputStyle, fontFamily: "monospace" }} onFocus={handleFocus} onBlur={handleBlur} placeholder="Optional" />
+              <label className="admin-label text-[11px] uppercase tracking-wide">GTIN / Barcode</label>
+              <input value={gtin} onChange={(e) => setGtin(e.target.value)} className="admin-input font-mono" placeholder="Optional" />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isStoreOwned ? "1fr 1fr" : "1fr", gap: "12px" }}>
+          <div className={`grid gap-3 ${isStoreOwned ? "grid-cols-2" : "grid-cols-1"}`}>
             <div>
-              <label style={editLabelStyle}>Price ($)</label>
-              <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+              <label className="admin-label text-[11px] uppercase tracking-wide">Price ($)</label>
+              <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className="admin-input" />
             </div>
             {isStoreOwned && (
               <div>
-                <label style={editLabelStyle}>Cost ($)</label>
-                <input type="text" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} placeholder="0.00" />
+                <label className="admin-label text-[11px] uppercase tracking-wide">Cost ($)</label>
+                <input type="text" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className="admin-input" placeholder="0.00" />
               </div>
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-          <button onClick={onCancel} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", border: "1px solid #e3e3e3", background: "#fff", color: "#6d7175", cursor: "pointer", fontFamily: "inherit" }}>
+        <div className="admin-modal-footer px-0 py-0 mt-4 border-0">
+          <button onClick={onCancel} className="admin-btn-secondary text-[13px] px-4 py-2">
             Cancel
           </button>
           <button
@@ -85,20 +75,9 @@ export function EditListingModal({ listing, mode, onConfirm, onCancel }: {
               ...(isStoreOwned ? { cost: cost.trim() } : {}),
             })}
             disabled={!canSubmit}
-            style={{
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "none",
-              background: !canSubmit ? "#c4b5fd" : "#7c3aed",
-              color: "#fff",
-              cursor: !canSubmit ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = "#6d28d9"; }}
-            onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = "#7c3aed"; }}
+            className={`px-4 py-2 text-[13px] font-semibold rounded-lg border-0 text-white font-[inherit] transition-colors duration-150 ${
+              !canSubmit ? "bg-purple-300 cursor-not-allowed" : "bg-purple-600 cursor-pointer hover:bg-purple-700"
+            }`}
           >
             {mode === "edit-approve" ? "Save & Approve" : "Save Changes"}
           </button>

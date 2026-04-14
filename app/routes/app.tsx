@@ -1,9 +1,14 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import type { HeadersFunction, LinksFunction, LoaderFunctionArgs } from "react-router";
 import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
+import adminStyles from "~/admin.css?url";
 
 import { authenticate } from "../shopify.server";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: adminStyles },
+];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);

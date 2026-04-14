@@ -58,7 +58,7 @@ model Product {
   title             String
   brand             String?
   category          String?
-  styleId           String?  @unique
+  sku               String?  @unique @map("styleId")
   description       String?
   imageUrl          String?   // Shopify-hosted product image URL
 

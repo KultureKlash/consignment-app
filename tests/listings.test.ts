@@ -11,7 +11,7 @@ describe("listings.server", () => {
 
       const listing = await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -35,7 +35,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -55,13 +55,13 @@ describe("listings.server", () => {
       expect(listings.every((l) => l.price === 350 && l.status === "active")).toBe(true);
     });
 
-    it("reuses existing product when same styleId is used", async () => {
+    it("reuses existing product when same sku is used", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -72,7 +72,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -93,7 +93,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -104,7 +104,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "10",
@@ -118,13 +118,13 @@ describe("listings.server", () => {
       expect(await prisma.listing.count()).toBe(2);
     });
 
-    it("creates separate products for different styleIds", async () => {
+    it("creates separate products for different skus", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -135,7 +135,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "555088-001",
+        sku: "555088-001",
         title: "Jordan 1 Retro High OG Bred",
         brand: "Jordan",
         size: "9",
@@ -156,7 +156,7 @@ describe("listings.server", () => {
 
       const listing1 = await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -168,7 +168,7 @@ describe("listings.server", () => {
 
       const listing2 = await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -193,7 +193,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -205,7 +205,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -225,7 +225,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -236,7 +236,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -257,7 +257,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -269,7 +269,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -288,7 +288,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -308,7 +308,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -333,7 +333,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -354,7 +354,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -377,7 +377,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -396,7 +396,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -407,7 +407,7 @@ describe("listings.server", () => {
 
       await createListing({
         admin,
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         size: "9",
@@ -423,7 +423,7 @@ describe("listings.server", () => {
       expect(await prisma.listing.count()).toBe(2);
     });
 
-    it("creates listing without styleId using title+brand dedup", async () => {
+    it("creates listing without sku using title+brand dedup", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
@@ -439,7 +439,7 @@ describe("listings.server", () => {
 
       expect(listing.price).toBe(180);
       const product = await prisma.product.findFirst();
-      expect(product?.styleId).toBeNull();
+      expect(product?.sku).toBeNull();
       expect(product?.title).toBe("Ami Paris Bucket Hat");
     });
 
@@ -520,7 +520,7 @@ describe("listings.server", () => {
 
       const listing = await createListing({
         admin,
-        styleId: "SYNC-FAIL-001",
+        sku: "SYNC-FAIL-001",
         title: "Test Product Sync Fail",
         brand: "TestBrand",
         size: "9",

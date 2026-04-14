@@ -15,7 +15,7 @@ export function EditProductModal({ group, onConfirm, onCancel }: {
   const [mainCat, setMainCat] = useState(parsed.main || "");
   const [subCat, setSubCat] = useState(parsed.sub || group.category || "");
   const subOptions = mainCat ? (CATEGORIES[mainCat] ?? []) : [];
-  const [styleId, setStyleId] = useState(group.styleId ?? "");
+  const [sku, setSku] = useState(group.sku ?? "");
   const [imageData, setImageData] = useState<string | undefined>();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,59 +25,56 @@ export function EditProductModal({ group, onConfirm, onCancel }: {
     setImageData(data);
   };
 
-  const fieldLabel: React.CSSProperties = { fontSize: "11px", fontWeight: 700, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" };
-  const fieldInput: React.CSSProperties = { width: "100%", padding: "9px 12px", fontSize: "13px", border: "1px solid #e3e3e3", borderRadius: "8px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
-
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-      <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "480px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <Pencil size={16} color="#6d7175" />
-          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>Edit Product</h3>
+    <div className="admin-modal-overlay p-4">
+      <div className="admin-modal max-w-[480px] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Pencil size={16} className="text-gray-500" />
+          <h3 className="text-[15px] font-semibold m-0">Edit Product</h3>
         </div>
-        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>Changes apply to all listings of this product.</p>
+        <p className="text-[13px] text-gray-500 mt-0 mb-4">Changes apply to all listings of this product.</p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div className="flex flex-col gap-3">
           {/* Image */}
           <div>
-            <p style={fieldLabel}>Product Image</p>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Product Image</p>
+            <div className="flex items-center gap-3">
               {(imageData || group.imageUrl) && (
-                <img src={imageData || group.imageUrl!} alt="" style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
+                <img src={imageData || group.imageUrl!} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
               )}
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#fff", fontSize: "12px", fontWeight: 500, color: "#6d7175", cursor: "pointer" }}>
+              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-500 cursor-pointer hover:bg-gray-50">
                 <Camera size={14} />
                 {group.imageUrl ? "Replace" : "Upload"}
-                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </label>
             </div>
           </div>
 
           {/* Title */}
           <div>
-            <p style={fieldLabel}>Title</p>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} style={fieldInput} />
+            <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Title</p>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="admin-input" />
           </div>
 
           {/* Brand */}
           <div>
-            <p style={fieldLabel}>Brand</p>
-            <input value={brand} onChange={(e) => setBrand(e.target.value)} style={fieldInput} />
+            <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Brand</p>
+            <input value={brand} onChange={(e) => setBrand(e.target.value)} className="admin-input" />
           </div>
 
           {/* Category */}
-          <div style={{ display: "grid", gridTemplateColumns: subOptions.length > 0 ? "1fr 1fr" : "1fr", gap: "12px" }}>
+          <div className={`grid gap-3 ${subOptions.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
             <div>
-              <p style={fieldLabel}>Category</p>
-              <select value={mainCat} onChange={(e) => { setMainCat(e.target.value); setSubCat(""); }} style={{ ...fieldInput, cursor: "pointer", appearance: "auto" }}>
+              <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Category</p>
+              <select value={mainCat} onChange={(e) => { setMainCat(e.target.value); setSubCat(""); }} className="admin-input cursor-pointer appearance-auto">
                 <option value="">Select...</option>
                 {MAIN_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             {subOptions.length > 0 && (
               <div>
-                <p style={fieldLabel}>Subcategory</p>
-                <select value={subCat} onChange={(e) => setSubCat(e.target.value)} style={{ ...fieldInput, cursor: "pointer", appearance: "auto" }}>
+                <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Subcategory</p>
+                <select value={subCat} onChange={(e) => setSubCat(e.target.value)} className="admin-input cursor-pointer appearance-auto">
                   <option value="">Select...</option>
                   {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -85,21 +82,23 @@ export function EditProductModal({ group, onConfirm, onCancel }: {
             )}
           </div>
 
-          {/* Style ID */}
+          {/* SKU */}
           <div>
-            <p style={fieldLabel}>Style ID</p>
-            <input value={styleId} onChange={(e) => setStyleId(e.target.value)} style={fieldInput} placeholder="Optional" />
+            <p className="admin-label text-[11px] uppercase tracking-wide font-bold">SKU</p>
+            <input value={sku} onChange={(e) => setSku(e.target.value)} className="admin-input" placeholder="Optional" />
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "20px" }}>
-          <button onClick={onCancel} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", border: "1px solid #e3e3e3", background: "#fff", color: "#6d7175", cursor: "pointer", fontFamily: "inherit" }}>
+        <div className="admin-modal-footer px-0 py-0 mt-5 border-0">
+          <button onClick={onCancel} className="admin-btn-secondary text-[13px] px-4 py-2">
             Cancel
           </button>
           <button
-            onClick={() => onConfirm({ title: title.trim(), brand: brand.trim(), category: subCat || mainCat, styleId: styleId.trim(), imageData })}
+            onClick={() => onConfirm({ title: title.trim(), brand: brand.trim(), category: subCat || mainCat, sku: sku.trim(), imageData })}
             disabled={!title.trim()}
-            style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 600, borderRadius: "8px", border: "none", background: !title.trim() ? "#9ca3af" : "#111827", color: "#fff", cursor: !title.trim() ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+            className={`px-4 py-2 text-[13px] font-semibold rounded-lg border-0 text-white font-[inherit] ${
+              !title.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-gray-900 cursor-pointer hover:bg-gray-800"
+            }`}
           >
             Save Changes
           </button>

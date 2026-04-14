@@ -1,29 +1,29 @@
 import { useState, useCallback } from "react";
 import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
-import { tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
+import { statusBadgeClass, relativeTime, statusLabel } from "./listing-ui";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { Listing, ProductGroup, SectionOption, SortKey } from "./types";
 import {
-  groupHeaderStyle,
-  groupHeaderCellStyle,
-  chevronWrapStyle,
-  qtyBadgeStyle,
-  childRowStyle,
-  childIndentTd,
-  childHeaderStyle,
-  childThStyle,
-  childSortableThStyle,
-  priceCellStyle,
-  consignorNameStyle,
-  consignorEmailStyle,
-  dateCellStyle,
-  checkboxStyle,
-  checkboxTdStyle,
+  groupHeaderClass,
+  groupHeaderCellClass,
+  chevronWrapClass,
+  qtyBadgeClass,
+  childRowClass,
+  childIndentTdClass,
+  childHeaderClass,
+  childThClass,
+  childSortableThClass,
+  priceCellClass,
+  consignorNameClass,
+  consignorEmailClass,
+  dateCellClass,
+  checkboxClass,
+  checkboxTdClass,
   SortIndicator,
   StatusCounts,
   ActionBtn,
-} from "./helpers";
+} from "./listingHelpers";
 import { SectionPicker } from "./SectionPicker";
 
 export function GroupRows({
@@ -109,22 +109,13 @@ export function GroupRows({
     <>
       {/* Product header row */}
       <tr
-        style={{
-          ...groupHeaderStyle,
-          ...(isExpanded ? { borderBottom: "1px solid #d1d5db", background: "#fafafa" } : {}),
-        }}
+        className={`${groupHeaderClass} ${isExpanded ? "border-b-gray-300 bg-gray-50" : ""}`}
         onClick={onToggle}
-        onMouseEnter={(e) => (e.currentTarget.style.background = isExpanded ? "#f5f5f5" : "#f9fafb")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = isExpanded ? "#fafafa" : "#ffffff")}
       >
-        <td colSpan={colCount} style={groupHeaderCellStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <td colSpan={colCount} className={groupHeaderCellClass}>
+          <div className="flex items-center gap-2.5">
             <span
-              style={{
-                ...chevronWrapStyle,
-                transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                background: isExpanded ? "#e8eaed" : "transparent",
-              }}
+              className={`${chevronWrapClass} ${isExpanded ? "rotate-90 bg-gray-200" : ""}`}
             >
               <ChevronRight size={14} strokeWidth={2.5} />
             </span>
@@ -133,37 +124,21 @@ export function GroupRows({
               <img
                 src={group.imageUrl}
                 alt={group.title}
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  objectFit: "cover",
-                  borderRadius: "6px",
-                  border: "1px solid #e3e3e3",
-                  flexShrink: 0,
-                }}
+                className="w-12 h-12 object-cover rounded-md border border-gray-200 shrink-0"
               />
             ) : (
-              <span style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "6px",
-                background: "#f0f0f2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}>
-                <Package size={20} color="#9ca3af" />
+              <span className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                <Package size={20} className="text-gray-400" />
               </span>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontWeight: 600, fontSize: "13.5px", color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[13.5px] text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
                   {group.title}
                 </span>
                 {group.brand && (
-                  <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
+                  <span className="text-xs text-gray-500 font-medium whitespace-nowrap shrink-0">
                     {group.brand}
                   </span>
                 )}
@@ -171,9 +146,7 @@ export function GroupRows({
                 {onEditProduct && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onEditProduct(group); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#c4c9d1", transition: "color 0.15s", flexShrink: 0 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = "#6d7175"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "#c4c9d1"; }}
+                    className="bg-transparent border-0 cursor-pointer p-0.5 text-gray-300 hover:text-gray-500 transition-colors duration-150 shrink-0"
                     title="Edit product"
                   >
                     <Pencil size={13} />
@@ -191,45 +164,30 @@ export function GroupRows({
                   />
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                {group.styleId && (
-                  <span style={{ fontSize: "11px", color: "#9ca3af", fontFamily: "monospace", letterSpacing: "0.02em" }}>
-                    {group.styleId}
+              <div className="flex items-center gap-2">
+                {group.sku && (
+                  <span className="text-[11px] text-gray-400 font-mono tracking-wide">
+                    {group.sku}
                   </span>
                 )}
                 <StatusCounts listings={group.listings} />
               </div>
             </div>
 
-            <div style={{ marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
               {onQuickAdd ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onQuickAdd(group.productId, e.currentTarget as HTMLElement);
                   }}
-                  style={{
-                    width: "30px",
-                    height: "30px",
-                    borderRadius: "8px",
-                    border: "1px solid #e2e5ea",
-                    background: "white",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#6d7175",
-                    transition: "all 0.15s ease",
-                    padding: 0,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.borderColor = "#c4c9d1"; e.currentTarget.style.color = "#1a1a1a"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#e2e5ea"; e.currentTarget.style.color = "#6d7175"; }}
+                  className="w-[30px] h-[30px] rounded-lg border border-gray-200 bg-white cursor-pointer flex items-center justify-center text-gray-500 transition-all duration-150 p-0 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
                   title="Quick add listing"
                 >
                   <Plus size={16} strokeWidth={2.5} />
                 </button>
               ) : (
-                <span style={qtyBadgeStyle}>
+                <span className={qtyBadgeClass}>
                   {group.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).length}
                 </span>
               )}
@@ -240,35 +198,35 @@ export function GroupRows({
 
       {/* Column headers — only when expanded */}
       {isExpanded && (
-        <tr ref={scrollRef} style={childHeaderStyle}>
+        <tr ref={scrollRef} className={childHeaderClass}>
           {hasSelection && (
-            <td style={{ ...childThStyle, width: "36px", paddingRight: "0" }} onClick={(e) => e.stopPropagation()}>
+            <td className={`${childThClass} w-9 pr-0`} onClick={(e) => e.stopPropagation()}>
               {groupSelectableIds.length > 0 && (
                 <input
                   type="checkbox"
                   checked={allGroupSelected}
                   onChange={() => onToggleGroup(groupSelectableIds)}
-                  style={checkboxStyle}
+                  className={checkboxClass}
                 />
               )}
             </td>
           )}
-          <td style={{ ...childThStyle, paddingLeft: "42px" }}>Size</td>
-          <td style={childThStyle}>Barcode</td>
-          <td style={childSortableThStyle} onClick={() => handleLocalSort("price")}>
+          <td className={`${childThClass} pl-[42px]`}>Size</td>
+          <td className={childThClass}>Barcode</td>
+          <td className={childSortableThClass} onClick={() => handleLocalSort("price")}>
             Price
             <SortIndicator active={localSortKey === "price"} dir={localSortDir} />
           </td>
-          <td style={childThStyle}>Consignor</td>
-          <td style={childSortableThStyle} onClick={() => handleLocalSort("status")}>
+          <td className={childThClass}>Consignor</td>
+          <td className={childSortableThClass} onClick={() => handleLocalSort("status")}>
             Status
             <SortIndicator active={localSortKey === "status"} dir={localSortDir} />
           </td>
-          <td style={childSortableThStyle} onClick={() => handleLocalSort("date")}>
+          <td className={childSortableThClass} onClick={() => handleLocalSort("date")}>
             Created
             <SortIndicator active={localSortKey === "date"} dir={localSortDir} />
           </td>
-          {(onCancel || onApprove) && <td style={childThStyle}>Actions</td>}
+          {(onCancel || onApprove) && <td className={childThClass}>Actions</td>}
         </tr>
       )}
 
@@ -278,49 +236,44 @@ export function GroupRows({
         return (
           <tr
             key={l.id}
-            style={{
-              ...childRowStyle,
-              ...(i === sortedListings.length - 1 ? { borderBottom: "2px solid #e2e5ea" } : {}),
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+            className={`${childRowClass} ${i === sortedListings.length - 1 ? "border-b-2 border-b-gray-200" : ""}`}
           >
             {hasSelection && (
-              <td style={checkboxTdStyle} onClick={(e) => e.stopPropagation()}>
+              <td className={checkboxTdClass} onClick={(e) => e.stopPropagation()}>
                 {isSelectable ? (
                   <input
                     type="checkbox"
                     checked={selectedIds?.has(l.id) ?? false}
                     onChange={() => onToggleId(l.id)}
-                    style={checkboxStyle}
+                    className={checkboxClass}
                   />
                 ) : (
-                  <span style={{ display: "inline-block", width: "16px" }} />
+                  <span className="inline-block w-4" />
                 )}
               </td>
             )}
-            <td style={childIndentTd}>
-              <span style={{ fontWeight: 600 }}>{l.variant.size}</span>
+            <td className={childIndentTdClass}>
+              <span className="font-semibold">{l.variant.size}</span>
             </td>
-            <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#9ca3af", letterSpacing: "0.02em" }}>
+            <td className="admin-td text-[11px] font-mono text-gray-400 tracking-wide">
               {l.variant.gtin || "\u2014"}
             </td>
-            <td style={priceCellStyle}>
+            <td className={priceCellClass}>
               ${fmt(Number(l.price))}
             </td>
-            <td style={tdStyle}>
-              <div style={consignorNameStyle}>{l.consignor.name}</div>
-              <div style={consignorEmailStyle}>{l.consignor.email}</div>
+            <td className="admin-td">
+              <div className={consignorNameClass}>{l.consignor.name}</div>
+              <div className={consignorEmailClass}>{l.consignor.email}</div>
             </td>
-            <td style={tdStyle}>
-              <span style={statusBadge(l.status)}>{statusLabel(l.status)}</span>
+            <td className="admin-td">
+              <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
             </td>
-            <td style={dateCellStyle}>
+            <td className={dateCellClass}>
               {relativeTime(l.createdAt)}
             </td>
             {(onCancel || onApprove) && (
-              <td style={tdStyle}>
-                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+              <td className="admin-td">
+                <div className="flex gap-1 items-center">
                   {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
                     <>
                       <ActionBtn
@@ -423,7 +376,7 @@ export function GroupRows({
                     />
                   )}
                   {![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP, LISTING_STATUS.CANCELLED].includes(l.status) && (
-                    <span style={{ color: "#d1d5db" }}>{"\u2014"}</span>
+                    <span className="text-gray-300">{"\u2014"}</span>
                   )}
                 </div>
               </td>

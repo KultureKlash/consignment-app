@@ -17,63 +17,32 @@ export default function Activity() {
 
   return (
     <s-page>
-      <div style={{ padding: "0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+      <div className="p-0">
+        <div className="flex items-center gap-3 mb-6">
           <Link
             to="/app"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              color: "#111827",
-              fontSize: "12px",
-              fontWeight: 600,
-              background: "rgba(17,24,39,0.06)",
-              padding: "6px 14px",
-              borderRadius: "10px",
-              border: "1px solid rgba(17,24,39,0.15)",
-              textDecoration: "none",
-            }}
+            className="inline-flex items-center gap-1 text-gray-900 text-xs font-semibold bg-gray-900/[0.06] px-3.5 py-1.5 rounded-[10px] border border-gray-900/15 no-underline"
           >
             <ArrowLeft size={14} />
             Home
           </Link>
         </div>
 
-        <div style={{
-          background: "#ffffff",
-          border: "1px solid rgba(227,227,227,0.6)",
-          borderRadius: "12px",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            padding: "16px 24px",
-            borderBottom: "1px solid rgba(227,227,227,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="admin-card">
+          <div className="admin-card-header justify-between">
+            <div className="flex items-center gap-2">
               <History size={16} color="rgba(109,113,117,0.6)" />
-              <h1 style={{
-                fontSize: "13px",
-                fontWeight: 700,
-                color: "#1a1a1a",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-                margin: 0,
-              }}>
+              <h1 className="text-[13px] font-bold text-gray-900 uppercase tracking-wide m-0">
                 Activity Feed
               </h1>
             </div>
-            <span style={{ fontSize: "12px", color: "#6d7175", fontWeight: 500 }}>
+            <span className="text-xs text-gray-500 font-medium">
               {feed.length} event{feed.length !== 1 ? "s" : ""}
             </span>
           </div>
-          <div style={{ padding: "12px 24px 24px" }}>
+          <div className="px-6 py-3 pb-6">
             {feed.length === 0 ? (
-              <div style={{ color: "#6d7175", fontSize: "14px", padding: "24px 0", textAlign: "center" }}>
+              <div className="text-gray-500 text-sm py-6 text-center">
                 No activity yet.
               </div>
             ) : (

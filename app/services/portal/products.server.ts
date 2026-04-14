@@ -4,7 +4,7 @@ import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 export type PortalProductResult = {
   id: string;
-  styleId: string | null;
+  sku: string | null;
   title: string;
   brand: string | null;
   category: string | null;
@@ -17,7 +17,7 @@ export async function searchProducts(query: string): Promise<PortalProductResult
 
   return products.map((p) => ({
     id: p.id,
-    styleId: p.styleId,
+    sku: p.sku,
     title: p.title,
     brand: p.brand,
     category: p.category,

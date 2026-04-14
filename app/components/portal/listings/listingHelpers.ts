@@ -64,7 +64,7 @@ export type ListingRow = {
   variant: {
     size: string;
     gtin: string | null;
-    product: { id: string; title: string; brand: string | null; imageUrl: string | null; styleId: string | null };
+    product: { id: string; title: string; brand: string | null; imageUrl: string | null; sku: string | null };
   };
 };
 

@@ -3,7 +3,7 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { safeSyncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { ensureVariantBarcode } from "~/services/variant-utils.server";
+import { ensureVariantBarcode } from "~/services/catalog.server";
 import { logger } from "~/lib/logger.server";
 
 // ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──

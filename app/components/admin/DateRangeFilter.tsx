@@ -3,7 +3,6 @@ import { DayPicker } from "react-day-picker";
 import type { DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Calendar } from "lucide-react";
-import { handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 
 type Preset = { label: string; value: string };
 
@@ -84,69 +83,31 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
   }
 
   return (
-    <div ref={ref} style={{ position: "relative", flex: "0 0 auto" }}>
+    <div ref={ref} className="relative flex-none">
       {/* Trigger button */}
       <button
         type="button"
         onClick={() => { setOpen(!open); if (!open) setShowCalendar(preset === "custom"); }}
-        onFocus={handleFocus as unknown as React.FocusEventHandler<HTMLButtonElement>}
-        onBlur={handleBlurStyle as unknown as React.FocusEventHandler<HTMLButtonElement>}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "10px 14px",
-          fontSize: "14px",
-          borderRadius: "8px",
-          border: "1px solid #c4c9d1",
-          background: "white",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          color: "#1a1a1a",
-          transition: "border-color 0.2s, box-shadow 0.2s",
-          outline: "none",
-          whiteSpace: "nowrap",
-        }}
+        className="admin-input flex items-center gap-2 cursor-pointer whitespace-nowrap w-auto"
       >
-        <Calendar size={15} color="#6d7175" />
+        <Calendar size={15} className="text-gray-500" />
         <span>{displayLabel}</span>
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div style={{
-          position: "absolute",
-          top: "calc(100% + 6px)",
-          right: 0,
-          zIndex: 50,
-          background: "#fff",
-          border: "1px solid rgba(227,227,227,0.8)",
-          borderRadius: "10px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          overflow: "hidden",
-          display: "flex",
-        }}>
+        <div className="absolute top-[calc(100%+6px)] right-0 z-50 bg-white border border-gray-200/80 rounded-xl shadow-lg overflow-hidden flex">
           {/* Presets */}
-          <div style={{
-            padding: "8px 0",
-            minWidth: "140px",
-            borderRight: showCalendar ? "1px solid rgba(227,227,227,0.6)" : "none",
-          }}>
+          <div className={`py-2 min-w-[140px]${showCalendar ? " border-r border-gray-200/60" : ""}`}>
             {PRESETS.map((p) => (
               <div
                 key={p.value}
                 onClick={() => selectPreset(p.value)}
-                style={{
-                  padding: "9px 16px",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  fontWeight: p.value === preset ? 600 : 400,
-                  color: p.value === preset ? "#1a1a1a" : "#6d7175",
-                  background: p.value === preset ? "#f3f4f6" : "transparent",
-                  transition: "background 0.1s",
-                }}
-                onMouseEnter={(e) => { if (p.value !== preset) e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={(e) => { if (p.value !== preset) e.currentTarget.style.background = "transparent"; }}
+                className={`px-4 py-2 text-[13px] cursor-pointer transition-colors duration-100 hover:bg-gray-50 ${
+                  p.value === preset
+                    ? "font-semibold text-gray-900 bg-gray-100"
+                    : "font-normal text-gray-500"
+                }`}
               >
                 {p.label}
               </div>
@@ -155,7 +116,7 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
 
           {/* Calendar */}
           {showCalendar && (
-            <div style={{ padding: "12px" }}>
+            <div className="p-3">
               <DayPicker
                 mode="range"
                 selected={range}
@@ -164,21 +125,11 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
                 numberOfMonths={1}
                 style={{ fontSize: "13px" }}
               />
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", paddingTop: "8px", borderTop: "1px solid rgba(227,227,227,0.4)" }}>
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-200/40">
                 <button
                   type="button"
                   onClick={() => { setOpen(false); setShowCalendar(false); }}
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    borderRadius: "10px",
-                    border: "1px solid rgba(17,24,39,0.15)",
-                    background: "rgba(17,24,39,0.06)",
-                    color: "#111827",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
+                  className="admin-btn-secondary text-xs"
                 >
                   Cancel
                 </button>
@@ -186,17 +137,7 @@ export default function DateRangeFilter({ preset, from, to, onChange }: Props) {
                   type="button"
                   onClick={applyRange}
                   disabled={!range?.from || !range?.to}
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    borderRadius: "10px",
-                    border: "none",
-                    background: range?.from && range?.to ? "#111827" : "#9ca3af",
-                    color: "#fff",
-                    cursor: range?.from && range?.to ? "pointer" : "default",
-                    fontFamily: "inherit",
-                  }}
+                  className="admin-btn-primary text-xs disabled:bg-gray-400 disabled:cursor-default disabled:hover:shadow-none disabled:hover:translate-y-0"
                 >
                   Apply
                 </button>

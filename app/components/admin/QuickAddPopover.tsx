@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
 import CustomSelect from "./CustomSelect";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 
 type Consignor = { id: string; name: string };
 
@@ -15,7 +13,7 @@ type QuickAddData = {
   productId: string;
   title: string;
   brand: string | null;
-  styleId: string | null;
+  sku: string | null;
   category: string | null;
   variants: VariantInfo[];
 };
@@ -27,37 +25,6 @@ type Props = {
   onSubmit: (fields: Record<string, string>) => void;
   onClose: () => void;
   isSubmitting?: boolean;
-};
-
-const popoverStyle: React.CSSProperties = {
-  position: "fixed",
-  zIndex: 9999,
-  background: "white",
-  border: "1px solid #e2e5ea",
-  borderRadius: "10px",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.04)",
-  padding: "16px",
-  width: "320px",
-  fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-};
-
-const compactInput: React.CSSProperties = {
-  ...inputStyle,
-  padding: "8px 12px",
-  fontSize: "13px",
-};
-
-const addBtnStyle: React.CSSProperties = {
-  padding: "8px 16px",
-  fontSize: "13px",
-  fontWeight: 600,
-  borderRadius: "10px",
-  border: "none",
-  background: "#111827",
-  color: "#fff",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  transition: "all 0.2s ease",
 };
 
 export default function QuickAddPopover({
@@ -175,7 +142,7 @@ export default function QuickAddPopover({
       title: data.title,
       brand: data.brand ?? "",
       category: data.category ?? "",
-      styleId: data.styleId ?? "",
+      sku: data.sku ?? "",
       size: effectiveSize,
       gtin: gtin || "",
       price,
@@ -186,31 +153,33 @@ export default function QuickAddPopover({
   if (!mounted) return null;
 
   return createPortal(
-    <div ref={popoverRef} style={{ ...popoverStyle, top: pos.top, left: pos.left }}>
+    <div
+      ref={popoverRef}
+      className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg p-4 w-80 font-[Inter,-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]"
+      style={{ top: pos.top, left: pos.left }}
+    >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-        <div style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a" }}>
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="text-[13px] font-semibold text-gray-900">
           Quick add
         </div>
         <span
           onClick={onClose}
-          style={{ fontSize: "18px", color: "#9ca3af", cursor: "pointer", lineHeight: 1, fontWeight: 500 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}
+          className="text-lg text-gray-400 cursor-pointer leading-none font-medium hover:text-gray-900"
         >
           ×
         </span>
       </div>
 
       {/* Product name */}
-      <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "12px", lineHeight: 1.4 }}>
+      <div className="text-xs text-gray-500 mb-3 leading-relaxed">
         {data.title}
         {data.brand ? ` · ${data.brand}` : ""}
       </div>
 
       {/* Consignor */}
-      <div style={{ marginBottom: "10px" }}>
-        <label style={labelStyle}>Consignor</label>
+      <div className="mb-2.5">
+        <label className="admin-label">Consignor</label>
         <CustomSelect
           options={consignorOptions}
           value={consignorId}
@@ -221,25 +190,21 @@ export default function QuickAddPopover({
       </div>
 
       {/* Size */}
-      <div style={{ marginBottom: "10px" }}>
-        <label style={labelStyle}>Size</label>
+      <div className="mb-2.5">
+        <label className="admin-label">Size</label>
         {isNewSize ? (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div className="flex gap-2 items-center">
             <input
               type="text"
               value={newSize}
               onChange={(e) => setNewSize(e.target.value)}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
               placeholder="Enter size..."
-              style={{ ...compactInput, flex: 1 }}
+              className="admin-input py-2 px-3 text-[13px] flex-1"
               autoFocus
             />
             <span
               onClick={() => { setIsNewSize(false); setNewSize(""); }}
-              style={{ fontSize: "12px", color: "#6d7175", cursor: "pointer", whiteSpace: "nowrap", fontWeight: 500 }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "#6d7175"; }}
+              className="text-xs text-gray-500 cursor-pointer whitespace-nowrap font-medium hover:text-gray-900"
             >
               Back
             </span>
@@ -261,73 +226,58 @@ export default function QuickAddPopover({
 
       {/* GTIN — conditional */}
       {needsGtin && (
-        <div style={{ marginBottom: "10px" }}>
-          <label style={labelStyle}>GTIN / Barcode</label>
+        <div className="mb-2.5">
+          <label className="admin-label">GTIN / Barcode</label>
           <input
             type="text"
             value={gtin}
             onChange={(e) => setGtin(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             placeholder="Scan or enter barcode..."
-            style={gtinLocked ? { ...compactInput, background: "#f9fafb", color: "#6b7280" } : compactInput}
+            className={gtinLocked ? "admin-input-disabled py-2 px-3 text-[13px]" : "admin-input py-2 px-3 text-[13px]"}
             disabled={gtinLocked}
           />
         </div>
       )}
 
       {/* Price + Quantity row */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Price ($)</label>
+      <div className="flex gap-2.5 mb-3.5">
+        <div className="flex-1">
+          <label className="admin-label">Price ($)</label>
           <input
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             placeholder="0.00"
             min="0"
             step="0.01"
-            style={compactInput}
+            className="admin-input py-2 px-3 text-[13px]"
           />
         </div>
-        <div style={{ flex: "0 0 80px" }}>
-          <label style={labelStyle}>Qty</label>
+        <div className="flex-none w-20">
+          <label className="admin-label">Qty</label>
           <input
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             min="1"
             max="50"
-            style={compactInput}
+            className="admin-input py-2 px-3 text-[13px]"
           />
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px" }}>
+      <div className="flex items-center justify-end gap-3">
         <span
           onClick={onClose}
-          style={{ fontSize: "13px", color: "#6d7175", cursor: "pointer", fontWeight: 500 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "#6d7175"; }}
+          className="text-[13px] text-gray-500 cursor-pointer font-medium hover:text-gray-900"
         >
           Cancel
         </span>
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          style={{
-            ...addBtnStyle,
-            ...(canSubmit
-              ? {}
-              : { background: "#d1d5db", cursor: "not-allowed" }),
-          }}
-          onMouseEnter={(e) => { if (canSubmit) { e.currentTarget.style.background = "#374151"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-          onMouseLeave={(e) => { if (canSubmit) { e.currentTarget.style.background = "#111827"; e.currentTarget.style.transform = "none"; } }}
+          className="admin-btn-primary px-4 py-2 text-[13px] disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
         >
           {isSubmitting ? "Adding..." : "Add"}
         </button>

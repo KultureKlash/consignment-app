@@ -86,7 +86,7 @@ logger.error("Shopify sync failed", { listingId, error: err.message });
 
 - **Max 10 props per component.** Beyond that, use React Context.
 - **Prop drilling max 2 levels.** If passing through 3+ levels, create a Context provider.
-- **No inline `style={{}}` in new code.** Existing admin inline styles are grandfathered until Tailwind migration. Portal uses Tailwind — keep it that way.
+- **No inline `style={{}}` unless the value is dynamic** (runtime colors, computed positions). Use Tailwind classes from `admin.css`. Portal uses Tailwind — keep it that way.
 - **Use `useCreateListing()` pattern** as the reference for Context-based form state management.
 
 ---

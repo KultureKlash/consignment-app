@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Search, MapPin } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { inputStyle, searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import CustomSelect from "~/components/admin/CustomSelect";
 
 type Consignor = { id: string; name: string };
@@ -73,67 +72,52 @@ export default function ListingsFilter({
   const consignorNames = consignors.map((c) => c.name);
   const selectedConsignorName = consignors.find((c) => c.id === consignorId)?.name ?? "";
 
-  const chipBase: React.CSSProperties = {
-    display: "inline-flex", alignItems: "center", gap: "6px",
-    padding: "7px 14px", fontSize: "12px", fontWeight: 500,
-    borderRadius: "20px", cursor: "pointer", fontFamily: "inherit",
-    transition: "all 0.2s ease", border: "1px solid #e8e8e8",
-    background: "#fafafa", color: "#6b7280", whiteSpace: "nowrap",
-  };
-  const chipActive: React.CSSProperties = {
-    ...chipBase,
-    background: "#111827", color: "#fff", border: "1px solid #111827",
-    boxShadow: "0 2px 8px rgba(17,24,39,0.15)",
-  };
-
   return (
-    <div style={{ marginBottom: "16px" }}>
+    <div className="mb-4">
       {/* Search */}
-      <div style={{ position: "relative", marginBottom: "10px" }}>
-        <span style={searchIconWrap}><Search size={16} /></span>
+      <div className="relative mb-2.5">
+        <span className="admin-search-icon"><Search size={16} /></span>
         <input
           type="text"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          onFocus={handleFocus}
-          onBlur={handleBlurStyle}
-          placeholder="Search by product, style ID, or consignor..."
-          style={{ ...searchInputStyle, borderRadius: "12px", padding: "11px 14px 11px 38px" }}
+          placeholder="Search by product, SKU, or consignor..."
+          className="admin-input-search rounded-xl py-2.5 pl-9 pr-3.5"
         />
       </div>
 
       {/* Filter chips */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+      <div className="flex flex-wrap gap-1.5 items-center">
         <CustomSelect
           options={STATUS_OPTIONS}
           value={status}
-          onChange={(val) => onFilterChange({ status: val === status ? "all" : val, page: "1" })}
+          onChange={(val) => onFilterChange({ status: val, page: "1" })}
           placeholder="Status"
-          chipStyle={status && status !== "active" ? chipActive : chipBase}
+          chipMode
+          chipActive={!!(status && status !== "active")}
+          onClear={() => onFilterChange({ status: "active", page: "1" })}
         />
 
         <CustomSelect
           options={MAIN_CATEGORIES}
           value={mainCategory}
-          onChange={(val) => onFilterChange({ category: val === mainCategory ? "" : val, page: "1" })}
+          onChange={(val) => onFilterChange({ category: val, page: "1" })}
           placeholder="Category"
-          chipStyle={mainCategory ? chipActive : chipBase}
+          chipMode
+          chipActive={!!mainCategory}
+          onClear={() => onFilterChange({ category: "", page: "1" })}
         />
 
         {mainCategory && subOptions.length > 0 && (
           <CustomSelect
             options={subOptions}
             value={subCategory}
-            onChange={(val) => {
-              if (val === subCategory) {
-                onFilterChange({ category: mainCategory, page: "1" });
-              } else {
-                onFilterChange({ category: val, page: "1" });
-              }
-            }}
+            onChange={(val) => onFilterChange({ category: val, page: "1" })}
             placeholder="Subcategory"
             searchable
-            chipStyle={subCategory ? chipActive : chipBase}
+            chipMode
+            chipActive={!!subCategory}
+            onClear={() => onFilterChange({ category: mainCategory, page: "1" })}
           />
         )}
 
@@ -142,14 +126,13 @@ export default function ListingsFilter({
           value={selectedConsignorName}
           onChange={(val) => {
             const c = consignors.find((c) => c.name === val);
-            onFilterChange({
-              consignorId: c && c.id !== consignorId ? c.id : "",
-              page: "1",
-            });
+            if (c) onFilterChange({ consignorId: c.id, page: "1" });
           }}
           placeholder="Consignor"
           searchable
-          chipStyle={consignorId ? chipActive : chipBase}
+          chipMode
+          chipActive={!!consignorId}
+          onClear={() => onFilterChange({ consignorId: "", page: "1" })}
         />
 
         {sections.length > 0 && (
@@ -157,8 +140,6 @@ export default function ListingsFilter({
             sections={sections}
             value={sectionId}
             onChange={(val) => onFilterChange({ sectionId: val, page: "1" })}
-            chipBase={chipBase}
-            chipActive={chipActive}
           />
         )}
 
@@ -168,15 +149,9 @@ export default function ListingsFilter({
               setSearchValue("");
               onFilterChange({ search: "", status: "active", category: "", consignorId: "", sectionId: "", page: "1" });
             }}
-            style={{
-              ...chipBase,
-              color: "#dc2626",
-              border: "1px solid rgba(220,38,38,0.2)",
-              background: "rgba(220,38,38,0.04)",
-              gap: "4px",
-            }}
+            className="admin-chip-trigger text-red-600 border-red-600/20 bg-red-600/5 gap-1"
           >
-            <span style={{ fontSize: "14px", lineHeight: 1 }}>×</span>
+            <span className="text-sm leading-none">×</span>
             Clear
           </button>
         )}
@@ -187,12 +162,10 @@ export default function ListingsFilter({
 
 // ── Section filter with grouped pill layout ──
 
-function SectionFilterPicker({ sections, value, onChange, chipBase, chipActive }: {
+function SectionFilterPicker({ sections, value, onChange }: {
   sections: Section[];
   value: string;
   onChange: (val: string) => void;
-  chipBase: React.CSSProperties;
-  chipActive: React.CSSProperties;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -234,80 +207,95 @@ function SectionFilterPicker({ sections, value, onChange, chipBase, chipActive }
       <button
         ref={triggerRef}
         onClick={() => setOpen(!open)}
-        style={value ? { ...chipActive, gap: "5px" } : { ...chipBase, gap: "5px" }}
+        className={`${value ? "admin-chip-trigger-active" : "admin-chip-trigger"} gap-1.5`}
       >
         <MapPin size={11} />
         {selectedName ?? "Section"}
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
-        <div ref={popoverRef} style={{
-          position: "fixed", top: pos.top, left: pos.left, zIndex: 9999,
-          background: "#fff", border: "1px solid #f0f0f0", borderRadius: "12px",
-          boxShadow: "0 8px 30px rgba(0,0,0,0.08)", width: "240px",
-          display: "flex", flexDirection: "column", maxHeight: "300px",
-        }}>
-          <div style={{ padding: "8px", borderBottom: "1px solid #f5f5f5", flexShrink: 0 }}>
-            <div style={{ position: "relative" }}>
-              <Search size={13} style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+        <div
+          ref={popoverRef}
+          className="fixed z-[9999] bg-white border border-gray-100 rounded-xl shadow-lg w-60 flex flex-col max-h-[300px]"
+          style={{ top: pos.top, left: pos.left }}
+        >
+          <div className="p-2 border-b border-gray-100 shrink-0">
+            <div className="relative">
+              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search sections..."
-                style={{ width: "100%", padding: "6px 8px 6px 28px", fontSize: "12px", border: "1px solid #e5e7eb", borderRadius: "8px", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                className="w-full py-1.5 pl-7 pr-2 text-xs border border-gray-200 rounded-lg outline-none box-border font-[inherit]"
               />
             </div>
           </div>
-          <div style={{ overflowY: "auto", scrollbarWidth: "none", flex: 1, padding: "4px 0" }}>
+          <div className="overflow-y-auto scrollbar-none flex-1 py-1">
             {value && (
-              <div onClick={() => pick("")} style={{ padding: "6px 12px", fontSize: "11px", color: "#9ca3af", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-              >Clear section</div>
+              <div
+                onClick={() => pick("")}
+                className="px-3 py-1.5 text-[11px] text-gray-400 cursor-pointer hover:bg-gray-50"
+              >
+                Clear section
+              </div>
             )}
             {racks.length > 0 && (
               <>
-                <div style={{ padding: "6px 12px 4px", fontSize: "9px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>Clothing Racks</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", padding: "2px 10px 8px" }}>
+                <div className="px-3 py-1.5 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Clothing Racks</div>
+                <div className="flex flex-wrap gap-1 px-2.5 pb-2">
                   {racks.map((s) => (
-                    <button key={s.id} onClick={() => pick(s.id)} style={{
-                      padding: "4px 10px", fontSize: "11px", fontWeight: 600, borderRadius: "6px", fontFamily: "inherit",
-                      border: `1px solid ${s.id === value ? "#059669" : "#e5e7eb"}`,
-                      background: s.id === value ? "#ecfdf5" : "#fff",
-                      color: s.id === value ? "#059669" : "#374151", cursor: "pointer",
-                    }}>{s.name}</button>
+                    <button
+                      key={s.id}
+                      onClick={() => pick(s.id)}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md font-[inherit] cursor-pointer border ${
+                        s.id === value
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-600"
+                          : "border-gray-200 bg-white text-gray-700"
+                      }`}
+                    >
+                      {s.name}
+                    </button>
                   ))}
                 </div>
               </>
             )}
             {shelves.length > 0 && (
               <>
-                <div style={{ padding: "6px 12px 4px", fontSize: "9px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>Shoe Storage</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "3px", padding: "2px 10px 8px" }}>
+                <div className="px-3 py-1.5 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Shoe Storage</div>
+                <div className="grid grid-cols-5 gap-[3px] px-2.5 pb-2">
                   {shelves.map((s) => (
-                    <button key={s.id} onClick={() => pick(s.id)} style={{
-                      padding: "4px 0", fontSize: "11px", fontWeight: 500, borderRadius: "4px", textAlign: "center", fontFamily: "inherit",
-                      border: `1px solid ${s.id === value ? "#059669" : "#f3f4f6"}`,
-                      background: s.id === value ? "#ecfdf5" : "#f9fafb",
-                      color: s.id === value ? "#059669" : "#6b7280", cursor: "pointer",
-                    }}>{s.name}</button>
+                    <button
+                      key={s.id}
+                      onClick={() => pick(s.id)}
+                      className={`py-1 text-[11px] font-medium rounded text-center font-[inherit] cursor-pointer border ${
+                        s.id === value
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-600"
+                          : "border-gray-100 bg-gray-50 text-gray-500"
+                      }`}
+                    >
+                      {s.name}
+                    </button>
                   ))}
                 </div>
               </>
             )}
             {other.map((s) => (
-              <div key={s.id} onClick={() => pick(s.id)} style={{
-                padding: "6px 12px", fontSize: "12px", cursor: "pointer", fontWeight: s.id === value ? 600 : 400,
-                color: s.id === value ? "#059669" : "#374151", background: s.id === value ? "#ecfdf5" : "",
-              }}
-                onMouseEnter={(e) => { if (s.id !== value) e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={(e) => { if (s.id !== value) e.currentTarget.style.background = ""; }}
-              >{s.name}</div>
+              <div
+                key={s.id}
+                onClick={() => pick(s.id)}
+                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 ${
+                  s.id === value
+                    ? "font-semibold text-emerald-600 bg-emerald-50"
+                    : "font-normal text-gray-700"
+                }`}
+              >
+                {s.name}
+              </div>
             ))}
             {racks.length === 0 && shelves.length === 0 && other.length === 0 && (
-              <div style={{ padding: "12px", fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>No sections match</div>
+              <div className="p-3 text-xs text-gray-400 text-center">No sections match</div>
             )}
           </div>
         </div>,

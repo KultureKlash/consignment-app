@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
-import {
-  searchInputStyle,
-  chipStyle,
-  chipClear,
-  searchIconWrap,
-  handleFocus,
-  handleBlurStyle,
-} from "~/lib/admin/listing-ui";
+import Dropdown from "~/components/admin/Dropdown";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function ConsignorPicker() {
@@ -35,7 +27,7 @@ export default function ConsignorPicker() {
 
   if (consignors.length === 0) {
     return (
-      <p style={{ color: "#6d7175", fontSize: "13px", margin: 0 }}>
+      <p className="text-gray-500 text-[13px] m-0">
         No consignors found. Add one in the Consignors page.
       </p>
     );
@@ -43,10 +35,10 @@ export default function ConsignorPicker() {
 
   if (selected) {
     return (
-      <div style={chipStyle}>
-        <span style={{ flex: 1 }}>
-          <span style={{ fontWeight: 500 }}>{selected.name}</span>
-          <span style={{ color: "#6b7280" }}>
+      <div className="admin-chip">
+        <span className="flex-1">
+          <span className="font-medium">{selected.name}</span>
+          <span className="text-gray-500">
             {" "}
             ({(selected.feeRate * 100).toFixed(0)}% fee) — {selected.email}
           </span>
@@ -57,7 +49,7 @@ export default function ConsignorPicker() {
             setSelectedConsignor("");
             setSearch("");
           }}
-          style={chipClear}
+          className="admin-chip-clear"
         >
           ✕
         </span>
@@ -66,8 +58,8 @@ export default function ConsignorPicker() {
   }
 
   return (
-    <div ref={consignorInputRef} style={{ position: "relative" }}>
-      <span style={searchIconWrap}>
+    <div ref={consignorInputRef} className="relative">
+      <span className="admin-search-icon">
         <Search size={16} />
       </span>
       <input
@@ -77,19 +69,10 @@ export default function ConsignorPicker() {
           setSearch(e.target.value);
           setShowResults(true);
         }}
-        onFocus={(e) => {
-          setShowResults(true);
-          handleFocus(e);
-        }}
-        onBlur={(e) => {
-          setTimeout(() => setShowResults(false), 200);
-          handleBlurStyle(e);
-        }}
+        onFocus={() => setShowResults(true)}
+        onBlur={() => setTimeout(() => setShowResults(false), 200)}
         placeholder="Search consignor by name or email..."
-        style={{
-          ...searchInputStyle,
-          ...(fieldErrors.has("consignorId") ? { borderColor: "#ef4444" } : {}),
-        }}
+        className={`admin-input-search${fieldErrors.has("consignorId") ? " !border-red-500" : ""}`}
       />
       <Dropdown anchorRef={consignorInputRef} open={showResults}>
         {filtered.map((c) => (
@@ -102,27 +85,18 @@ export default function ConsignorPicker() {
               setShowResults(false);
               clearError("consignorId");
             }}
-            style={dropdownItemStyle}
-            onMouseEnter={(e) => handleItemHover(e, true)}
-            onMouseLeave={(e) => handleItemHover(e, false)}
+            className="admin-dropdown-item"
           >
-            <div style={{ fontWeight: 600, color: "#1a1a1a", fontSize: "14px" }}>
+            <div className="font-semibold text-gray-900 text-sm">
               {c.name}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
+            <div className="text-xs text-gray-500 mt-0.5">
               {(c.feeRate * 100).toFixed(0)}% fee — {c.email}
             </div>
           </div>
         ))}
         {search.trim() && filtered.length === 0 && (
-          <div
-            style={{
-              padding: "10px 14px",
-              color: "#9ca3af",
-              fontSize: "13px",
-              textAlign: "center",
-            }}
-          >
+          <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
             No consignors found
           </div>
         )}

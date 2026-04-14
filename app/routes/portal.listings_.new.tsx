@@ -28,7 +28,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     if (product) {
       prefillProduct = {
         id: product.id,
-        styleId: product.styleId,
+        sku: product.sku,
         title: product.title,
         brand: product.brand,
         category: product.category,
@@ -66,7 +66,7 @@ export async function action({ request }: ActionFunctionArgs) {
       title: data.title,
       brand: data.brand,
       category,
-      styleId: data.styleId,
+      sku: data.sku,
       size: data.size,
       gtin: data.gtin,
       price: data.price,
@@ -80,7 +80,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 type ProductResult = {
   id: string;
-  styleId: string | null;
+  sku: string | null;
   title: string;
   brand: string | null;
   category: string | null;
@@ -107,7 +107,7 @@ export default function PortalListingNew() {
   const [brand, setBrand] = useState(prefillProduct?.brand ?? "");
   const [mainCategory, setMainCategory] = useState(prefillCat?.main ?? "");
   const [subCategory, setSubCategory] = useState(prefillCat?.sub ?? "");
-  const [styleId, setStyleId] = useState(prefillProduct?.styleId ?? "");
+  const [sku, setSku] = useState(prefillProduct?.sku ?? "");
   const [size, setSize] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [gtin, setGtin] = useState("");
@@ -199,7 +199,7 @@ export default function PortalListingNew() {
     setSelectedProduct(product);
     setTitle(product.title);
     setBrand(product.brand ?? "");
-    setStyleId(product.styleId ?? "");
+    setSku(product.sku ?? "");
     if (product.category) {
       const cat = parseCategory(product.category);
       setMainCategory(cat.main ?? "");
@@ -231,7 +231,7 @@ export default function PortalListingNew() {
     setBrand("");
     setMainCategory("");
     setSubCategory("");
-    setStyleId("");
+    setSku("");
     setSize("");
     setGtin("");
     setSelectedVariantId("");
@@ -245,7 +245,7 @@ export default function PortalListingNew() {
     setBrand("");
     setMainCategory("");
     setSubCategory("");
-    setStyleId("");
+    setSku("");
     setSize("");
     setGtin("");
     setPrice("");
@@ -309,7 +309,7 @@ export default function PortalListingNew() {
           <input type="hidden" name="brand" value={brand} />
           <input type="hidden" name="mainCategory" value={mainCategory} />
           <input type="hidden" name="subCategory" value={subCategory} />
-          <input type="hidden" name="styleId" value={styleId} />
+          <input type="hidden" name="sku" value={sku} />
 
           {/* Step 1: Product Search */}
           {showSearch && (
@@ -321,7 +321,7 @@ export default function PortalListingNew() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by product name or style ID..."
+                  placeholder="Search by product name or SKU..."
                   className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
                   autoFocus
                 />
@@ -352,7 +352,7 @@ export default function PortalListingNew() {
                         <div className="text-sm font-medium truncate">{product.title}</div>
                         <div className="text-xs text-muted-foreground flex gap-2">
                           {product.brand && <span>{product.brand}</span>}
-                          {product.styleId && <span>· {product.styleId}</span>}
+                          {product.sku && <span>· {product.sku}</span>}
                           <span>· {product.variants.length} size{product.variants.length !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
@@ -395,7 +395,7 @@ export default function PortalListingNew() {
                   <Lightbulb className="w-4 h-4 text-primary/60 shrink-0 mt-0.5" />
                   <div className="text-xs text-muted-foreground leading-relaxed space-y-1">
                     <p><span className="text-foreground/80 font-medium">Product name</span> — use the exact title from StockX to keep it standardized</p>
-                    <p><span className="text-foreground/80 font-medium">Style ID</span> — found on the inner tag or shoe box, helps with tracking</p>
+                    <p><span className="text-foreground/80 font-medium">SKU</span> — found on the inner tag or shoe box, helps with tracking</p>
                     <p><span className="text-foreground/80 font-medium">GTIN</span> — the barcode number on the box, type or scan it</p>
                   </div>
                 </div>
@@ -408,7 +408,7 @@ export default function PortalListingNew() {
                   <div className="text-xs text-muted-foreground">
                     {selectedProduct.brand && <span>{selectedProduct.brand} · </span>}
                     {selectedProduct.category && <span>{selectedProduct.category} · </span>}
-                    {selectedProduct.styleId && <span>{selectedProduct.styleId}</span>}
+                    {selectedProduct.sku && <span>{selectedProduct.sku}</span>}
                   </div>
                 </div>
               ) : (
@@ -471,11 +471,11 @@ export default function PortalListingNew() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">Style ID <span className="text-muted-foreground/60 font-normal">(optional)</span></label>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">SKU <span className="text-muted-foreground/60 font-normal">(optional)</span></label>
                     <input
                       type="text"
-                      value={styleId}
-                      onChange={(e) => setStyleId(e.target.value)}
+                      value={sku}
+                      onChange={(e) => setSku(e.target.value)}
                       className="glass-input w-full px-3 py-2.5 rounded-xl text-sm"
                       placeholder="e.g. CD0881-100"
                     />

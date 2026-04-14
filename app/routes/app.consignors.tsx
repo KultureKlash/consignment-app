@@ -6,7 +6,6 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorBalance } from "~/services/orders.server";
 import { createConsignor } from "~/services/consignors.server";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
 import { ChevronRight, Plus, X } from "lucide-react";
@@ -50,25 +49,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { error: message, intent };
   }
-};
-
-const modalOverlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.4)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 50,
-};
-
-const modalCard: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: "14px",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-  width: "100%",
-  maxWidth: "440px",
-  overflow: "hidden",
 };
 
 export default function Consignors() {
@@ -127,29 +107,13 @@ export default function Consignors() {
   return (
     <s-page heading="Consignors">
       <s-section>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-          <span style={{ fontSize: "13px", color: "#6d7175" }}>
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-[13px] text-gray-500">
             {consignors.length} consignor{consignors.length !== 1 ? "s" : ""}
           </span>
           <button
             onClick={() => setShowModal(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#fff",
-              background: "#111827",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#1f2937"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#111827"; }}
+            className="admin-btn-primary inline-flex items-center gap-1.5 !px-4 !py-2 !text-[13px]"
           >
             <Plus size={14} />
             Add Consignor
@@ -159,14 +123,14 @@ export default function Consignors() {
         {consignors.length === 0 ? (
           <s-paragraph>No consignors yet. Add one to get started.</s-paragraph>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+          <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr style={{ borderBottom: "2px solid #ddd", textAlign: "left" }}>
-                <th style={{ padding: "6px" }}>Name</th>
-                <th style={{ padding: "6px" }}>Email</th>
-                <th style={{ padding: "6px" }}>Fee Rate</th>
-                <th style={{ padding: "6px" }}>Balance</th>
-                <th style={{ padding: "6px", width: "32px" }} />
+              <tr className="border-b-2 border-gray-300 text-left">
+                <th className="admin-th">Name</th>
+                <th className="admin-th">Email</th>
+                <th className="admin-th">Fee Rate</th>
+                <th className="admin-th">Balance</th>
+                <th className="admin-th w-8" />
               </tr>
             </thead>
             <tbody>
@@ -174,57 +138,30 @@ export default function Consignors() {
                 <tr
                   key={c.id}
                   onClick={() => navigate(`/app/consignors/${c.id}`)}
-                  style={{ borderBottom: "1px solid #eee", cursor: "pointer", transition: "background 0.15s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#f8f9fa"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  className="border-b border-gray-200 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
                 >
-                  <td style={{ padding: "6px", fontWeight: 500 }}>
+                  <td className="admin-td font-medium">
                     {c.name}
                     {c.storeOwned && (
-                      <span style={{
-                        marginLeft: "8px",
-                        padding: "2px 8px",
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        color: "#6d7175",
-                        background: "#f3f4f6",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "9999px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.03em",
-                      }}>
+                      <span className="ml-2 px-2 py-0.5 text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full uppercase tracking-wide">
                         Store
                       </span>
                     )}
                     {c.status === "suspended" && (
-                      <span style={{
-                        marginLeft: "8px",
-                        padding: "2px 8px",
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        color: "#dc2626",
-                        background: "#fef2f2",
-                        border: "1px solid #fecaca",
-                        borderRadius: "9999px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.03em",
-                      }}>
+                      <span className="ml-2 px-2 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full uppercase tracking-wide">
                         Suspended
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: "6px" }}>{c.email}</td>
-                  <td style={{ padding: "6px" }}>{(c.feeRate * 100).toFixed(0)}%</td>
+                  <td className="admin-td">{c.email}</td>
+                  <td className="admin-td">{(c.feeRate * 100).toFixed(0)}%</td>
                   <td
-                    style={{
-                      padding: "6px",
-                      fontWeight: "bold",
-                      color: (balances[c.id] ?? 0) > 0 ? "#1a7f37" : "#333",
-                    }}
+                    className="admin-td font-bold"
+                    style={{ color: (balances[c.id] ?? 0) > 0 ? "#1a7f37" : "#333" }}
                   >
                     ${fmt(balances[c.id] ?? 0)}
                   </td>
-                  <td style={{ padding: "6px", color: "#9ca3af" }}>
+                  <td className="admin-td text-gray-400">
                     <ChevronRight size={16} />
                   </td>
                 </tr>
@@ -235,46 +172,42 @@ export default function Consignors() {
       </s-section>
 
       {showModal && (
-        <div style={modalOverlay} onClick={() => setShowModal(false)}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-              <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "#1a1a1a" }}>Add Consignor</h2>
+        <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="admin-modal !max-w-[440px]" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="m-0 text-[15px] font-semibold text-gray-900">Add Consignor</h2>
               <button
                 onClick={() => setShowModal(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6d7175" }}
+                className="bg-transparent border-0 cursor-pointer p-1 text-gray-500"
               >
                 <X size={18} />
               </button>
             </div>
-            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="admin-modal-body flex flex-col gap-4">
               <div>
-                <label style={labelStyle}>Name</label>
+                <label className="admin-label">Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  onFocus={handleFocus}
-                  onBlur={handleBlurStyle}
-                  style={inputStyle}
+                  className="admin-input"
                   placeholder="Full name"
                   autoFocus
                 />
               </div>
               <div>
-                <label style={labelStyle}>Email</label>
+                <label className="admin-label">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={handleFocus}
-                  onBlur={handleBlurStyle}
-                  style={inputStyle}
+                  className="admin-input"
                   placeholder="email@example.com"
                 />
               </div>
               <div>
-                <label style={labelStyle}>Fee Rate (%)</label>
-                <div style={{ position: "relative" }}>
+                <label className="admin-label">Fee Rate (%)</label>
+                <div className="relative">
                   <input
                     type="number"
                     min="0"
@@ -282,38 +215,29 @@ export default function Consignors() {
                     step="1"
                     value={feeRate}
                     onChange={(e) => setFeeRate(e.target.value)}
-                    onFocus={handleFocus}
-                    onBlur={handleBlurStyle}
-                    style={{ ...inputStyle, paddingRight: "32px" }}
+                    className="admin-input pr-8"
                   />
-                  <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: "#6d7175", fontSize: "14px", pointerEvents: "none" }}>%</span>
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">%</span>
                 </div>
-                <span style={{ fontSize: "11px", color: "#8c9196", marginTop: "4px", display: "block" }}>
+                <span className="text-[11px] text-gray-400 mt-1 block">
                   Platform fee deducted from sales. Consignor keeps {100 - (parseFloat(feeRate) || 0)}%.
                 </span>
               </div>
 
               {/* Tax Status */}
               <div>
-                <label style={labelStyle}>Tax Status</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <label className="admin-label">Tax Status</label>
+                <div className="flex gap-2">
                   {(["individual", "business"] as const).map((status) => (
                     <button
                       key={status}
                       type="button"
                       onClick={() => setNewTaxStatus(status)}
-                      style={{
-                        flex: 1,
-                        padding: "8px 12px",
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        borderRadius: "8px",
-                        border: `1px solid ${newTaxStatus === status ? "#111827" : "#c4c9d1"}`,
-                        background: newTaxStatus === status ? "#111827" : "#fff",
-                        color: newTaxStatus === status ? "#fff" : "#374151",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
+                      className={`flex-1 py-2 px-3 text-[13px] font-medium rounded-lg border cursor-pointer transition-all duration-150 ${
+                        newTaxStatus === status
+                          ? "border-gray-900 bg-gray-900 text-white"
+                          : "border-gray-300 bg-white text-gray-700"
+                      }`}
                     >
                       {status === "individual" ? "Individual" : "Registered Business"}
                     </button>
@@ -324,40 +248,34 @@ export default function Consignors() {
               {newTaxStatus === "business" && (
                 <>
                   <div>
-                    <label style={labelStyle}>Province</label>
+                    <label className="admin-label">Province</label>
                     <select
                       value={newProvince}
                       onChange={(e) => setNewProvince(e.target.value)}
-                      onFocus={handleFocus}
-                      onBlur={handleBlurStyle}
-                      style={{ ...inputStyle, cursor: "pointer" }}
+                      className="admin-input cursor-pointer"
                     >
                       <option value="QC">Quebec (QC)</option>
                       <option value="ON">Ontario (ON)</option>
                     </select>
                   </div>
                   <div>
-                    <label style={labelStyle}>GST/HST Number</label>
+                    <label className="admin-label">GST/HST Number</label>
                     <input
                       type="text"
                       value={newGstNumber}
                       onChange={(e) => setNewGstNumber(e.target.value)}
-                      onFocus={handleFocus}
-                      onBlur={handleBlurStyle}
-                      style={inputStyle}
+                      className="admin-input"
                       placeholder="e.g. 123456789 RT0001"
                     />
                   </div>
                   {newProvince === "QC" && (
                     <div>
-                      <label style={labelStyle}>QST Number</label>
+                      <label className="admin-label">QST Number</label>
                       <input
                         type="text"
                         value={newQstNumber}
                         onChange={(e) => setNewQstNumber(e.target.value)}
-                        onFocus={handleFocus}
-                        onBlur={handleBlurStyle}
-                        style={inputStyle}
+                        className="admin-input"
                         placeholder="e.g. 1234567890 TQ0001"
                       />
                     </div>
@@ -365,39 +283,19 @@ export default function Consignors() {
                 </>
               )}
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" }}>
+            <div className="admin-modal-footer">
               <button
                 onClick={() => setShowModal(false)}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color: "#374151",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
+                className="admin-btn-secondary !px-4 !py-2 !text-[13px]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreate}
                 disabled={!canSubmit || isSubmitting}
-                style={{
-                  padding: "8px 20px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#fff",
-                  background: canSubmit ? "#111827" : "#9ca3af",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: canSubmit ? "pointer" : "default",
-                  opacity: isSubmitting ? 0.7 : 1,
-                  fontFamily: "inherit",
-                  transition: "all 0.15s ease",
-                }}
+                className={`admin-btn-primary !px-5 !py-2 !text-[13px] ${
+                  !canSubmit ? "!bg-gray-400 !cursor-default hover:!bg-gray-400 hover:!shadow-none hover:!translate-y-0" : ""
+                } ${isSubmitting ? "opacity-70" : ""}`}
               >
                 {isSubmitting ? "Creating..." : "Create"}
               </button>

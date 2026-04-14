@@ -5,7 +5,7 @@ import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsign
 async function setupConsignorWithListings() {
   const consignor = await createTestConsignor({ name: "Alice", email: "alice@test.com", feeRate: 0.15 });
   const product = await prisma.product.create({
-    data: { title: "Test Shoe", styleId: `STYLE-${Date.now()}` },
+    data: { title: "Test Shoe", sku: `STYLE-${Date.now()}` },
   });
   const variant = await prisma.variant.create({
     data: { productId: product.id, size: "9" },

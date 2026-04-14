@@ -4,8 +4,8 @@ import { Plus, Package, Trash2, Pencil, ChevronRight, PackageX, ArrowLeft } from
 import { fmt } from "~/lib/currency";
 import { StatusBadge } from "./StatusBadge";
 import { InlinePrice } from "./InlinePrice";
-import { daysListedLabel, LISTING_STATUS } from "./helpers";
-import type { ListingRow } from "./helpers";
+import { daysListedLabel, LISTING_STATUS } from "./listingHelpers";
+import type { ListingRow } from "./listingHelpers";
 
 interface MobileDetailDrawerProps {
   listing: ListingRow;
@@ -27,7 +27,7 @@ export function MobileDetailDrawer({
   const product = listing.variant.product;
   const lowest = lowestPrices[listing.variantId];
   const daysLabel = daysListedLabel(listing.createdAt, listing.status);
-  const sku = listing.variant.gtin || product.styleId || null;
+  const sku = listing.variant.gtin || product.sku || null;
   const isEditable = listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED;
 
   return createPortal(

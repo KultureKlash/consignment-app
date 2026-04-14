@@ -8,7 +8,7 @@ export type Listing = {
   variant: {
     size: string;
     gtin: string | null;
-    product: { id: string; title: string; styleId: string | null; brand: string | null; category?: string | null; imageUrl?: string | null; sectionId?: string | null; section?: { name: string } | null };
+    product: { id: string; title: string; sku: string | null; brand: string | null; category?: string | null; imageUrl?: string | null; sectionId?: string | null; section?: { name: string } | null };
   };
 };
 
@@ -23,7 +23,7 @@ export type EditProductFields = {
   title: string;
   brand: string;
   category: string;
-  styleId: string;
+  sku: string;
   imageData?: string;
 };
 
@@ -37,7 +37,7 @@ export type VariantInfo = {
 export type ProductGroup = {
   productId: string;
   title: string;
-  styleId: string | null;
+  sku: string | null;
   brand: string | null;
   category: string | null;
   imageUrl: string | null;

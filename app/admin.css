@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Admin design tokens ── */
+
+@theme {
+  --color-admin-bg: #f9fafb;
+  --color-admin-surface: #ffffff;
+  --color-admin-border: #f3f4f6;
+  --color-admin-border-strong: #e5e7eb;
+  --color-admin-text: #111827;
+  --color-admin-text-muted: #64748b;
+  --color-admin-text-subtle: #9ca3af;
+  --color-admin-accent: #111827;
+  --color-admin-accent-hover: #1f2937;
+}
+
+/* ── Reusable admin components ── */
+
+@layer components {
+  /* Cards */
+  .admin-card {
+    @apply bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden;
+  }
+  .admin-card-header {
+    @apply px-5 py-4 border-b border-gray-100 flex items-center gap-2;
+  }
+  .admin-card-title {
+    @apply text-xs font-bold text-slate-500 uppercase tracking-wider;
+  }
+  .admin-card-body {
+    @apply px-5 py-5;
+  }
+
+  /* Form inputs */
+  .admin-input {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 font-[inherit] transition-colors duration-200 focus:border-gray-900 focus:outline-none;
+  }
+  .admin-input-search {
+    @apply w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 font-[inherit] transition-colors duration-200 focus:border-gray-900 focus:outline-none;
+  }
+  .admin-input-disabled {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed font-[inherit];
+  }
+  .admin-label {
+    @apply block text-xs font-medium mb-1.5 text-gray-700;
+  }
+  .admin-field-label {
+    @apply block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5;
+  }
+  .admin-helper-text {
+    @apply text-[11px] text-gray-400 mt-1;
+  }
+  .admin-textarea {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 font-[inherit] transition-colors duration-200 focus:border-gray-900 focus:outline-none resize-y min-h-[80px];
+  }
+
+  /* Chips */
+  .admin-chip {
+    @apply flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm;
+  }
+  .admin-chip-clear {
+    @apply cursor-pointer text-base text-gray-400 font-bold leading-none hover:text-gray-600;
+  }
+  .admin-chip-trigger {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full cursor-pointer font-[inherit] transition-all duration-200 border border-gray-200 bg-gray-50 text-gray-500 whitespace-nowrap hover:bg-gray-100;
+  }
+  .admin-chip-trigger-active {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full cursor-pointer font-[inherit] transition-all duration-200 border border-gray-900 bg-gray-900 text-white whitespace-nowrap shadow-md;
+  }
+
+  /* Table cells */
+  .admin-th {
+    @apply px-2 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left;
+  }
+  .admin-td {
+    @apply px-2 py-2.5 text-sm text-gray-900 align-middle;
+  }
+
+  /* Buttons */
+  .admin-btn {
+    @apply px-4 py-1.5 text-xs font-semibold rounded-lg border-0 cursor-pointer transition-all duration-200 font-[inherit];
+  }
+  .admin-btn-primary {
+    @apply px-4 py-1.5 text-xs font-semibold rounded-lg border-0 cursor-pointer transition-all duration-200 font-[inherit] bg-gray-900 text-white hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .admin-btn-danger {
+    @apply px-4 py-1.5 text-xs font-semibold rounded-lg border-0 cursor-pointer transition-all duration-200 font-[inherit] bg-red-600 text-white hover:bg-red-700 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .admin-btn-secondary {
+    @apply px-4 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200 font-[inherit] bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900;
+  }
+  .admin-btn-ghost {
+    @apply px-4 py-1.5 text-xs font-semibold rounded-lg border-0 cursor-pointer transition-all duration-200 font-[inherit] bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700;
+  }
+  .admin-btn-submit {
+    @apply w-full py-4 px-6 text-[15px] font-semibold text-white bg-gray-900 rounded-xl cursor-pointer transition-all duration-200 font-[inherit] shadow-md hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0;
+  }
+
+  /* Search icon wrapper */
+  .admin-search-icon {
+    @apply absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400;
+  }
+
+  /* Modal overlay */
+  .admin-modal-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+  }
+  .admin-modal {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto;
+  }
+  .admin-modal-header {
+    @apply flex items-center justify-between px-6 py-4 border-b border-gray-100;
+  }
+  .admin-modal-body {
+    @apply px-6 py-5;
+  }
+  .admin-modal-footer {
+    @apply flex justify-end gap-3 px-6 py-4 border-t border-gray-100;
+  }
+
+  /* Dropdown */
+  .admin-dropdown {
+    @apply absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl max-h-72 overflow-y-auto;
+  }
+  .admin-dropdown-item {
+    @apply px-3.5 py-2.5 cursor-pointer transition-colors duration-100 hover:bg-gray-50;
+  }
+
+  /* Status badges */
+  .admin-badge {
+    @apply inline-block px-2 py-0.5 text-[11px] font-semibold rounded-full border;
+  }
+  .admin-badge-submitted { @apply bg-purple-100 text-purple-700 border-purple-300; }
+  .admin-badge-approved { @apply bg-teal-100 text-teal-700 border-teal-200; }
+  .admin-badge-active { @apply bg-green-100 text-green-700 border-green-300; }
+  .admin-badge-paused { @apply bg-red-50 text-red-600 border-red-200; }
+  .admin-badge-pending-sale { @apply bg-amber-50 text-amber-700 border-amber-200; }
+  .admin-badge-sold { @apply bg-blue-100 text-blue-700 border-blue-200; }
+  .admin-badge-cancelled { @apply bg-gray-100 text-gray-600 border-gray-300; }
+  .admin-badge-rejected { @apply bg-red-50 text-red-600 border-red-200; }
+  .admin-badge-withdrawal { @apply bg-orange-50 text-orange-600 border-orange-200; }
+  .admin-badge-pickup { @apply bg-cyan-100 text-cyan-700 border-cyan-200; }
+  .admin-badge-withdrawn { @apply bg-gray-100 text-gray-600 border-gray-300; }
+}

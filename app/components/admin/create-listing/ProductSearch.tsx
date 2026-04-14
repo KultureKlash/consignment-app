@@ -1,14 +1,6 @@
 import { Search } from "lucide-react";
-import {
-  searchInputStyle,
-  chipStyle,
-  chipClear,
-  searchIconWrap,
-  handleFocus,
-  handleBlurStyle,
-} from "~/lib/admin/listing-ui";
 import { parseCategory } from "~/lib/categories";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
+import Dropdown from "~/components/admin/Dropdown";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function ProductSearch() {
@@ -39,11 +31,11 @@ export default function ProductSearch() {
   // State A: Product selected — show chip
   if (selectedProductId && selectedProduct) {
     return (
-      <div style={chipStyle}>
-        <span style={{ flex: 1 }}>
-          <span style={{ fontWeight: 500 }}>{selectedProduct.title}</span>
-          <span style={{ color: "#6b7280" }}>
-            {selectedProduct.styleId ? ` (${selectedProduct.styleId})` : ""}
+      <div className="admin-chip">
+        <span className="flex-1">
+          <span className="font-medium">{selectedProduct.title}</span>
+          <span className="text-gray-500">
+            {selectedProduct.sku ? ` (${selectedProduct.sku})` : ""}
             {selectedProduct.brand ? ` — ${selectedProduct.brand}` : ""}
           </span>
         </span>
@@ -52,7 +44,7 @@ export default function ProductSearch() {
             e.preventDefault();
             resetAll();
           }}
-          style={chipClear}
+          className="admin-chip-clear"
         >
           ✕
         </span>
@@ -63,8 +55,8 @@ export default function ProductSearch() {
   // State C: Search mode — show search input + dropdown
   if (!selectedProductId && !newProductMode) {
     return (
-      <div ref={productInputRef} style={{ position: "relative" }}>
-        <span style={searchIconWrap}>
+      <div ref={productInputRef} className="relative">
+        <span className="admin-search-icon">
           <Search size={16} />
         </span>
         <input
@@ -74,27 +66,14 @@ export default function ProductSearch() {
             setProductSearch(e.target.value);
             setShowResults(true);
           }}
-          onFocus={(e) => {
-            setShowResults(true);
-            handleFocus(e);
-          }}
-          onBlur={(e) => {
-            setTimeout(() => setShowResults(false), 200);
-            handleBlurStyle(e);
-          }}
-          placeholder="Search by name or style ID..."
-          style={searchInputStyle}
+          onFocus={() => setShowResults(true)}
+          onBlur={() => setTimeout(() => setShowResults(false), 200)}
+          placeholder="Search by name or SKU..."
+          className="admin-input-search"
         />
         <Dropdown anchorRef={productInputRef} open={showResults}>
           {isSearching && (
-            <div
-              style={{
-                padding: "10px 14px",
-                color: "#9ca3af",
-                fontSize: "13px",
-                textAlign: "center",
-              }}
-            >
+            <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
               Searching...
             </div>
           )}
@@ -112,7 +91,7 @@ export default function ProductSearch() {
                   setNewSizeMode(false);
                   setFormFields({
                     ...formFields,
-                    styleId: p.styleId ?? "",
+                    sku: p.sku ?? "",
                     title: p.title,
                     brand: p.brand ?? "",
                     size: "",
@@ -131,29 +110,20 @@ export default function ProductSearch() {
                     setCategoryManual(false);
                   }
                 }}
-                style={dropdownItemStyle}
-                onMouseEnter={(e) => handleItemHover(e, true)}
-                onMouseLeave={(e) => handleItemHover(e, false)}
+                className="admin-dropdown-item"
               >
-                <div style={{ fontWeight: 600, color: "#1a1a1a", fontSize: "14px" }}>
+                <div className="font-semibold text-gray-900 text-sm">
                   {p.title}
                 </div>
-                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
-                  {p.styleId ?? p.brand ?? "No style ID"}
-                  {p.styleId && p.brand ? ` — ${p.brand}` : ""} · {p.variants.length} size
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {p.sku ?? p.brand ?? "No SKU"}
+                  {p.sku && p.brand ? ` — ${p.brand}` : ""} · {p.variants.length} size
                   {p.variants.length !== 1 ? "s" : ""}
                 </div>
               </div>
             ))}
           {!isSearching && productSearch.trim() && searchResults.length === 0 && (
-            <div
-              style={{
-                padding: "10px 14px",
-                color: "#9ca3af",
-                fontSize: "13px",
-                textAlign: "center",
-              }}
-            >
+            <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
               No products found
             </div>
           )}
@@ -164,18 +134,7 @@ export default function ProductSearch() {
               setProductSearch("");
               setShowResults(false);
             }}
-            style={{
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "#6d7175",
-              fontWeight: 500,
-              borderTop: "1px solid #f0f0f0",
-              transition: "background 0.12s ease",
-              margin: "4px 0 0 0",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            className="px-3.5 py-2.5 cursor-pointer text-sm text-gray-500 font-medium border-t border-gray-100 mt-1 transition-colors duration-100 hover:bg-gray-100"
           >
             + Add new product
           </div>

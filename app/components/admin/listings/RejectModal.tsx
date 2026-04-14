@@ -7,84 +7,36 @@ export function RejectModal({ onConfirm, onCancel, reason, setReason }: {
   return (
     <div
       onClick={onCancel}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
+      className="admin-modal-overlay p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "420px",
-          width: "100%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-        }}
+        className="admin-modal max-w-[420px] p-6"
       >
-        <h3 style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 4px" }}>Reject Listing</h3>
-        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
+        <h3 className="text-[15px] font-semibold mt-0 mb-1">Reject Listing</h3>
+        <p className="text-[13px] text-gray-500 mt-0 mb-4">
           Provide a reason for rejection. The consignor will see this.
         </p>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="e.g. Item condition doesn't meet our standards..."
-          style={{
-            width: "100%",
-            minHeight: "80px",
-            padding: "10px 12px",
-            fontSize: "13px",
-            borderRadius: "8px",
-            border: "1px solid #d1d5db",
-            fontFamily: "inherit",
-            resize: "vertical",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "#111827"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,24,39,0.08)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; e.currentTarget.style.boxShadow = "none"; }}
+          className="admin-textarea"
           autoFocus
         />
-        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+        <div className="admin-modal-footer px-0 py-0 mt-4 border-0">
           <button
             onClick={onCancel}
-            style={{
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 500,
-              borderRadius: "8px",
-              border: "1px solid #e3e3e3",
-              background: "#fff",
-              color: "#6d7175",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
+            className="admin-btn-secondary text-[13px] px-4 py-2"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={!reason.trim()}
-            style={{
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "none",
-              background: !reason.trim() ? "#fca5a5" : "#dc2626",
-              color: "#fff",
-              cursor: !reason.trim() ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              transition: "background 0.15s",
-            }}
+            className={`px-4 py-2 text-[13px] font-semibold rounded-lg border-0 text-white font-[inherit] transition-colors duration-150 ${
+              !reason.trim() ? "bg-red-300 cursor-not-allowed" : "bg-red-600 cursor-pointer hover:bg-red-700"
+            }`}
           >
             Reject Listing
           </button>

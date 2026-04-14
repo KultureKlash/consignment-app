@@ -17,7 +17,7 @@ async function requireActiveConsignor(consignorId: string) {
 
 export async function submitListing({
   consignorId,
-  styleId,
+  sku,
   title,
   brand,
   category,
@@ -28,7 +28,7 @@ export async function submitListing({
   imageData,
 }: {
   consignorId: string;
-  styleId?: string | null;
+  sku?: string | null;
   title: string;
   brand?: string;
   category?: string;
@@ -40,7 +40,7 @@ export async function submitListing({
 }) {
   await requireActiveConsignor(consignorId);
 
-  const product = await findOrCreateProduct({ styleId, title, brand, category });
+  const product = await findOrCreateProduct({ sku, title, brand, category });
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
   // Store image on product if provided and product has no image yet

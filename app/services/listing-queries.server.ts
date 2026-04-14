@@ -1,5 +1,6 @@
 import prisma from "~/db.server";
 import type { Prisma } from "@prisma/client";
+import { CATEGORIES } from "~/lib/categories";
 
 export type ListingFilters = {
   search?: string;
@@ -43,8 +44,8 @@ export async function queryListings(filters: ListingFilters) {
         { consignor: { name: { contains: lower } } },
         { variant: { product: { title: { contains: search } } } },
         { variant: { product: { title: { contains: lower } } } },
-        { variant: { product: { styleId: { contains: search } } } },
-        { variant: { product: { styleId: { contains: upper } } } },
+        { variant: { product: { sku: { contains: search } } } },
+        { variant: { product: { sku: { contains: upper } } } },
       ],
     });
   }
@@ -54,9 +55,13 @@ export async function queryListings(filters: ListingFilters) {
   }
 
   if (category) {
-    conditions.push({
-      variant: { product: { category: { startsWith: category } } },
-    });
+    const subcats = CATEGORIES[category];
+    if (subcats) {
+      // Main category selected — match any subcategory or the main name itself (legacy data)
+      conditions.push({ variant: { product: { category: { in: [category, ...subcats] } } } });
+    } else {
+      conditions.push({ variant: { product: { category } } });
+    }
   }
 
   if (consignorId) {
@@ -97,9 +102,9 @@ export async function queryListings(filters: ListingFilters) {
     const totalGroups = productIds.length;
     const pageProductIds = productIds.slice((page - 1) * limit, page * limit);
 
-    // Step 2: Fetch all listings for those products
+    // Step 2: Fetch all listings for those products (AND-compose to avoid nested variant merge)
     const listings = await prisma.listing.findMany({
-      where: { ...where, variant: { productId: { in: pageProductIds } } },
+      where: { AND: [where, { variant: { productId: { in: pageProductIds } } }] },
       orderBy,
       include: LISTING_INCLUDE,
     });

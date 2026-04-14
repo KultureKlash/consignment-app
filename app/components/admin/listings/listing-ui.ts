@@ -1,7 +1,26 @@
-// Shared styles, helpers, and types for listing-related pages
+// Shared Tailwind class strings and helpers for admin listing pages.
+// Style objects are defined in admin.css — this file maps them to components.
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 
-// ── Styles ──────────────────────────────────────────────
+// ── Class strings (map to admin.css @layer components) ──
+
+export const inputClass = "admin-input";
+export const searchInputClass = "admin-input-search";
+export const disabledInputClass = "admin-input-disabled";
+export const labelClass = "admin-label";
+export const chipClass = "admin-chip";
+export const chipClearClass = "admin-chip-clear";
+export const searchIconClass = "admin-search-icon";
+export const thClass = "admin-th";
+export const tdClass = "admin-td";
+export const sectionCardClass = "admin-card";
+export const sectionHeaderClass = "admin-card-header";
+export const sectionTitleClass = "admin-card-title";
+export const sectionBodyClass = "admin-card-body";
+
+// ── Legacy style object exports (for gradual migration) ──
+// Components still using style={{}} can import these until migrated.
+// Delete each one as the consumer switches to className.
 
 export const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -64,6 +83,70 @@ export const searchIconWrap: React.CSSProperties = {
   color: "#9ca3af",
 };
 
+export const thStyle: React.CSSProperties = {
+  padding: "10px 8px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#6d7175",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  textAlign: "left",
+};
+
+export const tdStyle: React.CSSProperties = {
+  padding: "10px 8px",
+  fontSize: "13px",
+  color: "#1a1a1a",
+  verticalAlign: "middle",
+};
+
+export const sectionCard: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #f0f0f0",
+  borderRadius: "16px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  overflow: "hidden",
+};
+
+export const sectionHeader: React.CSSProperties = {
+  padding: "16px 22px",
+  borderBottom: "1px solid #f5f5f5",
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+};
+
+export const sectionTitle: React.CSSProperties = {
+  fontSize: "12px",
+  fontWeight: 700,
+  color: "#94a3b8",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  margin: 0,
+};
+
+// ── Status badge ──
+
+const BADGE_CLASSES: Record<string, string> = {
+  [LISTING_STATUS.SUBMITTED]: "admin-badge-submitted",
+  [LISTING_STATUS.APPROVED]: "admin-badge-approved",
+  [LISTING_STATUS.ACTIVE]: "admin-badge-active",
+  [LISTING_STATUS.PAUSED]: "admin-badge-paused",
+  [LISTING_STATUS.PENDING_SALE]: "admin-badge-pending-sale",
+  [LISTING_STATUS.SOLD]: "admin-badge-sold",
+  [LISTING_STATUS.CANCELLED]: "admin-badge-cancelled",
+  [LISTING_STATUS.REJECTED]: "admin-badge-rejected",
+  [LISTING_STATUS.WITHDRAWAL_REQUESTED]: "admin-badge-withdrawal",
+  [LISTING_STATUS.PENDING_PICKUP]: "admin-badge-pickup",
+  [LISTING_STATUS.WITHDRAWN]: "admin-badge-withdrawn",
+};
+
+/** Returns Tailwind className for a status badge */
+export function statusBadgeClass(status: string): string {
+  return `admin-badge capitalize whitespace-nowrap ${BADGE_CLASSES[status] ?? "admin-badge-cancelled"}`;
+}
+
+/** Legacy: returns inline style object for status badge. Delete once all consumers use className. */
 export const statusBadge = (status: string): React.CSSProperties => {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
     submitted: { bg: "#ede9fe", text: "#7c3aed", border: "#c4b5fd" },
@@ -93,24 +176,19 @@ export const statusBadge = (status: string): React.CSSProperties => {
   };
 };
 
-export const thStyle: React.CSSProperties = {
-  padding: "10px 8px",
-  fontSize: "11px",
-  fontWeight: 700,
-  color: "#6d7175",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  textAlign: "left",
-};
+// ── Focus/blur handlers (legacy — use admin-input CSS class instead) ──
 
-export const tdStyle: React.CSSProperties = {
-  padding: "10px 8px",
-  fontSize: "13px",
-  color: "#1a1a1a",
-  verticalAlign: "middle",
-};
+export function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
+  e.currentTarget.style.borderColor = "#111827";
+  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,24,39,0.08)";
+}
 
-// ── Helpers ─────────────────────────────────────────────
+export function handleBlurStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
+  e.currentTarget.style.borderColor = "#c4c9d1";
+  e.currentTarget.style.boxShadow = "none";
+}
+
+// ── Helpers ──
 
 export function relativeTime(date: string | Date): string {
   const diffMs = Date.now() - new Date(date).getTime();
@@ -141,48 +219,11 @@ export function statusLabel(status: string): string {
   return labels[status] ?? status;
 }
 
-export function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
-  e.currentTarget.style.borderColor = "#111827";
-  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,24,39,0.08)";
-}
-
-export function handleBlurStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLDivElement>) {
-  e.currentTarget.style.borderColor = "#c4c9d1";
-  e.currentTarget.style.boxShadow = "none";
-}
-
-// ── Unified section/card styles ──────────────────────────
-
-export const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #f0f0f0",
-  borderRadius: "16px",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-};
-
-export const sectionHeader: React.CSSProperties = {
-  padding: "16px 22px",
-  borderBottom: "1px solid #f5f5f5",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-export const sectionTitle: React.CSSProperties = {
-  fontSize: "12px",
-  fontWeight: 700,
-  color: "#94a3b8",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  margin: 0,
-};
-
-// ── Types ───────────────────────────────────────────────
+// ── Types ──
 
 export type ProductResult = {
   id: string;
-  styleId: string | null;
+  sku: string | null;
   title: string;
   brand: string | null;
   category: string | null;

@@ -5,13 +5,13 @@ import prisma from "~/db.server";
 export async function action({ request }: ActionFunctionArgs) {
   const body = await request.json();
 
-  const { title, brand, styleId, sizes } = body;
+  const { title, brand, sku, sizes } = body;
 
   const product = await prisma.product.create({
     data: {
       title,
       brand,
-      styleId,
+      sku,
       variants: {
         create: sizes.map((size: string) => ({
           size

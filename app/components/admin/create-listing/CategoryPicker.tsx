@@ -1,14 +1,7 @@
 import { Search } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
-import {
-  searchInputStyle,
-  searchIconWrap,
-  handleFocus,
-  handleBlurStyle,
-} from "~/lib/admin/listing-ui";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
+import Dropdown from "~/components/admin/Dropdown";
 import CustomSelect from "~/components/admin/CustomSelect";
-import { fieldLabel } from "./helpers";
 import { useCreateListing } from "./CreateListingContext";
 
 export function NewProductCategoryPicker() {
@@ -36,16 +29,9 @@ export function NewProductCategoryPicker() {
   return (
     <>
       {/* Category selects */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "12px",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
-          <label style={fieldLabel}>Category</label>
+          <label className="admin-field-label">Category</label>
           <CustomSelect
             options={MAIN_CATEGORIES}
             value={mainCategory}
@@ -64,7 +50,7 @@ export function NewProductCategoryPicker() {
           />
         </div>
         <div>
-          <label style={fieldLabel}>Subcategory</label>
+          <label className="admin-field-label">Subcategory</label>
           <CustomSelect
             options={mainCategory ? (CATEGORIES[mainCategory] ?? []) : []}
             value={subCategory}
@@ -111,16 +97,9 @@ export function ExistingProductCategoryPicker() {
   if (!selectedProduct) return null;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "12px",
-        marginTop: "16px",
-      }}
-    >
+    <div className="grid grid-cols-2 gap-3 mt-4">
       <div>
-        <label style={fieldLabel}>Category</label>
+        <label className="admin-field-label">Category</label>
         <CustomSelect
           options={MAIN_CATEGORIES}
           value={mainCategory}
@@ -134,7 +113,7 @@ export function ExistingProductCategoryPicker() {
         />
       </div>
       <div>
-        <label style={fieldLabel}>Subcategory</label>
+        <label className="admin-field-label">Subcategory</label>
         <CustomSelect
           options={mainCategory ? (CATEGORIES[mainCategory] ?? []) : []}
           value={subCategory}
@@ -176,20 +155,13 @@ function TaxonomyOverride({
   taxonomyResults: Array<{ id: string; fullName: string }>;
 }) {
   return (
-    <div style={{ marginBottom: "16px" }}>
-      <label style={fieldLabel}>Shopify Product Category</label>
+    <div className="mb-4">
+      <label className="admin-field-label">Shopify Product Category</label>
       {!taxonomyEditMode ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "13px",
-          }}
-        >
+        <div className="flex items-center gap-2 text-[13px]">
           {shopifyCategory ? (
             <>
-              <span style={{ color: "#1a1a1a" }}>{shopifyCategory.fullName}</span>
+              <span className="text-gray-900">{shopifyCategory.fullName}</span>
               <span
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -197,14 +169,14 @@ function TaxonomyOverride({
                   setTaxonomyEditMode(true);
                   setTaxonomySearch("");
                 }}
-                style={{ cursor: "pointer", color: "#4f46e5", fontWeight: 500 }}
+                className="cursor-pointer text-indigo-600 font-medium"
               >
                 Change
               </span>
             </>
           ) : (
             <>
-              <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
+              <span className="text-gray-400 italic">
                 Auto-detected from category
               </span>
               <span
@@ -213,7 +185,7 @@ function TaxonomyOverride({
                   setTaxonomyEditMode(true);
                   setTaxonomySearch("");
                 }}
-                style={{ cursor: "pointer", color: "#4f46e5", fontWeight: 500 }}
+                className="cursor-pointer text-indigo-600 font-medium"
               >
                 Override
               </span>
@@ -221,8 +193,8 @@ function TaxonomyOverride({
           )}
         </div>
       ) : (
-        <div ref={taxonomyInputRef} style={{ position: "relative" }}>
-          <span style={searchIconWrap}>
+        <div ref={taxonomyInputRef} className="relative">
+          <span className="admin-search-icon">
             <Search size={16} />
           </span>
           <input
@@ -232,19 +204,15 @@ function TaxonomyOverride({
               setTaxonomySearch(e.target.value);
               setShowTaxonomyResults(true);
             }}
-            onFocus={(e) => {
-              setShowTaxonomyResults(true);
-              handleFocus(e);
-            }}
-            onBlur={(e) => {
+            onFocus={() => setShowTaxonomyResults(true)}
+            onBlur={() => {
               setTimeout(() => {
                 setShowTaxonomyResults(false);
                 if (!taxonomySearch.trim()) setTaxonomyEditMode(false);
               }, 200);
-              handleBlurStyle(e);
             }}
             placeholder="Search Shopify categories..."
-            style={searchInputStyle}
+            className="admin-input-search"
             autoFocus
           />
           <Dropdown
@@ -252,14 +220,7 @@ function TaxonomyOverride({
             open={showTaxonomyResults && taxonomySearch.trim().length > 0}
           >
             {taxonomyFetcher.state === "loading" && (
-              <div
-                style={{
-                  padding: "10px 14px",
-                  color: "#9ca3af",
-                  fontSize: "13px",
-                  textAlign: "center",
-                }}
-              >
+              <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
                 Searching...
               </div>
             )}
@@ -274,24 +235,15 @@ function TaxonomyOverride({
                     setShowTaxonomyResults(false);
                     setTaxonomyEditMode(false);
                   }}
-                  style={dropdownItemStyle}
-                  onMouseEnter={(e) => handleItemHover(e, true)}
-                  onMouseLeave={(e) => handleItemHover(e, false)}
+                  className="admin-dropdown-item"
                 >
-                  <span style={{ fontWeight: 500, color: "#1a1a1a" }}>{cat.fullName}</span>
+                  <span className="font-medium text-gray-900">{cat.fullName}</span>
                 </div>
               ))}
             {taxonomyFetcher.state !== "loading" &&
               taxonomySearch.trim() &&
               taxonomyResults.length === 0 && (
-                <div
-                  style={{
-                    padding: "10px 14px",
-                    color: "#9ca3af",
-                    fontSize: "13px",
-                    textAlign: "center",
-                  }}
-                >
+                <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
                   No categories found
                 </div>
               )}

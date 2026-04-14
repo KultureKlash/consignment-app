@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "~/components/admin/Dropdown";
-import { inputStyle, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
-import { fieldLabel } from "./helpers";
+import Dropdown from "~/components/admin/Dropdown";
 import { NewProductCategoryPicker } from "./CategoryPicker";
 import ImageUpload from "./ImageUpload";
 import { useCreateListing } from "./CreateListingContext";
@@ -42,60 +40,25 @@ export default function NewProductFields() {
 
   return (
     <>
-      <div
-        style={{
-          marginBottom: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
+      <div className="mb-4 flex items-center gap-3">
         <span
           onMouseDown={(e) => {
             e.preventDefault();
             onBack();
           }}
-          style={{
-            cursor: "pointer",
-            color: "#111827",
-            fontSize: "12px",
-            fontWeight: 600,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            background: "rgba(17,24,39,0.06)",
-            padding: "6px 14px",
-            borderRadius: "10px",
-            border: "1px solid rgba(17,24,39,0.15)",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(17,24,39,0.12)";
-            e.currentTarget.style.borderColor = "rgba(17,24,39,0.25)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(17,24,39,0.06)";
-            e.currentTarget.style.borderColor = "rgba(17,24,39,0.15)";
-          }}
+          className="cursor-pointer text-gray-900 text-xs font-semibold inline-flex items-center gap-1 bg-gray-900/5 px-3.5 py-1.5 rounded-[10px] border border-gray-900/15 transition-all duration-200 hover:bg-gray-900/10 hover:border-gray-900/25"
         >
           ← Back to search
         </span>
-        <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+        <span className="text-xs text-gray-400">
           Product not in catalog — enter details manually
         </span>
       </div>
 
       {/* Product fields — Row 1: Name / Brand */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "16px",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label style={fieldLabel}>Product Name</label>
+          <label className="admin-field-label">Product Name</label>
           <input
             type="text"
             value={formFields.title}
@@ -103,17 +66,12 @@ export default function NewProductFields() {
               setFormFields((prev) => ({ ...prev, title: e.target.value }));
               clearError("title");
             }}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             placeholder="e.g. Nike Air Max 90"
-            style={{
-              ...inputStyle,
-              ...(fieldErrors.has("title") ? { borderColor: "#ef4444" } : {}),
-            }}
+            className={`admin-input${fieldErrors.has("title") ? " !border-red-500" : ""}`}
           />
         </div>
         <div ref={brandInputRef}>
-          <label style={fieldLabel}>Brand</label>
+          <label className="admin-field-label">Brand</label>
           <input
             type="text"
             value={formFields.brand}
@@ -122,19 +80,15 @@ export default function NewProductFields() {
               setBrandSearch(e.target.value);
               setShowBrandResults(true);
             }}
-            onFocus={(e) => {
+            onFocus={() => {
               if (formFields.brand) {
                 setBrandSearch(formFields.brand);
                 setShowBrandResults(true);
               }
-              handleFocus(e);
             }}
-            onBlur={(e) => {
-              setTimeout(() => setShowBrandResults(false), 200);
-              handleBlurStyle(e);
-            }}
+            onBlur={() => setTimeout(() => setShowBrandResults(false), 200)}
             placeholder="e.g. Nike"
-            style={inputStyle}
+            className="admin-input"
           />
           <Dropdown
             anchorRef={brandInputRef}
@@ -149,11 +103,9 @@ export default function NewProductFields() {
                   setBrandSearch("");
                   setShowBrandResults(false);
                 }}
-                style={dropdownItemStyle}
-                onMouseEnter={(e) => handleItemHover(e, true)}
-                onMouseLeave={(e) => handleItemHover(e, false)}
+                className="admin-dropdown-item"
               >
-                <span style={{ fontWeight: 500 }}>{b}</span>
+                <span className="font-medium">{b}</span>
               </div>
             ))}
           </Dropdown>

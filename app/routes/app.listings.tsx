@@ -7,11 +7,11 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
 import { handleListingAction } from "~/services/admin/listing-actions.server";
-import { useListingToasts } from "~/hooks/useListingToasts";
+import { useListingToasts } from "~/components/admin/listings/useListingToasts";
 import ListingsFilter from "~/components/admin/ListingsFilter";
 import ListingsTable from "~/components/admin/listings";
 import type { EditApproveFields, EditProductFields } from "~/components/admin/listings";
-import Pagination from "~/components/shared/Pagination";
+import Pagination from "~/components/admin/listings/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
 import BulkActionBar from "~/components/admin/BulkActionBar";
 
@@ -113,7 +113,7 @@ export default function Listings() {
     }
     return {
       productId: quickAdd.productId,
-      title: product.title, brand: product.brand, styleId: product.styleId,
+      title: product.title, brand: product.brand, sku: product.sku,
       category: (product as { category?: string | null }).category ?? null,
       variants: Array.from(variantMap.values()),
     };

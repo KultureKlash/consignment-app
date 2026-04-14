@@ -7,62 +7,31 @@ interface ActivityItemProps {
 }
 
 const iconConfig: Record<string, { icon: typeof ShoppingBag; color: string; bg: string; label: string }> = {
-  sale: { icon: ShoppingBag, color: "#065f46", bg: "#ecfdf5", label: "Sale" },
-  approval: { icon: CheckCircle2, color: "#1e40af", bg: "#eff6ff", label: "Approval" },
-  request: { icon: Clock, color: "#92400e", bg: "#fef3c7", label: "Update" },
-  listing: { icon: Package, color: "#334155", bg: "#f1f5f9", label: "New Listing" },
+  sale: { icon: ShoppingBag, color: "#065f46", bg: "bg-emerald-50", label: "Sale" },
+  approval: { icon: CheckCircle2, color: "#1e40af", bg: "bg-blue-50", label: "Approval" },
+  request: { icon: Clock, color: "#92400e", bg: "bg-amber-100", label: "Update" },
+  listing: { icon: Package, color: "#334155", bg: "bg-slate-100", label: "New Listing" },
 };
 
 export default function ActivityItem({ event, time, type }: ActivityItemProps) {
   const { icon: Icon, color, bg, label } = iconConfig[type];
 
   return (
-    <div style={{
-      display: "flex",
-      gap: "14px",
-      padding: "12px 0",
-      borderBottom: "1px solid rgba(0, 0, 0, 0.04)",
-    }}>
-      <div style={{
-        width: "34px",
-        height: "34px",
-        borderRadius: "10px",
-        background: bg,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}>
+    <div className="flex gap-3.5 py-3 border-b border-black/[0.04]">
+      <div className={`w-[34px] h-[34px] rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
         <Icon size={15} color={color} strokeWidth={2} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <span style={{
-          fontSize: "10px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          color,
-          marginBottom: "2px",
-        }}>
+      <div className="flex flex-col min-w-0">
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.06em] mb-0.5"
+          style={{ color }}
+        >
           {label}
         </span>
-        <p style={{
-          fontSize: "13px",
-          color: "#1a1a1a",
-          lineHeight: 1.5,
-          fontWeight: 500,
-          margin: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}>
+        <p className="text-[13px] text-gray-900 leading-normal font-medium m-0 overflow-hidden text-ellipsis">
           {event}
         </p>
-        <span style={{
-          fontSize: "11px",
-          color: "#b5b9be",
-          fontVariantNumeric: "tabular-nums",
-          marginTop: "2px",
-        }}>
+        <span className="text-[11px] text-gray-400 tabular-nums mt-0.5">
           {time}
         </span>
       </div>

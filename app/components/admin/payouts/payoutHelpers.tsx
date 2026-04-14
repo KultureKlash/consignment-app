@@ -1,5 +1,4 @@
 import type React from "react";
-import { useState } from "react";
 import { fmt } from "~/lib/currency";
 import { generateCsv, downloadCsv } from "~/lib/csv";
 
@@ -52,33 +51,11 @@ export interface PayoutRef {
   items: PayoutItemRef[];
 }
 
-// ── Shared styles ──
+// ── Shared Tailwind class strings ──
 
-export const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(227,227,227,0.6)",
-  borderRadius: "12px",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-};
-
-export const sectionHeaderStyle: React.CSSProperties = {
-  padding: "14px 20px",
-  borderBottom: "1px solid rgba(227,227,227,0.5)",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-export const sectionTitleStyle: React.CSSProperties = {
-  fontSize: "13px",
-  fontWeight: 700,
-  color: "#1a1a1a",
-  textTransform: "uppercase",
-  letterSpacing: "0.03em",
-  margin: 0,
-};
-
+export const sectionCardClass = "admin-card";
+export const sectionHeaderClass = "admin-card-header";
+export const sectionTitleClass = "admin-card-title m-0";
 export const gridCols = "36px 100px 1fr 100px 90px 90px 90px";
 
 // ── Shared utilities ──
@@ -91,25 +68,13 @@ export function relativeDate(dateStr: string): string {
 // ── StatCard ──
 
 export function StatCard({ label, value, icon: Icon, accentColor }: { label: string; value: string; icon: React.ElementType; accentColor: string; bgTint: string }) {
-  const [hovered, setHovered] = useState(false);
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: "relative", background: "#fff",
-        border: `1px solid ${hovered ? "rgba(200,200,200,0.8)" : "rgba(227,227,227,0.6)"}`,
-        borderRadius: "10px", padding: "18px 20px", transition: "all 0.2s ease",
-        transform: hovered ? "translateY(-1px)" : "translateY(0)",
-        boxShadow: hovered ? "0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)" : "0 1px 2px rgba(0,0,0,0.03)",
-        cursor: "default",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-        <span style={{ fontSize: "12px", fontWeight: 500, color: "#6d7175", letterSpacing: "0.01em" }}>{label}</span>
-        <Icon size={20} color={accentColor} strokeWidth={1.8} />
+    <div className="relative bg-white border border-gray-200/60 rounded-[10px] px-5 py-[18px] transition-all duration-200 ease-in-out cursor-default shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] hover:border-gray-300/80">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-medium text-[#6d7175] tracking-[0.01em]">{label}</span>
+        <Icon size={20} style={{ color: accentColor }} strokeWidth={1.8} />
       </div>
-      <div style={{ fontSize: "24px", fontWeight: 600, color: "#1a1a1a", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.025em", lineHeight: 1 }}>
+      <div className="text-2xl font-semibold text-[#1a1a1a] tabular-nums tracking-tight leading-none">
         {value}
       </div>
     </div>

@@ -7,7 +7,7 @@ import { getOrderDetail } from "~/services/order-queries.server";
 async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100") {
   const product = await prisma.product.create({
     data: {
-      styleId: `style-${Date.now()}-${Math.random()}`,
+      sku: `style-${Date.now()}-${Math.random()}`,
       title: "Test Product",
       shopifyProductId: "gid://shopify/Product/1",
     },
@@ -187,7 +187,7 @@ describe("orders.server — processOrder", () => {
 
     const { variant: variant1 } = await setupVariant("gid://shopify/ProductVariant/200");
     const product2 = await prisma.product.create({
-      data: { styleId: "STYLE-2", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
+      data: { sku: "STYLE-2", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
     });
     const variant2 = await prisma.variant.create({
       data: {
@@ -552,7 +552,7 @@ describe("orders.server — refundOrder", () => {
 
     const { variant: variant1 } = await setupVariant("gid://shopify/ProductVariant/300");
     const product2 = await prisma.product.create({
-      data: { styleId: "STYLE-PARTIAL", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
+      data: { sku: "STYLE-PARTIAL", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
     });
     const variant2 = await prisma.variant.create({
       data: {
@@ -600,7 +600,7 @@ describe("orders.server — refundOrder", () => {
 
     const { variant: variant1 } = await setupVariant("gid://shopify/ProductVariant/400");
     const product2 = await prisma.product.create({
-      data: { styleId: "STYLE-OPEN", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
+      data: { sku: "STYLE-OPEN", title: "Product 2", shopifyProductId: "gid://shopify/Product/2" },
     });
     const variant2 = await prisma.variant.create({
       data: {
@@ -1873,7 +1873,7 @@ describe("orders.server — post-payout refund handling", () => {
     const product = await prisma.product.create({
       data: {
         title: "Post-Payout Test Product",
-        styleId: `style-pp-${Date.now()}-${Math.random()}`,
+        sku: `style-pp-${Date.now()}-${Math.random()}`,
         category: opts.category ?? "Footwear > Sneakers",
         shopifyProductId: `gid://shopify/Product/pp-${Date.now()}`,
       },
@@ -2030,7 +2030,7 @@ describe("orders.server — post-payout refund handling", () => {
     const product = await prisma.product.create({
       data: {
         title: "Normal Refund Product",
-        styleId: `style-nr-${Date.now()}-${Math.random()}`,
+        sku: `style-nr-${Date.now()}-${Math.random()}`,
         category: "Footwear > Sneakers",
         shopifyProductId: `gid://shopify/Product/nr-${Date.now()}`,
       },

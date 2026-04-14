@@ -1,4 +1,4 @@
-import type { ProductResult } from "~/lib/admin/listing-ui";
+import type { ProductResult } from "~/components/admin/listings/listing-ui";
 
 export type Consignor = {
   id: string;
@@ -14,7 +14,7 @@ export type Props = {
 };
 
 export type FormFields = {
-  styleId: string;
+  sku: string;
   title: string;
   brand: string;
   size: string;
@@ -25,7 +25,7 @@ export type FormFields = {
 };
 
 export const EMPTY_FORM: FormFields = {
-  styleId: "",
+  sku: "",
   title: "",
   brand: "",
   size: "",

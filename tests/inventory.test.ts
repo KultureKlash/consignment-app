@@ -9,7 +9,7 @@ describe("inventory.server", () => {
       const { admin, graphql } = createMockAdmin();
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: { productId: product.id, size: "9", gtin: "TEST-GTIN-9", inventoryItemId: null },
@@ -25,7 +25,7 @@ describe("inventory.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -53,7 +53,7 @@ describe("inventory.server", () => {
       const consignor2 = await createTestConsignor({ email: "b@test.com" });
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -89,7 +89,7 @@ describe("inventory.server", () => {
       const consignor2 = await createTestConsignor({ email: "b@test.com" });
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -126,7 +126,7 @@ describe("inventory.server", () => {
 
       const consignor = await createTestConsignor();
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -168,7 +168,7 @@ describe("inventory.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -195,7 +195,7 @@ describe("inventory.server", () => {
       const consignor2 = await createTestConsignor({ email: "b@test.com" });
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -231,7 +231,7 @@ describe("inventory.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
       });
       // Two variants — so it's safe to delete one
       const variant9 = await prisma.variant.create({
@@ -276,7 +276,7 @@ describe("inventory.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
       });
       // Only one variant — can't delete it
       const variant = await prisma.variant.create({
@@ -311,7 +311,7 @@ describe("inventory.server", () => {
 
       const consignor = await createTestConsignor();
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda" },
       });
       const variant = await prisma.variant.create({
         data: {
@@ -343,7 +343,7 @@ describe("inventory.server", () => {
       const consignor2 = await createTestConsignor({ email: "b@test.com" });
 
       const product = await prisma.product.create({
-        data: { styleId: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
+        data: { sku: "DD1391-100", title: "Nike Dunk Panda", shopifyProductId: "gid://shopify/Product/1" },
       });
       const variant = await prisma.variant.create({
         data: {

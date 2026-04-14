@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import Dropdown, { dropdownItemStyle, handleItemHover } from "./Dropdown";
+import Dropdown, { dropdownItemClass } from "./Dropdown";
 
 type OptionItem = { label: string; value: string };
 
@@ -12,43 +12,9 @@ type CustomSelectProps = {
   hasError?: boolean;
   searchable?: boolean;
   actionItem?: { label: string; onSelect: () => void };
-  chipStyle?: React.CSSProperties;
-};
-
-const triggerStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 14px",
-  fontSize: "14px",
-  borderRadius: "8px",
-  border: "1px solid #c4c9d1",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
-  transition: "border-color 0.2s, box-shadow 0.2s",
-  outline: "none",
-  color: "#1a1a1a",
-  background: "white",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  userSelect: "none",
-};
-
-const disabledTriggerStyle: React.CSSProperties = {
-  ...triggerStyle,
-  background: "#f9fafb",
-  color: "#6b7280",
-  cursor: "not-allowed",
-};
-
-const chevronStyle: React.CSSProperties = {
-  width: 0,
-  height: 0,
-  borderLeft: "4px solid transparent",
-  borderRight: "4px solid transparent",
-  borderTop: "5px solid #9ca3af",
-  marginLeft: "8px",
-  flexShrink: 0,
+  chipMode?: boolean;
+  chipActive?: boolean;
+  onClear?: () => void;
 };
 
 export default function CustomSelect({
@@ -60,7 +26,9 @@ export default function CustomSelect({
   hasError = false,
   searchable = false,
   actionItem,
-  chipStyle,
+  chipMode = false,
+  chipActive = false,
+  onClear,
 }: CustomSelectProps) {
   // Normalize options to { label, value } pairs
   const normalizedOptions: OptionItem[] = options.map((opt) =>
@@ -120,57 +88,48 @@ export default function CustomSelect({
     setTimeout(() => setOpen(false), 200);
   };
 
-  const baseStyle = chipStyle ?? (disabled ? disabledTriggerStyle : triggerStyle);
-  const errorOverride = hasError && !disabled ? { borderColor: "#ef4444" } : {};
-  const focusRef = useRef(false);
-
-  const handleFocusIn = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    focusRef.current = true;
-    if (!hasError) {
-      e.currentTarget.style.borderColor = "#4f46e5";
-      e.currentTarget.style.boxShadow = "0 0 0 3px rgba(79,70,229,0.12)";
-    }
-  };
-
-  const handleFocusOut = (e: React.FocusEvent<HTMLDivElement>) => {
-    focusRef.current = false;
-    e.currentTarget.style.borderColor = hasError ? "#ef4444" : "#c4c9d1";
-    e.currentTarget.style.boxShadow = "none";
-    // Searchable uses click-outside handler instead of blur
-    if (searchable) return;
-    handleBlur();
-  };
+  const triggerClass = chipMode
+    ? chipActive
+      ? "admin-chip-trigger-active"
+      : "admin-chip-trigger"
+    : disabled
+      ? "admin-input flex items-center justify-between cursor-not-allowed bg-gray-50 text-gray-500 select-none"
+      : `admin-input flex items-center justify-between cursor-pointer select-none${hasError ? " border-red-500" : ""}`;
 
   return (
-    <div ref={anchorRef} style={{ position: "relative" }}>
+    <div ref={anchorRef} className="relative">
       <div
         tabIndex={disabled ? -1 : 0}
         onClick={handleTriggerClick}
         onKeyDown={handleKeyDown}
-        onFocus={handleFocusIn}
-        onBlur={handleFocusOut}
-        style={{ ...baseStyle, ...errorOverride }}
+        onBlur={() => { if (!searchable) handleBlur(); }}
+        className={triggerClass}
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span style={{
-          ...(value ? {} : { color: "#9ca3af" }),
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          minWidth: 0,
-        }}>
+        <span className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0${value ? "" : " text-gray-400"}`}>
           {value ? selectedLabel : placeholder}
         </span>
-        <span style={chipStyle ? { ...chevronStyle, borderLeftWidth: "3px", borderRightWidth: "3px", borderTopWidth: "4px", marginLeft: "4px" } : chevronStyle} />
+        {chipMode && chipActive && onClear ? (
+          <span
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClear(); }}
+            className="ml-0.5 text-[10px] leading-none opacity-60 hover:opacity-100 shrink-0"
+          >
+            ✕
+          </span>
+        ) : (
+          <span className={chipMode
+            ? "inline-block w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[4px] border-t-gray-400 ml-1 shrink-0"
+            : "inline-block w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-gray-400 ml-2 shrink-0"
+          } />
+        )}
       </div>
 
       <Dropdown anchorRef={anchorRef} open={open}>
         <div ref={dropdownRef}>
         {searchable && (
-          <div style={{ padding: "8px 10px", borderBottom: "1px solid #f0f0f0" }}>
+          <div className="px-2.5 py-2 border-b border-gray-100">
             <input
               ref={searchRef}
               type="text"
@@ -178,22 +137,11 @@ export default function CustomSelect({
               onChange={(e) => setSearchQuery(e.target.value)}
               onMouseDown={(e) => e.stopPropagation()}
               placeholder="Type to search..."
-              style={{
-                width: "100%",
-                padding: "6px 10px",
-                fontSize: "13px",
-                border: "1px solid #e3e3e3",
-                borderRadius: "6px",
-                outline: "none",
-                fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "#111827"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(17,24,39,0.08)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "#e3e3e3"; e.currentTarget.style.boxShadow = "none"; }}
+              className="w-full px-2.5 py-1.5 text-[13px] border border-gray-200 rounded-md outline-none font-[inherit] box-border focus:border-gray-900 focus:shadow-[0_0_0_2px_rgba(17,24,39,0.08)]"
             />
           </div>
         )}
-        <div style={searchable ? { maxHeight: "200px", overflowY: "auto" } : undefined}>
+        <div className={searchable ? "max-h-[200px] overflow-y-auto" : undefined}>
           {filteredOptions.map((opt) => (
             <div
               key={opt.value}
@@ -202,12 +150,7 @@ export default function CustomSelect({
                 onChange(opt.value);
                 setOpen(false);
               }}
-              style={{
-                ...dropdownItemStyle,
-                ...(opt.value === value ? { background: "#f0f4ff", fontWeight: 500 } : {}),
-              }}
-              onMouseEnter={(e) => handleItemHover(e, true)}
-              onMouseLeave={(e) => handleItemHover(e, false)}
+              className={`${dropdownItemClass}${opt.value === value ? " bg-indigo-50 font-medium" : ""}`}
               role="option"
               aria-selected={opt.value === value}
             >
@@ -215,7 +158,7 @@ export default function CustomSelect({
             </div>
           ))}
           {filteredOptions.length === 0 && (
-            <div style={{ padding: "10px 14px", color: "#9ca3af", fontSize: "13px", textAlign: "center" }}>
+            <div className="px-3.5 py-2.5 text-gray-400 text-[13px] text-center">
               No matches
             </div>
           )}
@@ -227,18 +170,7 @@ export default function CustomSelect({
               actionItem.onSelect();
               setOpen(false);
             }}
-            style={{
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "#4f46e5",
-              fontWeight: 600,
-              borderTop: "1px solid #f0f0f0",
-              transition: "background 0.12s ease",
-              margin: "4px 0 0 0",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            className="px-3.5 py-2.5 cursor-pointer text-sm text-indigo-600 font-semibold border-t border-gray-100 mt-1 transition-colors duration-100 hover:bg-gray-100"
           >
             {actionItem.label}
           </div>

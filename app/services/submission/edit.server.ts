@@ -13,7 +13,7 @@ export async function adminEditProduct({
   title,
   brand,
   category,
-  styleId,
+  sku,
   imageData,
 }: {
   admin: AdminApiContext;
@@ -21,7 +21,7 @@ export async function adminEditProduct({
   title?: string;
   brand?: string;
   category?: string;
-  styleId?: string;
+  sku?: string;
   imageData?: string;
 }) {
   const product = await prisma.product.findUnique({ where: { id: productId } });
@@ -33,7 +33,7 @@ export async function adminEditProduct({
       ...(title !== undefined ? { title } : {}),
       ...(brand !== undefined ? { brand: brand || null } : {}),
       ...(category !== undefined ? { category: category || null } : {}),
-      ...(styleId !== undefined ? { styleId: styleId || null } : {}),
+      ...(sku !== undefined ? { sku: sku || null } : {}),
     },
   });
 

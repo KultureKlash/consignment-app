@@ -9,7 +9,6 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
 import { syncInventory } from "~/services/inventory.server";
 import prisma from "~/db.server";
-import { inputStyle, labelStyle, handleFocus, handleBlurStyle, sectionCard, sectionHeader, sectionTitle } from "~/lib/admin/listing-ui";
 import { ArrowLeft, Copy, Check, User, BarChart3, ShieldAlert, ShieldCheck, X, ExternalLink } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
@@ -91,26 +90,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { error: message, intent };
   }
 };
-
-// sectionCard, sectionHeader, sectionTitle imported from listing-ui
-
-const statRow: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "10px 24px",
-  fontSize: "13px",
-  borderBottom: "1px solid rgba(227,227,227,0.3)",
-};
-
-const statusDot = (color: string): React.CSSProperties => ({
-  width: "8px",
-  height: "8px",
-  borderRadius: "50%",
-  background: color,
-  display: "inline-block",
-  marginRight: "8px",
-});
 
 export default function ConsignorDetail() {
   const { consignor, balance, counts } = useLoaderData<typeof loader>();
@@ -209,20 +188,12 @@ export default function ConsignorDetail() {
 
   return (
     <s-page>
-      <div style={{ padding: "0" }}>
+      <div className="p-0">
         {/* Top bar: back + save */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <div className="flex justify-between items-center mb-6">
           <Link
             to="/app/consignors"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "13px",
-              color: "#6d7175",
-              textDecoration: "none",
-              fontWeight: 500,
-            }}
+            className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 no-underline font-medium"
           >
             <ArrowLeft size={16} />
             Back to Consignors
@@ -230,23 +201,9 @@ export default function ConsignorDetail() {
           <button
             onClick={handleSave}
             disabled={isSubmitting || !hasChanges}
-            style={{
-              padding: "10px 24px",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#fff",
-              background: hasChanges ? "#111827" : "#9ca3af",
-              border: "none",
-              borderRadius: "10px",
-              cursor: hasChanges ? "pointer" : "default",
-              opacity: isSubmitting ? 0.7 : 1,
-              transition: "all 0.2s ease",
-              fontFamily: "inherit",
-              boxShadow: hasChanges ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
-              letterSpacing: "0.01em",
-            }}
-            onMouseEnter={(e) => { if (hasChanges && !isSubmitting) { e.currentTarget.style.background = "#1f2937"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,0.25)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-            onMouseLeave={(e) => { if (hasChanges && !isSubmitting) { e.currentTarget.style.background = "#111827"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)"; e.currentTarget.style.transform = "translateY(0)"; } }}
+            className={`admin-btn-primary !px-6 !py-2.5 !text-[13px] tracking-wide ${
+              !hasChanges ? "!bg-gray-400 !cursor-default !shadow-none hover:!bg-gray-400 hover:!shadow-none hover:!translate-y-0" : "!shadow-md"
+            } ${isSubmitting ? "opacity-70" : ""}`}
           >
             {isSubmitting ? "Saving..." : "Save Changes"}
           </button>
@@ -261,15 +218,7 @@ export default function ConsignorDetail() {
                 .then((data) => { if (data.url) window.open(data.url, "_blank"); })
                 .catch(() => shopify.toast.show("Failed to open portal"));
             }}
-            style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "10px 18px", fontSize: "13px", fontWeight: 500,
-              color: "#6d7175", background: "rgba(17,24,39,0.04)",
-              border: "1px solid rgba(17,24,39,0.12)", borderRadius: "10px",
-              cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(17,24,39,0.08)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(17,24,39,0.04)"; }}
+            className="admin-btn-secondary flex items-center gap-1.5 !px-4.5 !py-2.5 !text-[13px]"
           >
             <ExternalLink size={14} />
             View Portal
@@ -277,37 +226,26 @@ export default function ConsignorDetail() {
         </div>
 
         {/* Header: name + meta */}
-        <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ fontSize: "20px", fontWeight: 600, color: "#1a1a1a", margin: "0 0 8px 0", letterSpacing: "-0.02em" }}>
+        <div className="mb-7">
+          <h1 className="text-xl font-semibold text-gray-900 mb-2 tracking-tight">
             {consignor.name}
           </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#6d7175", flexWrap: "wrap" }}>
+          <div className="flex items-center gap-3 text-[13px] text-gray-500 flex-wrap">
             <button
               onClick={handleCopyId}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                fontSize: "13px",
-                color: "#6d7175",
-                fontFamily: "monospace",
-              }}
+              className="inline-flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer text-[13px] text-gray-500 font-mono"
               title="Copy ID"
             >
               {copied ? <Check size={12} color="#1a7f37" /> : <Copy size={12} />}
               {consignor.id}
             </button>
-            <span style={{ color: "#d1d5db" }}>|</span>
+            <span className="text-gray-300">|</span>
             <span>Member since {memberSince}</span>
-            <span style={{ color: "#d1d5db" }}>|</span>
-            <span style={{ fontWeight: 600, color: balance > 0 ? "#1a7f37" : "#333" }}>
+            <span className="text-gray-300">|</span>
+            <span className="font-semibold" style={{ color: balance > 0 ? "#1a7f37" : "#333" }}>
               Balance: ${fmt(balance)}
               {consignor.taxStatus === "business" && balance > 0 && (
-                <span style={{ fontWeight: 400, color: "#6d7175", fontSize: "12px" }}>
+                <span className="font-normal text-gray-500 text-xs">
                   {" "}(${fmt(computeTax(balance, consignor).total)} with tax)
                 </span>
               )}
@@ -317,23 +255,14 @@ export default function ConsignorDetail() {
 
         {/* Suspension banner */}
         {isSuspended && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "14px 20px",
-            marginBottom: "24px",
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "12px",
-          }}>
+          <div className="flex items-center gap-3 px-5 py-3.5 mb-6 bg-red-50 border border-red-200 rounded-xl">
             <ShieldAlert size={18} color="#dc2626" />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "#991b1b", margin: 0 }}>
+            <div className="flex-1">
+              <p className="text-[13px] font-semibold text-red-900 m-0">
                 Account Suspended
               </p>
               {consignor.suspensionReason && (
-                <p style={{ fontSize: "12px", color: "#b91c1c", margin: "2px 0 0" }}>
+                <p className="text-xs text-red-700 mt-0.5 mb-0">
                   Reason: {consignor.suspensionReason}
                 </p>
               )}
@@ -341,22 +270,9 @@ export default function ConsignorDetail() {
             <button
               onClick={handleUnsuspend}
               disabled={isSubmitting}
-              style={{
-                padding: "7px 16px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "#065f46",
-                background: "#ecfdf5",
-                border: "1px solid #a7f3d0",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#d1fae5"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#ecfdf5"; }}
+              className="py-1.5 px-4 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg cursor-pointer font-[inherit] transition-all duration-150 hover:bg-emerald-100"
             >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+              <span className="inline-flex items-center gap-1.5">
                 <ShieldCheck size={13} /> Reactivate
               </span>
             </button>
@@ -364,39 +280,35 @@ export default function ConsignorDetail() {
         )}
 
         {/* Two-column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div className="grid grid-cols-2 gap-6">
           {/* Details card */}
-          <div style={sectionCard}>
-            <div style={sectionHeader}>
+          <div className="admin-card">
+            <div className="admin-card-header">
               <User size={16} color="rgba(109,113,117,0.6)" />
-              <h2 style={sectionTitle}>Details</h2>
+              <h2 className="admin-card-title">Details</h2>
             </div>
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="px-6 py-5 flex flex-col gap-4">
               <div>
-                <label style={labelStyle}>Name</label>
+                <label className="admin-label">Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  onFocus={handleFocus}
-                  onBlur={handleBlurStyle}
-                  style={inputStyle}
+                  className="admin-input"
                 />
               </div>
               <div>
-                <label style={labelStyle}>Email</label>
+                <label className="admin-label">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={handleFocus}
-                  onBlur={handleBlurStyle}
-                  style={inputStyle}
+                  className="admin-input"
                 />
               </div>
               <div>
-                <label style={labelStyle}>Fee Rate (%)</label>
-                <div style={{ position: "relative" }}>
+                <label className="admin-label">Fee Rate (%)</label>
+                <div className="relative">
                   <input
                     type="number"
                     min="0"
@@ -404,53 +316,44 @@ export default function ConsignorDetail() {
                     step="1"
                     value={feeRatePercent}
                     onChange={(e) => setFeeRatePercent(e.target.value)}
-                    onFocus={handleFocus}
-                    onBlur={handleBlurStyle}
-                    style={{ ...inputStyle, paddingRight: "32px" }}
+                    className="admin-input pr-8"
                   />
-                  <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: "#6d7175", fontSize: "14px", pointerEvents: "none" }}>%</span>
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">%</span>
                 </div>
               </div>
               {/* Store Owned checkbox */}
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 0" }}>
+              <div className="flex items-center gap-2.5 py-1">
                 <input
                   type="checkbox"
                   id="storeOwned"
                   checked={storeOwned}
                   onChange={(e) => setStoreOwned(e.target.checked)}
-                  style={{ width: "16px", height: "16px", accentColor: "#111827", cursor: "pointer" }}
+                  className="w-4 h-4 accent-gray-900 cursor-pointer"
                 />
-                <label htmlFor="storeOwned" style={{ fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer" }}>
+                <label htmlFor="storeOwned" className="text-[13px] font-medium text-gray-700 cursor-pointer">
                   Store owned inventory
                 </label>
               </div>
               {storeOwned && (
-                <p style={{ fontSize: "11px", color: "#9ca3af", margin: "-8px 0 0 26px" }}>
+                <p className="text-[11px] text-gray-400 -mt-2 ml-6.5">
                   This account will be excluded from payout workflows.
                 </p>
               )}
 
               {/* Tax Status */}
-              <div style={{ borderTop: "1px solid rgba(227,227,227,0.4)", paddingTop: "16px" }}>
-                <label style={labelStyle}>Tax Status</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+              <div className="border-t border-gray-200/40 pt-4">
+                <label className="admin-label">Tax Status</label>
+                <div className="flex gap-2">
                   {(["individual", "business"] as const).map((status) => (
                     <button
                       key={status}
                       type="button"
                       onClick={() => setTaxStatus(status)}
-                      style={{
-                        flex: 1,
-                        padding: "8px 12px",
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        borderRadius: "8px",
-                        border: `1px solid ${taxStatus === status ? "#111827" : "#c4c9d1"}`,
-                        background: taxStatus === status ? "#111827" : "#fff",
-                        color: taxStatus === status ? "#fff" : "#374151",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
+                      className={`flex-1 py-2 px-3 text-[13px] font-medium rounded-lg border cursor-pointer transition-all duration-150 ${
+                        taxStatus === status
+                          ? "border-gray-900 bg-gray-900 text-white"
+                          : "border-gray-300 bg-white text-gray-700"
+                      }`}
                     >
                       {status === "individual" ? "Individual" : "Registered Business"}
                     </button>
@@ -461,45 +364,39 @@ export default function ConsignorDetail() {
               {taxStatus === "business" && (
                 <>
                   <div>
-                    <label style={labelStyle}>Province</label>
+                    <label className="admin-label">Province</label>
                     <select
                       value={province}
                       onChange={(e) => setProvince(e.target.value)}
-                      onFocus={handleFocus}
-                      onBlur={handleBlurStyle}
-                      style={{ ...inputStyle, cursor: "pointer" }}
+                      className="admin-input cursor-pointer"
                     >
                       <option value="QC">Quebec (QC)</option>
                       <option value="ON">Ontario (ON)</option>
                     </select>
                   </div>
                   <div>
-                    <label style={labelStyle}>GST/HST Number</label>
+                    <label className="admin-label">GST/HST Number</label>
                     <input
                       type="text"
                       value={gstNumber}
                       onChange={(e) => setGstNumber(e.target.value)}
-                      onFocus={handleFocus}
-                      onBlur={handleBlurStyle}
-                      style={inputStyle}
+                      className="admin-input"
                       placeholder="e.g. 123456789 RT0001"
                     />
                   </div>
                   {province === "QC" && (
                     <div>
-                      <label style={labelStyle}>QST Number</label>
+                      <label className="admin-label">QST Number</label>
                       <input
                         type="text"
                         value={qstNumber}
                         onChange={(e) => setQstNumber(e.target.value)}
-                        onFocus={handleFocus}
-                        onBlur={handleBlurStyle}
-                        style={inputStyle}
+                        className="admin-input"
                         placeholder="e.g. 1234567890 TQ0001"
                       />
                     </div>
                   )}
-                  <p style={{ fontSize: "11px", color: "#9ca3af", margin: "-4px 0 0 0" }}>
+                  <p className="text-[11px] text-gray-400 -mt-1">
                     Business consignors invoice with GST{province === "QC" ? "/QST" : ""} on their payout.
                   </p>
                 </>
@@ -508,70 +405,57 @@ export default function ConsignorDetail() {
           </div>
 
           {/* Listings Summary card */}
-          <div style={sectionCard}>
-            <div style={sectionHeader}>
+          <div className="admin-card">
+            <div className="admin-card-header">
               <BarChart3 size={16} color="rgba(109,113,117,0.6)" />
-              <h2 style={sectionTitle}>Listings Summary</h2>
-              <span style={{
-                marginLeft: "auto",
-                fontSize: "11px",
-                fontWeight: 600,
-                color: "#6d7175",
-              }}>
+              <h2 className="admin-card-title">Listings Summary</h2>
+              <span className="ml-auto text-[11px] font-semibold text-gray-500">
                 {totalListings} total
               </span>
             </div>
             <div>
-              <div style={statRow}>
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span style={statusDot("#1a7f37")} />
+              <div className="flex justify-between items-center px-6 py-2.5 text-[13px] border-b border-gray-200/30">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full inline-block mr-2" style={{ background: "#1a7f37" }} />
                   Active
                 </span>
-                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.active}</span>
+                <span className="font-semibold tabular-nums">{counts.active}</span>
               </div>
               {(counts.paused ?? 0) > 0 && (
-                <div style={statRow}>
-                  <span style={{ display: "flex", alignItems: "center" }}>
-                    <span style={statusDot("#dc2626")} />
+                <div className="flex justify-between items-center px-6 py-2.5 text-[13px] border-b border-gray-200/30">
+                  <span className="flex items-center">
+                    <span className="w-2 h-2 rounded-full inline-block mr-2" style={{ background: "#dc2626" }} />
                     Paused
                   </span>
-                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.paused}</span>
+                  <span className="font-semibold tabular-nums">{counts.paused}</span>
                 </div>
               )}
-              <div style={statRow}>
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span style={statusDot("#b86e00")} />
+              <div className="flex justify-between items-center px-6 py-2.5 text-[13px] border-b border-gray-200/30">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full inline-block mr-2" style={{ background: "#b86e00" }} />
                   Pending Sale
                 </span>
-                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.pending_sale}</span>
+                <span className="font-semibold tabular-nums">{counts.pending_sale}</span>
               </div>
-              <div style={statRow}>
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span style={statusDot("#2c6ecb")} />
+              <div className="flex justify-between items-center px-6 py-2.5 text-[13px] border-b border-gray-200/30">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full inline-block mr-2" style={{ background: "#2c6ecb" }} />
                   Sold
                 </span>
-                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.sold}</span>
+                <span className="font-semibold tabular-nums">{counts.sold}</span>
               </div>
-              <div style={{ ...statRow, borderBottom: "none" }}>
-                <span style={{ display: "flex", alignItems: "center" }}>
-                  <span style={statusDot("#6d7175")} />
+              <div className="flex justify-between items-center px-6 py-2.5 text-[13px]">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full inline-block mr-2" style={{ background: "#6d7175" }} />
                   Cancelled
                 </span>
-                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{counts.cancelled}</span>
+                <span className="font-semibold tabular-nums">{counts.cancelled}</span>
               </div>
             </div>
-            <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(227,227,227,0.5)" }}>
+            <div className="px-6 py-4 border-t border-gray-200/50">
               <Link
                 to={`/app/payouts?consignor=${consignor.id}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color: "#4f46e5",
-                  textDecoration: "none",
-                }}
+                className="inline-flex items-center gap-1 text-[13px] font-medium text-indigo-600 no-underline"
               >
                 View sales & payouts →
               </Link>
@@ -581,26 +465,10 @@ export default function ConsignorDetail() {
 
         {/* Suspend button (for active consignors only) */}
         {!isSuspended && (
-          <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: "1px solid rgba(227,227,227,0.4)" }}>
+          <div className="mt-7 pt-5 border-t border-gray-200/40">
             <button
               onClick={() => setShowSuspendModal(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "#dc2626",
-                background: "transparent",
-                border: "1px solid #fecaca",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#fecaca"; }}
+              className="admin-btn-ghost inline-flex items-center gap-1.5 !text-red-600 border border-red-200 hover:!bg-red-50 hover:border-red-300"
             >
               <ShieldAlert size={14} />
               Suspend Account
@@ -612,108 +480,67 @@ export default function ConsignorDetail() {
       {/* Suspend confirmation modal */}
       {showSuspendModal && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
+          className="admin-modal-overlay"
           onClick={() => setShowSuspendModal(false)}
         >
           <div
-            style={{
-              background: "#fff",
-              borderRadius: "14px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-              width: "100%",
-              maxWidth: "440px",
-              overflow: "hidden",
-            }}
+            className="admin-modal !max-w-[440px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-              <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "#1a1a1a", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="admin-modal-header">
+              <h2 className="m-0 text-[15px] font-semibold text-gray-900 flex items-center gap-2">
                 <ShieldAlert size={16} color="#dc2626" />
                 Suspend Consignor
               </h2>
               <button
                 onClick={() => setShowSuspendModal(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6d7175" }}
+                className="bg-transparent border-0 cursor-pointer p-1 text-gray-500"
               >
                 <X size={18} />
               </button>
             </div>
-            <div style={{ padding: "20px" }}>
-              <p style={{ fontSize: "13px", color: "#374151", margin: "0 0 16px", lineHeight: 1.5 }}>
+            <div className="admin-modal-body">
+              <p className="text-[13px] text-gray-700 mb-4 leading-relaxed">
                 This will block <strong>{consignor.name}</strong> from logging into the portal, submitting listings, and making changes.
               </p>
               <div>
-                <label style={labelStyle}>Reason (optional)</label>
+                <label className="admin-label">Reason (optional)</label>
                 <input
                   type="text"
                   value={suspensionReason}
                   onChange={(e) => setSuspensionReason(e.target.value)}
-                  onFocus={handleFocus}
-                  onBlur={handleBlurStyle}
-                  style={inputStyle}
+                  className="admin-input"
                   placeholder="e.g. Repeated policy violations"
                   autoFocus
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+              <div className="flex items-center gap-2.5 mt-1">
                 <input
                   type="checkbox"
                   id="pauseListings"
                   checked={pauseListings}
                   onChange={(e) => setPauseListings(e.target.checked)}
-                  style={{ width: "16px", height: "16px", accentColor: "#dc2626", cursor: "pointer" }}
+                  className="w-4 h-4 accent-red-600 cursor-pointer"
                 />
-                <label htmlFor="pauseListings" style={{ fontSize: "13px", fontWeight: 500, color: "#374151", cursor: "pointer" }}>
+                <label htmlFor="pauseListings" className="text-[13px] font-medium text-gray-700 cursor-pointer">
                   Pause active listings
                 </label>
               </div>
-              <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0 26px" }}>
+              <p className="text-[11px] text-gray-400 mt-1 ml-6.5">
                 Paused listings are removed from the store and restored when the account is reactivated.
               </p>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" }}>
+            <div className="admin-modal-footer">
               <button
                 onClick={() => setShowSuspendModal(false)}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color: "#374151",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
+                className="admin-btn-secondary !px-4 !py-2 !text-[13px]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSuspend}
                 disabled={isSubmitting}
-                style={{
-                  padding: "8px 20px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#fff",
-                  background: "#dc2626",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  opacity: isSubmitting ? 0.7 : 1,
-                  fontFamily: "inherit",
-                  transition: "all 0.15s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}
+                className={`admin-btn-danger !px-5 !py-2 !text-[13px] ${isSubmitting ? "opacity-70" : ""}`}
               >
                 {isSubmitting ? "Suspending..." : "Suspend"}
               </button>

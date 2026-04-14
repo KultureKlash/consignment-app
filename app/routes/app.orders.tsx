@@ -7,7 +7,6 @@ import prisma from "~/db.server";
 import { ChevronRight, Search, Download } from "lucide-react";
 import CustomSelect from "~/components/admin/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
-import { searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import { fmt } from "~/lib/currency";
 import { generateCsv, downloadCsv } from "~/lib/csv";
 import type { Prisma } from "@prisma/client";
@@ -203,35 +202,33 @@ export default function Orders() {
 
   return (
     <s-page>
-      <div style={{ padding: "0" }}>
-        <header style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.02em", color: "#1a1a1a", margin: 0 }}>
+      <div className="p-0">
+        <header className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900 m-0">
             Orders
           </h1>
-          <p style={{ fontSize: "13px", color: "#6d7175", marginTop: "4px" }}>
+          <p className="text-[13px] text-gray-500 mt-1">
             {orders.length} order{orders.length !== 1 ? "s" : ""}
             {hasFilters ? " matching filters" : ""} · Refunds and cancellations sync via webhooks.
           </p>
         </header>
 
         {/* Filter bar */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end", marginBottom: "16px" }}>
+        <div className="flex flex-wrap gap-3 items-end mb-4">
           {/* Search */}
-          <div style={{ flex: "1 1 240px", position: "relative" }}>
-            <span style={searchIconWrap}><Search size={16} /></span>
+          <div className="flex-[1_1_240px] relative">
+            <span className="admin-search-icon"><Search size={16} /></span>
             <input
               type="text"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
               placeholder="Search by order # or product..."
-              style={searchInputStyle}
+              className="admin-input-search"
             />
           </div>
 
           {/* Status */}
-          <div style={{ flex: "0 0 150px" }}>
+          <div className="flex-[0_0_150px]">
             <CustomSelect
               options={STATUS_OPTIONS}
               value={filters.status}
@@ -261,56 +258,40 @@ export default function Orders() {
                 setSearchValue("");
                 setSearchParams({});
               }}
-              style={{
-                fontSize: "13px",
-                color: "#6d7175",
-                fontWeight: 500,
-                cursor: "pointer",
-                padding: "10px 0",
-              }}
+              className="text-[13px] text-gray-500 font-medium cursor-pointer py-2.5"
             >
               Clear filters
             </span>
           )}
 
           {orders.length > 0 && (
-            <button onClick={handleDownloadCsv} title="Download CSV" style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 2px", color: "#9ca3af", transition: "color 0.15s", marginLeft: "auto" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#1a1a1a"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}>
+            <button
+              onClick={handleDownloadCsv}
+              title="Download CSV"
+              className="bg-transparent border-0 cursor-pointer py-2.5 px-0.5 text-gray-400 transition-colors duration-150 ml-auto hover:text-gray-900"
+            >
               <Download size={14} />
             </button>
           )}
         </div>
 
         {orders.length === 0 ? (
-          <div style={{
-            background: "#fff",
-            border: "1px solid rgba(227,227,227,0.6)",
-            borderRadius: "12px",
-            padding: "40px",
-            textAlign: "center",
-            color: "#6d7175",
-            fontSize: "14px",
-          }}>
+          <div className="admin-card p-10 text-center text-gray-500 text-sm">
             {hasFilters
               ? "No orders match your filters."
               : "No orders yet. Orders will appear here when created in Shopify."}
           </div>
         ) : (
-          <div style={{
-            background: "#fff",
-            border: "1px solid rgba(227,227,227,0.6)",
-            borderRadius: "12px",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-            overflow: "hidden",
-          }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+          <div className="admin-card">
+            <table className="w-full border-collapse text-[13px]">
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(227,227,227,0.6)" }}>
-                  <th style={{ padding: "12px 20px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Order</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Date</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Total</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Items</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>Status</th>
-                  <th style={{ padding: "12px 16px", width: "32px" }} />
+                <tr className="border-b border-gray-200/60">
+                  <th className="admin-th !px-5">Order</th>
+                  <th className="admin-th !px-4">Date</th>
+                  <th className="admin-th !px-4">Total</th>
+                  <th className="admin-th !px-4">Items</th>
+                  <th className="admin-th !px-4">Status</th>
+                  <th className="admin-th !px-4 w-8" />
                 </tr>
               </thead>
               <tbody>
@@ -324,40 +305,29 @@ export default function Orders() {
                     <tr
                       key={o.id}
                       onClick={() => navigate(`/app/orders/${o.id}`)}
-                      style={{
-                        borderBottom: "1px solid rgba(227,227,227,0.4)",
-                        cursor: "pointer",
-                        transition: "background 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      className="border-b border-gray-200/40 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
                     >
-                      <td style={{ padding: "14px 20px", fontWeight: 600, color: "#1a1a1a" }}>
+                      <td className="admin-td !px-5 !py-3.5 font-semibold text-gray-900">
                         {displayOrderName(o)}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#6d7175" }}>
+                      <td className="admin-td !px-4 !py-3.5 text-gray-500">
                         {formatDate(o.createdAt as unknown as string)}
                       </td>
-                      <td style={{ padding: "14px 16px", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "#1a1a1a" }}>
+                      <td className="admin-td !px-4 !py-3.5 font-semibold tabular-nums text-gray-900">
                         ${fmt(o.total)}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#6d7175" }}>
+                      <td className="admin-td !px-4 !py-3.5 text-gray-500">
                         {itemSummary}
                       </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{
-                          padding: "3px 10px",
-                          borderRadius: "9999px",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          background: badge.bg,
-                          color: badge.color,
-                          letterSpacing: "0.02em",
-                        }}>
+                      <td className="admin-td !px-4 !py-3.5">
+                        <span
+                          className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide"
+                          style={{ background: badge.bg, color: badge.color }}
+                        >
                           {badge.label}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#9ca3af" }}>
+                      <td className="admin-td !px-4 !py-3.5 text-gray-400">
                         <ChevronRight size={16} />
                       </td>
                     </tr>

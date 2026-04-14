@@ -39,7 +39,7 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
       title: data.title,
       brand: data.brand,
       category: data.category,
-      styleId: data.styleId,
+      sku: data.sku,
       size: data.size,
       gtin: data.gtin,
       price: data.price,
@@ -78,7 +78,7 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
       title: data.title,
       brand: data.brand,
       category: data.category,
-      styleId: data.styleId,
+      sku: data.sku,
       imageData: data.imageData,
     });
     return { intent };

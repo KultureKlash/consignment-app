@@ -6,26 +6,26 @@ describe("catalog.server", () => {
   describe("findOrCreateProduct", () => {
     it("creates a new product when none exists", async () => {
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
 
-      expect(product.styleId).toBe("DD1391-100");
+      expect(product.sku).toBe("DD1391-100");
       expect(product.title).toBe("Nike Dunk Panda");
       expect(product.brand).toBe("Nike");
       expect(product.id).toBeDefined();
     });
 
-    it("returns existing product on second call with same styleId", async () => {
+    it("returns existing product on second call with same sku", async () => {
       const first = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
 
       const second = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
@@ -37,15 +37,15 @@ describe("catalog.server", () => {
       expect(count).toBe(1);
     });
 
-    it("creates separate products for different styleIds", async () => {
+    it("creates separate products for different skus", async () => {
       await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
 
       await findOrCreateProduct({
-        styleId: "555088-001",
+        sku: "555088-001",
         title: "Jordan 1 Retro High OG Bred",
         brand: "Jordan",
       });
@@ -54,19 +54,19 @@ describe("catalog.server", () => {
       expect(count).toBe(2);
     });
 
-    it("creates product without styleId (non-footwear path)", async () => {
+    it("creates product without sku (non-footwear path)", async () => {
       const product = await findOrCreateProduct({
         title: "Ami Paris Bucket Hat",
         brand: "Ami Paris",
         category: "Headwear > Bucket Hats",
       });
 
-      expect(product.styleId).toBeNull();
+      expect(product.sku).toBeNull();
       expect(product.title).toBe("Ami Paris Bucket Hat");
       expect(product.brand).toBe("Ami Paris");
     });
 
-    it("deduplicates by title+brand when no styleId", async () => {
+    it("deduplicates by title+brand when no sku", async () => {
       const first = await findOrCreateProduct({
         title: "Ami Paris Bucket Hat",
         brand: "Ami Paris",
@@ -111,15 +111,15 @@ describe("catalog.server", () => {
       expect(await prisma.product.count()).toBe(2);
     });
 
-    it("title+brand path finds existing product even if it has a styleId", async () => {
-      // Create via styleId path
+    it("title+brand path finds existing product even if it has a sku", async () => {
+      // Create via sku path
       const footwear = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
 
-      // Look up via title+brand path (no styleId) — finds existing because title+brand match
+      // Look up via title+brand path (no sku) — finds existing because title+brand match
       const sameProduct = await findOrCreateProduct({
         title: "Nike Dunk Panda",
         brand: "Nike",
@@ -133,7 +133,7 @@ describe("catalog.server", () => {
   describe("findOrCreateVariant", () => {
     it("creates a new variant for a product", async () => {
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
       });
 
@@ -148,7 +148,7 @@ describe("catalog.server", () => {
 
     it("returns existing variant on second call with same product + size", async () => {
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
       });
 
@@ -163,7 +163,7 @@ describe("catalog.server", () => {
 
     it("creates separate variants for different sizes", async () => {
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
       });
 

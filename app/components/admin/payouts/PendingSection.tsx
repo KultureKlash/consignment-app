@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { ChevronDown, ChevronRight, Clock, Download, FileText, CheckCircle2 } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
-import type { PayoutRef } from "./helpers";
-import { sectionCard, sectionHeaderStyle, sectionTitleStyle, gridCols, relativeDate } from "./helpers";
+import type { PayoutRef } from "./payoutHelpers";
+import { sectionCardClass, sectionHeaderClass, sectionTitleClass, gridCols, relativeDate } from "./payoutHelpers";
 
 interface PendingSectionProps {
   payouts: PayoutRef[];
@@ -31,12 +30,12 @@ export function PendingSection({
   const pendingPayouts = payouts.filter((p) => p.status !== "paid");
 
   return (
-    <div style={{ ...sectionCard, marginBottom: "24px" }}>
-      <div style={sectionHeaderStyle}>
-        <Clock size={15} color="#d97706" />
-        <h2 style={sectionTitleStyle}>Pending Payouts</h2>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "#6d7175" }}>
+    <div className={`${sectionCardClass} mb-6`}>
+      <div className={sectionHeaderClass}>
+        <Clock size={15} className="text-amber-600" />
+        <h2 className={sectionTitleClass}>Pending Payouts</h2>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-[11px] font-semibold text-[#6d7175]">
             {pendingPayouts.length} payout{pendingPayouts.length !== 1 ? "s" : ""}
           </span>
           {pendingPayouts.length > 0 && (
@@ -46,7 +45,7 @@ export function PendingSection({
       </div>
 
       {pendingPayouts.length === 0 ? (
-        <div style={{ padding: "32px 20px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>
+        <div className="py-8 px-5 text-center text-gray-400 text-[13px]">
           No pending payouts.
         </div>
       ) : (
@@ -54,66 +53,55 @@ export function PendingSection({
           {pendingPayouts.map((payout) => {
             const isOpen = expandedPayout === payout.id;
             return (
-              <div key={payout.id} style={{ borderBottom: "1px solid rgba(227,227,227,0.4)" }}>
+              <div key={payout.id} className="border-b border-gray-200/40">
                 <div
                   onClick={() => setExpandedPayout(isOpen ? null : payout.id)}
-                  style={{ display: "flex", alignItems: "center", padding: "12px 20px", cursor: "pointer", transition: "background 0.15s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  className="flex items-center px-5 py-3 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
                 >
-                  {isOpen ? <ChevronDown size={16} color="#6d7175" /> : <ChevronRight size={16} color="#6d7175" />}
-                  <span style={{ marginLeft: "8px", fontSize: "13px", fontWeight: 600, color: "#1a1a1a" }}>
+                  {isOpen ? <ChevronDown size={16} className="text-[#6d7175]" /> : <ChevronRight size={16} className="text-[#6d7175]" />}
+                  <span className="ml-2 text-[13px] font-semibold text-[#1a1a1a]">
                     {payout.consignor.name}
                   </span>
-                  <span style={{ marginLeft: "8px", fontSize: "12px", color: "#9ca3af" }}>
+                  <span className="ml-2 text-xs text-gray-400">
                     {payout.items.length} item{payout.items.length !== 1 ? "s" : ""}
                   </span>
-                  <span style={{ marginLeft: "12px", fontSize: "12px", color: "#9ca3af" }}>
+                  <span className="ml-3 text-xs text-gray-400">
                     {relativeDate(payout.createdAt as unknown as string)}
                   </span>
-                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{
-                      padding: "3px 10px",
-                      borderRadius: "9999px",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      background: payout.status === "invoiced" ? "#eff6ff" : "#fffbeb",
-                      color: payout.status === "invoiced" ? "#2563eb" : "#d97706",
-                      whiteSpace: "nowrap",
-                    }}>
+                  <div className="ml-auto flex items-center gap-3">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                      payout.status === "invoiced"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-amber-50 text-amber-600"
+                    }`}>
                       {payout.status === "pending"
                         ? (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment")
                         : "Invoice Received"}
                     </span>
                     {payout.status === "pending" && payout.invoiceSent && (
-                      <span style={{
-                        padding: "3px 10px",
-                        borderRadius: "9999px",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        background: "#eff6ff",
-                        color: "#2563eb",
-                        whiteSpace: "nowrap",
-                      }}>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap bg-blue-50 text-blue-600">
                         Invoice Sent
                       </span>
                     )}
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a1a", fontVariantNumeric: "tabular-nums", width: "90px", textAlign: "right" }}>
+                    <span className="text-sm font-bold text-[#1a1a1a] tabular-nums w-[90px] text-right">
                       ${fmt(payout.amount)}
                     </span>
                   </div>
                 </div>
 
                 {isOpen && (
-                  <div ref={scrollRef} style={{ background: "#f9fafb", borderTop: "1px solid rgba(227,227,227,0.3)" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: gridCols, alignItems: "center", padding: "8px 20px 6px 12px", borderBottom: "1px solid rgba(227,227,227,0.3)", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#9ca3af" }}>
+                  <div ref={scrollRef} className="bg-gray-50 border-t border-gray-200/30">
+                    <div
+                      className="grid items-center px-5 pt-2 pb-1.5 pl-3 border-b border-gray-200/30 text-[10px] font-bold uppercase tracking-widest text-gray-400"
+                      style={{ gridTemplateColumns: gridCols }}
+                    >
                       <span />
                       <span>Order</span>
                       <span>Product</span>
-                      <span style={{ textAlign: "right" }}>Date Sold</span>
-                      <span style={{ textAlign: "right" }}>Sale</span>
-                      <span style={{ textAlign: "right" }}>Fee</span>
-                      <span style={{ textAlign: "right", color: "#059669" }}>Payout</span>
+                      <span className="text-right">Date Sold</span>
+                      <span className="text-right">Sale</span>
+                      <span className="text-right">Fee</span>
+                      <span className="text-right text-emerald-600">Payout</span>
                     </div>
                     {payout.items.map((pi) => {
                       const tx = pi.transaction;
@@ -123,17 +111,21 @@ export function PendingSection({
                       const variant = item?.listing?.variant;
                       const soldDate = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "\u2014";
                       return (
-                        <div key={pi.id} style={{ display: "grid", gridTemplateColumns: gridCols, alignItems: "center", padding: "7px 20px 7px 12px", borderTop: "1px solid rgba(227,227,227,0.15)", fontSize: "13px" }}>
+                        <div
+                          key={pi.id}
+                          className="grid items-center px-5 py-[7px] pl-3 border-t border-gray-200/15 text-[13px]"
+                          style={{ gridTemplateColumns: gridCols }}
+                        >
                           <span />
-                          <span style={{ fontSize: "12px", color: "#6d7175", fontVariantNumeric: "tabular-nums" }}>{order?.orderNumber ?? "\u2014"}</span>
-                          <div style={{ minWidth: 0 }}>
-                            <span style={{ fontWeight: 500, color: "#1a1a1a" }}>{product?.title ?? "Unknown"}</span>
-                            <span style={{ color: "#9ca3af" }}> ({variant?.size ?? "?"})</span>
+                          <span className="text-xs text-[#6d7175] tabular-nums">{order?.orderNumber ?? "\u2014"}</span>
+                          <div className="min-w-0">
+                            <span className="font-medium text-[#1a1a1a]">{product?.title ?? "Unknown"}</span>
+                            <span className="text-gray-400"> ({variant?.size ?? "?"})</span>
                           </div>
-                          <span style={{ fontSize: "12px", color: "#6d7175", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{soldDate}</span>
-                          <span style={{ fontSize: "12px", color: "#6d7175", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>${fmt(tx.grossAmount)}</span>
-                          <span style={{ fontSize: "12px", fontWeight: 500, color: "#1a1a1a", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>${fmt(tx.feeAmount)}</span>
-                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#059669", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>${fmt(tx.consignorAmount)}</span>
+                          <span className="text-xs text-[#6d7175] text-right tabular-nums">{soldDate}</span>
+                          <span className="text-xs text-[#6d7175] text-right tabular-nums">${fmt(tx.grossAmount)}</span>
+                          <span className="text-xs font-medium text-[#1a1a1a] text-right tabular-nums">${fmt(tx.feeAmount)}</span>
+                          <span className="text-[13px] font-semibold text-emerald-600 text-right tabular-nums">${fmt(tx.consignorAmount)}</span>
                         </div>
                       );
                     })}
@@ -142,23 +134,23 @@ export function PendingSection({
                       const tax = computeTax(payout.amount, payout.consignor);
                       if (!tax.isTaxable) return null;
                       return (
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "24px", padding: "10px 20px", borderTop: "1px solid rgba(227,227,227,0.3)", background: "#fefce8", fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
-                          <span style={{ color: "#6d7175" }}>Subtotal <strong>${fmt(tax.subtotal)}</strong></span>
-                          {tax.gst > 0 && <span style={{ color: "#6d7175" }}>GST (5%) <strong>${fmt(tax.gst)}</strong></span>}
-                          {tax.qst > 0 && <span style={{ color: "#6d7175" }}>QST (9.975%) <strong>${fmt(tax.qst)}</strong></span>}
-                          {tax.hst > 0 && <span style={{ color: "#6d7175" }}>{tax.taxLabel} <strong>${fmt(tax.hst)}</strong></span>}
-                          <span style={{ fontWeight: 700, color: "#1a1a1a" }}>Total Payable ${fmt(tax.total)}</span>
+                        <div className="flex justify-end gap-6 px-5 py-2.5 border-t border-gray-200/30 bg-yellow-50 text-xs tabular-nums">
+                          <span className="text-[#6d7175]">Subtotal <strong>${fmt(tax.subtotal)}</strong></span>
+                          {tax.gst > 0 && <span className="text-[#6d7175]">GST (5%) <strong>${fmt(tax.gst)}</strong></span>}
+                          {tax.qst > 0 && <span className="text-[#6d7175]">QST (9.975%) <strong>${fmt(tax.qst)}</strong></span>}
+                          {tax.hst > 0 && <span className="text-[#6d7175]">{tax.taxLabel} <strong>${fmt(tax.hst)}</strong></span>}
+                          <span className="font-bold text-[#1a1a1a]">Total Payable ${fmt(tax.total)}</span>
                         </div>
                       );
                     })()}
-                    <div style={{ display: "flex", gap: "8px", padding: "12px 20px 12px 48px", borderTop: "1px solid rgba(227,227,227,0.3)" }}>
+                    <div className="flex gap-2 px-5 py-3 pl-12 border-t border-gray-200/30">
                       {payout.status === "pending" && payout.consignor.taxStatus === "business" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMarkInvoiced(payout.id); }}
                           disabled={isSubmitting}
-                          style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#2563eb", border: "none", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                          className={`admin-btn-primary bg-blue-600! hover:bg-blue-700! ${isSubmitting ? "cursor-default" : ""}`}
                         >
-                          <FileText size={12} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                          <FileText size={12} className="mr-1 align-middle inline" />
                           Mark Invoiced
                         </button>
                       )}
@@ -166,9 +158,9 @@ export function PendingSection({
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMarkPaid(payout.id); }}
                           disabled={isSubmitting}
-                          style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#fff", background: "#059669", border: "none", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                          className={`admin-btn-primary bg-emerald-600! hover:bg-emerald-700! ${isSubmitting ? "cursor-default" : ""}`}
                         >
-                          <CheckCircle2 size={12} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                          <CheckCircle2 size={12} className="mr-1 align-middle inline" />
                           Mark Paid
                         </button>
                       )}
@@ -176,7 +168,7 @@ export function PendingSection({
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCancel(payout.id); }}
                           disabled={isSubmitting}
-                          style={{ padding: "6px 16px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", cursor: isSubmitting ? "default" : "pointer", fontFamily: "inherit" }}
+                          className={`px-4 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200 font-[inherit] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 ${isSubmitting ? "cursor-default" : ""}`}
                         >
                           Cancel
                         </button>
@@ -194,14 +186,11 @@ export function PendingSection({
 }
 
 function DownloadButton({ onClick }: { onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
       title="Download CSV"
-      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: hovered ? "#1a1a1a" : "#9ca3af", transition: "color 0.15s" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="bg-transparent border-none cursor-pointer p-0.5 text-gray-400 transition-colors duration-150 hover:text-[#1a1a1a]"
     >
       <Download size={14} />
     </button>

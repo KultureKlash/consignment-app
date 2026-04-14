@@ -82,7 +82,7 @@ export const submitListingSchema = z.object({
   brand: optionalText(),
   mainCategory: optionalText(),
   subCategory: optionalText(),
-  styleId: optionalText(100),
+  sku: optionalText(100),
   size: shortText("Size").pipe(z.string().max(30, "Size is too long")),
   gtin: optionalText(50),
   price,
@@ -110,7 +110,7 @@ export const quickAddListingSchema = z.object({
   consignorId: z.string().min(1, "Consignor is required"),
   brand: optionalText(),
   category: optionalText(),
-  styleId: optionalText(100),
+  sku: optionalText(100),
   gtin: optionalText(50),
   quantity: z
     .string()
@@ -126,7 +126,7 @@ export const adminEditProductSchema = z.object({
   title: optionalText(),
   brand: optionalText(),
   category: optionalText(),
-  styleId: optionalText(100),
+  sku: optionalText(100),
   imageData: optionalText(5_000_000),
 });
 

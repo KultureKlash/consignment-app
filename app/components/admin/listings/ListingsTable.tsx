@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { Package } from "lucide-react";
-import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
+import { statusBadgeClass, relativeTime, statusLabel } from "./listing-ui";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { Listing, ProductGroup, Props } from "./types";
 import {
-  sortableThStyle,
-  tableStyle,
-  flatRowStyle,
-  checkboxStyle,
-  checkboxThStyle,
-  checkboxTdStyle,
+  sortableThClass,
+  tableClass,
+  flatRowClass,
+  checkboxClass,
+  checkboxThClass,
+  checkboxTdClass,
   groupByProduct,
   SortIndicator,
-} from "./helpers";
+} from "./listingHelpers";
 import { GroupRows } from "./GroupRows";
 import { RejectModal } from "./RejectModal";
 import { EditListingModal } from "./EditListingModal";
@@ -52,21 +52,14 @@ export default function ListingsTable({
 
   if (listings.length === 0 && !isNavigating) {
     return (
-      <div style={{ textAlign: "center", padding: "48px 20px" }}>
-        <Package size={44} color="#d1d5db" style={{ marginBottom: "14px" }} />
-        <p style={{ fontSize: "14px", color: "#6d7175", margin: 0, lineHeight: 1.5 }}>
+      <div className="text-center py-12 px-5">
+        <Package size={44} className="text-gray-300 mb-3.5 mx-auto" />
+        <p className="text-sm text-gray-500 m-0 leading-normal">
           No listings found.
         </p>
       </div>
     );
   }
-
-  const wrapperStyle: React.CSSProperties = {
-    overflowX: "auto",
-    ...(isNavigating
-      ? { opacity: 0.5, pointerEvents: "none", transition: "opacity 0.15s ease-out" }
-      : { transition: "opacity 0.15s ease-out" }),
-  };
 
   const toggleGroup = (productId: string) => {
     setExpandedGroups((prev) => {
@@ -129,8 +122,8 @@ export default function ListingsTable({
 
     return (
       <>
-        <div style={wrapperStyle}>
-          <table style={tableStyle}>
+        <div className={`overflow-x-auto transition-opacity duration-150 ${isNavigating ? "opacity-50 pointer-events-none" : ""}`}>
+          <table className={tableClass}>
             <tbody>
               {groups.map((group) => {
                 const isExpanded = expandedGroups.has(group.productId);
@@ -197,37 +190,37 @@ export default function ListingsTable({
 
   // ── Flat view (default) ──
   return (
-    <div style={wrapperStyle}>
-      <table style={tableStyle}>
+    <div className={`overflow-x-auto transition-opacity duration-150 ${isNavigating ? "opacity-50 pointer-events-none" : ""}`}>
+      <table className={tableClass}>
         <thead>
-          <tr style={{ borderBottom: "2px solid #e2e5ea" }}>
+          <tr className="border-b-2 border-gray-200">
             {hasSelection && (
-              <th style={checkboxThStyle}>
+              <th className={checkboxThClass}>
                 <input
                   type="checkbox"
                   checked={allSelectableSelected}
                   onChange={toggleAll}
-                  style={checkboxStyle}
+                  className={checkboxClass}
                 />
               </th>
             )}
-            <th style={thStyle}>Product</th>
-            <th style={thStyle}>Size</th>
-            <th style={thStyle}>Barcode</th>
-            <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("price")}>
+            <th className="admin-th">Product</th>
+            <th className="admin-th">Size</th>
+            <th className="admin-th">Barcode</th>
+            <th className={onSortChange ? sortableThClass : "admin-th"} onClick={() => onSortChange?.("price")}>
               Price
               {onSortChange && <SortIndicator active={sortBy === "price"} dir={sortDir} />}
             </th>
-            <th style={thStyle}>Consignor</th>
-            <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("status")}>
+            <th className="admin-th">Consignor</th>
+            <th className={onSortChange ? sortableThClass : "admin-th"} onClick={() => onSortChange?.("status")}>
               Status
               {onSortChange && <SortIndicator active={sortBy === "status"} dir={sortDir} />}
             </th>
-            <th style={onSortChange ? sortableThStyle : thStyle} onClick={() => onSortChange?.("date")}>
+            <th className={onSortChange ? sortableThClass : "admin-th"} onClick={() => onSortChange?.("date")}>
               Created
               {onSortChange && <SortIndicator active={sortBy === "date"} dir={sortDir} />}
             </th>
-            {onCancel && <th style={thStyle}>Actions</th>}
+            {onCancel && <th className="admin-th">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -267,81 +260,61 @@ function FlatRow({
 }) {
   const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
   return (
-    <tr
-      style={flatRowStyle}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
+    <tr className={flatRowClass}>
       {hasSelection && (
-        <td style={checkboxTdStyle}>
+        <td className={checkboxTdClass}>
           {isSelectable ? (
             <input
               type="checkbox"
               checked={isSelected}
               onChange={onToggle}
-              style={checkboxStyle}
+              className={checkboxClass}
             />
           ) : (
-            <span style={{ display: "inline-block", width: "16px" }} />
+            <span className="inline-block w-4" />
           )}
         </td>
       )}
-      <td style={tdStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <td className="admin-td">
+        <div className="flex items-center gap-2.5">
           {l.variant.product.imageUrl ? (
             <img
               src={l.variant.product.imageUrl}
               alt={l.variant.product.title}
-              style={{
-                width: "36px",
-                height: "36px",
-                objectFit: "cover",
-                borderRadius: "4px",
-                border: "1px solid #e3e3e3",
-                flexShrink: 0,
-              }}
+              className="w-9 h-9 object-cover rounded border border-gray-200 shrink-0"
             />
           ) : (
-            <span style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "4px",
-              background: "#f0f0f2",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}>
-              <Package size={16} color="#9ca3af" />
+            <span className="w-9 h-9 rounded bg-gray-100 flex items-center justify-center shrink-0">
+              <Package size={16} className="text-gray-400" />
             </span>
           )}
           <div>
-            <div style={{ fontWeight: 500 }}>{l.variant.product.title}</div>
-            <div style={{ fontSize: "11px", color: "#6d7175", marginTop: "1px" }}>
-              {l.variant.product.styleId ?? l.variant.product.brand ?? ""}
+            <div className="font-medium">{l.variant.product.title}</div>
+            <div className="text-[11px] text-gray-500 mt-px">
+              {l.variant.product.sku ?? l.variant.product.brand ?? ""}
             </div>
           </div>
         </div>
       </td>
-      <td style={tdStyle}>{l.variant.size}</td>
-      <td style={{ ...tdStyle, fontSize: "11px", fontFamily: "monospace", color: "#6d7175" }}>
+      <td className="admin-td">{l.variant.size}</td>
+      <td className="admin-td text-[11px] font-mono text-gray-500">
         {l.variant.gtin || "\u2014"}
       </td>
-      <td style={{ ...tdStyle, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+      <td className="admin-td font-semibold tabular-nums">
         ${fmt(Number(l.price))}
       </td>
-      <td style={tdStyle}>
+      <td className="admin-td">
         <div>{l.consignor.name}</div>
-        <div style={{ fontSize: "11px", color: "#6d7175", marginTop: "1px" }}>{l.consignor.email}</div>
+        <div className="text-[11px] text-gray-500 mt-px">{l.consignor.email}</div>
       </td>
-      <td style={tdStyle}>
-        <span style={statusBadge(l.status)}>{statusLabel(l.status)}</span>
+      <td className="admin-td">
+        <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
       </td>
-      <td style={{ ...tdStyle, fontSize: "12px", color: "#6d7175" }}>
+      <td className="admin-td text-xs text-gray-500">
         {relativeTime(l.createdAt)}
       </td>
       {onCancel && (
-        <td style={tdStyle}>
+        <td className="admin-td">
           {l.status === LISTING_STATUS.ACTIVE ? (
             <s-button
               tone="critical"
@@ -352,7 +325,7 @@ function FlatRow({
               Cancel
             </s-button>
           ) : (
-            <span style={{ color: "#d1d5db" }}>{"\u2014"}</span>
+            <span className="text-gray-300">{"\u2014"}</span>
           )}
         </td>
       )}

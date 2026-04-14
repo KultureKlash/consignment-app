@@ -1,12 +1,5 @@
 import { Barcode } from "lucide-react";
-import {
-  inputStyle,
-  disabledInput,
-  handleFocus,
-  handleBlurStyle,
-} from "~/lib/admin/listing-ui";
 import CustomSelect from "~/components/admin/CustomSelect";
-import { fieldLabel, helperText } from "./helpers";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function VariantFields() {
@@ -28,16 +21,9 @@ export default function VariantFields() {
 
   return (
     <>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "16px",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label style={fieldLabel}>Size</label>
+          <label className="admin-field-label">Size</label>
           {selectedProduct && !newSizeMode ? (
             <CustomSelect
               options={selectedProduct.variants.map((v) => v.size)}
@@ -70,16 +56,11 @@ export default function VariantFields() {
                 setFormFields({ ...formFields, size: e.target.value });
                 clearError("size");
               }}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
               placeholder="e.g. 10"
               min="1"
               max="99"
               step="0.5"
-              style={{
-                ...inputStyle,
-                ...(fieldErrors.has("size") ? { borderColor: "#ef4444" } : {}),
-              }}
+              className={`admin-input${fieldErrors.has("size") ? " !border-red-500" : ""}`}
             />
           ) : (
             <input
@@ -89,54 +70,33 @@ export default function VariantFields() {
                 setFormFields({ ...formFields, size: e.target.value });
                 clearError("size");
               }}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
               placeholder="e.g. M, L, XL"
-              style={{
-                ...inputStyle,
-                ...(fieldErrors.has("size") ? { borderColor: "#ef4444" } : {}),
-              }}
+              className={`admin-input${fieldErrors.has("size") ? " !border-red-500" : ""}`}
             />
           )}
         </div>
         <div>
-          <label style={fieldLabel}>Quantity</label>
+          <label className="admin-field-label">Quantity</label>
           <input
             type="number"
             value={formFields.quantity}
             onChange={(e) => setFormFields({ ...formFields, quantity: e.target.value })}
-            onFocus={handleFocus}
-            onBlur={handleBlurStyle}
             min="1"
             max="50"
             step="1"
-            style={inputStyle}
+            className="admin-input"
           />
         </div>
       </div>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isFootwearCat ? "1fr 1fr" : "1fr",
-          gap: "16px",
-        }}
+        className="grid gap-4"
+        style={{ gridTemplateColumns: isFootwearCat ? "1fr 1fr" : "1fr" }}
       >
         <div>
-          <label style={fieldLabel}>Price</label>
-          <div style={{ position: "relative" }}>
-            <span
-              style={{
-                position: "absolute",
-                left: "14px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#6d7175",
-                fontSize: "14px",
-                fontWeight: 500,
-                pointerEvents: "none",
-              }}
-            >
+          <label className="admin-field-label">Price</label>
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">
               $
             </span>
             <input
@@ -146,58 +106,39 @@ export default function VariantFields() {
                 setFormFields({ ...formFields, price: e.target.value });
                 clearError("price");
               }}
-              onFocus={handleFocus}
-              onBlur={handleBlurStyle}
               placeholder="0.00"
               min="1"
               step="1"
-              style={{
-                ...inputStyle,
-                paddingLeft: "30px",
-                ...(fieldErrors.has("price") ? { borderColor: "#ef4444" } : {}),
-              }}
+              className={`admin-input !pl-[30px]${fieldErrors.has("price") ? " !border-red-500" : ""}`}
             />
           </div>
         </div>
         {selectedConsignorObj?.storeOwned && (
           <div>
-            <label style={fieldLabel}>
-              Cost <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span>
+            <label className="admin-field-label">
+              Cost <span className="font-normal text-gray-400">(optional)</span>
             </label>
-            <div style={{ position: "relative" }}>
-              <span
-                style={{
-                  position: "absolute",
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#6d7175",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  pointerEvents: "none",
-                }}
-              >
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">
                 $
               </span>
               <input
                 type="number"
                 value={formFields.cost}
                 onChange={(e) => setFormFields({ ...formFields, cost: e.target.value })}
-                onFocus={handleFocus}
-                onBlur={handleBlurStyle}
                 placeholder="0.00"
                 min="0"
                 step="1"
-                style={{ ...inputStyle, paddingLeft: "30px" }}
+                className="admin-input !pl-[30px]"
               />
             </div>
-            <p style={helperText}>Acquisition cost for profit tracking</p>
+            <p className="admin-helper-text">Acquisition cost for profit tracking</p>
           </div>
         )}
         {isFootwearCat && (
           <div>
-            <label style={fieldLabel}>GTIN / Barcode</label>
-            <div style={{ position: "relative" }}>
+            <label className="admin-field-label">GTIN / Barcode</label>
+            <div className="relative">
               <input
                 type="text"
                 value={formFields.gtin}
@@ -205,25 +146,12 @@ export default function VariantFields() {
                   setFormFields({ ...formFields, gtin: e.target.value });
                   clearError("gtin");
                 }}
-                onFocus={handleFocus}
-                onBlur={handleBlurStyle}
                 placeholder="Scan or enter GTIN"
                 disabled={gtinLocked}
-                style={{
-                  ...(gtinLocked ? disabledInput : inputStyle),
-                  paddingRight: "36px",
-                  ...(fieldErrors.has("gtin") ? { borderColor: "#ef4444" } : {}),
-                }}
+                className={`${gtinLocked ? "admin-input-disabled" : "admin-input"} !pr-9${fieldErrors.has("gtin") ? " !border-red-500" : ""}`}
               />
               <span
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: gtinLocked ? "#d1d5db" : "#059669",
-                }}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${gtinLocked ? "text-gray-300" : "text-emerald-600"}`}
               >
                 <Barcode size={16} />
               </span>
@@ -233,7 +161,7 @@ export default function VariantFields() {
       </div>
 
       {!isFootwearCat && (newProductMode || selectedProductId) && (
-        <p style={{ ...helperText, marginTop: "8px" }}>
+        <p className="admin-helper-text mt-2">
           Barcode will be auto-generated for non-footwear items.
         </p>
       )}

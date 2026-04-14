@@ -1,8 +1,9 @@
 import prisma from "~/db.server";
+import { generateBarcode, parseCategory } from "~/lib/categories";
 
-export async function findProductByStyleId(styleId: string) {
+export async function findProductBySku(sku: string) {
   return prisma.product.findUnique({
-    where: { styleId },
+    where: { sku },
   });
 }
 
@@ -22,43 +23,43 @@ export async function findProductByTitleAndBrand(title: string, brand?: string) 
 }
 
 export async function createProduct({
-  styleId,
+  sku,
   title,
   brand,
   category,
 }: {
-  styleId?: string | null;
+  sku?: string | null;
   title: string;
   brand?: string;
   category?: string;
 }) {
   return prisma.product.create({
-    data: { styleId: styleId || null, title, brand, category },
+    data: { sku: sku || null, title, brand, category },
   });
 }
 
 export async function findOrCreateProduct({
-  styleId,
+  sku,
   title,
   brand,
   category,
 }: {
-  styleId?: string | null;
+  sku?: string | null;
   title: string;
   brand?: string;
   category?: string;
 }) {
-  // Footwear path: lookup by styleId
-  if (styleId) {
-    const existing = await findProductByStyleId(styleId);
+  // Footwear path: lookup by sku
+  if (sku) {
+    const existing = await findProductBySku(sku);
     if (existing) return existing;
-    return createProduct({ styleId, title, brand, category });
+    return createProduct({ sku, title, brand, category });
   }
 
   // Non-footwear path: lookup by title + brand
   const existing = await findProductByTitleAndBrand(title, brand);
   if (existing) return existing;
-  return createProduct({ styleId: null, title, brand, category });
+  return createProduct({ sku: null, title, brand, category });
 }
 
 export async function findOrCreateVariant({
@@ -91,7 +92,24 @@ export async function findOrCreateVariant({
   });
 }
 
-/** Search products by title, brand, or styleId (case-insensitive for SQLite). */
+/** Auto-generate a unique barcode for a variant that doesn't have one.
+ *  Tries up to 3 candidates, throws if all collide (extremely unlikely). */
+export async function ensureVariantBarcode(
+  variantId: string,
+  opts: { brand?: string | null; category?: string | null; size: string },
+): Promise<void> {
+  const sub = opts.category ? parseCategory(opts.category).sub : undefined;
+  let barcode: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const candidate = generateBarcode(opts.brand ?? undefined, sub, opts.size);
+    const existing = await prisma.variant.findUnique({ where: { gtin: candidate } });
+    if (!existing) { barcode = candidate; break; }
+  }
+  if (!barcode) throw new Error("Failed to generate unique barcode after 3 attempts");
+  await prisma.variant.update({ where: { id: variantId }, data: { gtin: barcode } });
+}
+
+/** Search products by title, brand, or sku (case-insensitive for SQLite). */
 export async function searchProducts(
   query: string,
   opts?: { includeVariants?: boolean; exclude?: string },
@@ -108,8 +126,8 @@ export async function searchProducts(
         { title: { contains: qLower } },
         { brand: { contains: q } },
         { brand: { contains: qLower } },
-        { styleId: { contains: q } },
-        { styleId: { contains: q.toUpperCase() } },
+        { sku: { contains: q } },
+        { sku: { contains: q.toUpperCase() } },
       ],
     },
     include: opts?.includeVariants ? { variants: { orderBy: { size: "asc" } } } : undefined,

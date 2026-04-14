@@ -4,12 +4,12 @@ import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.ser
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { ensureVariantBarcode } from "~/services/variant-utils.server";
+import { ensureVariantBarcode } from "~/services/catalog.server";
 import { logger } from "~/lib/logger.server";
 
 export async function createListing({
   admin,
-  styleId,
+  sku,
   title,
   brand,
   category,
@@ -23,7 +23,7 @@ export async function createListing({
   cost,
 }: {
   admin: AdminApiContext;
-  styleId?: string | null;
+  sku?: string | null;
   title: string;
   brand?: string;
   category?: string;
@@ -37,7 +37,7 @@ export async function createListing({
   cost?: number;
 }) {
 
-  const product = await findOrCreateProduct({ styleId, title, brand, category });
+  const product = await findOrCreateProduct({ sku, title, brand, category });
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
   if (!variant.gtin && !gtin) {

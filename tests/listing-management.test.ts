@@ -6,7 +6,7 @@ import { cancelListing, bulkCancelListings } from "~/services/listings.server";
 async function createTestListing(overrides: { price?: number; status?: string } = {}) {
   const consignor = await createTestConsignor();
   const product = await prisma.product.create({
-    data: { styleId: `style-${Date.now()}`, title: "Test Product" },
+    data: { sku: `style-${Date.now()}`, title: "Test Product" },
   });
   const variant = await prisma.variant.create({
     data: {
@@ -83,7 +83,7 @@ describe("bulkCancelListings", () => {
       variant = await prisma.variant.findUniqueOrThrow({ where: { id: overrides.variantId } });
     } else {
       const product = await prisma.product.create({
-        data: { styleId: `bulk-style-${Date.now()}-${Math.random()}`, title: "Bulk Product" },
+        data: { sku: `bulk-style-${Date.now()}-${Math.random()}`, title: "Bulk Product" },
       });
       const uid = `${Date.now()}-${Math.random()}`;
       variant = await prisma.variant.create({

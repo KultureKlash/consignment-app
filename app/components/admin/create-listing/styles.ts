@@ -1,16 +1,7 @@
 import type React from "react";
-import { labelStyle } from "~/lib/admin/listing-ui";
 
-// ── Section card styles ──
-
-export const sectionCard: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid rgba(227,227,227,0.6)",
-  borderRadius: "12px",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-  marginBottom: "20px",
-};
+// ── Section card/header styles (migrated to admin.css classes in CreateListingForm) ──
+// These legacy CSSProperties objects are kept only for SectionHeader which still uses style={}.
 
 export const sectionHeaderStyle: React.CSSProperties = {
   padding: "14px 20px",
@@ -29,12 +20,10 @@ export const sectionTitleStyle: React.CSSProperties = {
   margin: 0,
 };
 
-export const sectionBody: React.CSSProperties = {
-  padding: "20px",
-};
+// ── Field label (still used as style={} by several components) ──
 
 export const fieldLabel: React.CSSProperties = {
-  ...labelStyle,
+  display: "block",
   fontSize: "12px",
   fontWeight: 600,
   color: "#374151",

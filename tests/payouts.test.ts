@@ -5,7 +5,7 @@ import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData 
 async function setupVariant() {
   const product = await prisma.product.create({
     data: {
-      styleId: `style-${Date.now()}-${Math.random()}`,
+      sku: `style-${Date.now()}-${Math.random()}`,
       title: "Test Product",
     },
   });

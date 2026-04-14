@@ -10,7 +10,7 @@ describe("shopify-products.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
       });
@@ -39,7 +39,7 @@ describe("shopify-products.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
-        styleId: "TAX-TEST-001",
+        sku: "TAX-TEST-001",
         title: "Nike Air Max 90",
         brand: "Nike",
         category: "Footwear > Sneakers",
@@ -59,7 +59,7 @@ describe("shopify-products.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
-        styleId: "TAX-AUTO-001",
+        sku: "TAX-AUTO-001",
         title: "Gallery Dept Tee",
         brand: "Gallery Dept",
         category: "Apparel > T-Shirts",
@@ -85,7 +85,7 @@ describe("shopify-products.server", () => {
       // Create product and variant with Shopify IDs already set
       const product = await prisma.product.create({
         data: {
-          styleId: "DD1391-100",
+          sku: "DD1391-100",
           title: "Nike Dunk Panda",
           shopifyProductId: "gid://shopify/Product/existing",
         },
@@ -112,7 +112,7 @@ describe("shopify-products.server", () => {
       // Product already synced, but new variant isn't
       const product = await prisma.product.create({
         data: {
-          styleId: "DD1391-100",
+          sku: "DD1391-100",
           title: "Nike Dunk Panda",
           shopifyProductId: "gid://shopify/Product/existing",
         },
@@ -136,11 +136,11 @@ describe("shopify-products.server", () => {
       expect(updated?.inventoryItemId).toBeDefined();
     });
 
-    it("sets SKU to styleId for footwear product on create", async () => {
+    it("sets SKU to sku for footwear product on create", async () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
-        styleId: "DD1391-100",
+        sku: "DD1391-100",
         title: "Nike Dunk Panda",
         brand: "Nike",
         category: "Footwear > Sneakers",
@@ -183,7 +183,7 @@ describe("shopify-products.server", () => {
       expect(skuVars.input.sku).toBe("AMI-HAT-OS-ABC123");
     });
 
-    it("falls back to GTIN for footwear without styleId", async () => {
+    it("falls back to GTIN for footwear without sku", async () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
@@ -201,7 +201,7 @@ describe("shopify-products.server", () => {
       });
       expect(skuCall).toBeDefined();
       const skuVars = skuCall!.variables as Record<string, Record<string, string>>;
-      // No styleId + no category = treated as footwear, falls back to gtin
+      // No sku + no category = treated as footwear, falls back to gtin
       expect(skuVars.input.sku).toBe("FALLBACK-GTIN");
     });
 
@@ -211,7 +211,7 @@ describe("shopify-products.server", () => {
       // Product already synced
       const product = await prisma.product.create({
         data: {
-          styleId: "DD1391-100",
+          sku: "DD1391-100",
           title: "Nike Dunk Panda",
           shopifyProductId: "gid://shopify/Product/existing",
         },
@@ -235,7 +235,7 @@ describe("shopify-products.server", () => {
       const { admin, findCalls } = createMockAdmin();
 
       const product = await findOrCreateProduct({
-        styleId: "NO-CAT-TAX-001",
+        sku: "NO-CAT-TAX-001",
         title: "Unknown Item",
       });
       const variant = await findOrCreateVariant({ productId: product.id, size: "OS", gtin: "NO-CAT-GTIN" });

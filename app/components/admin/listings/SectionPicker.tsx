@@ -44,19 +44,16 @@ export function SectionPicker({ sections, value, onChange }: { sections: Section
   const pick = (id: string) => { onChange(id); setOpen(false); setSearch(""); };
 
   return (
-    <span style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+    <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
       {/* Badge trigger */}
       <button
         ref={triggerRef}
         onClick={() => setOpen(!open)}
-        style={{
-          display: "flex", alignItems: "center", gap: "4px",
-          fontSize: "10px", fontWeight: 600, padding: "3px 8px", borderRadius: "6px",
-          border: `1px solid ${selectedName ? "rgba(5,150,105,0.3)" : "rgba(156,163,175,0.4)"}`,
-          background: selectedName ? "rgba(5,150,105,0.08)" : "rgba(156,163,175,0.08)",
-          color: selectedName ? "#059669" : "#9ca3af",
-          cursor: "pointer", outline: "none", fontFamily: "inherit", whiteSpace: "nowrap",
-        }}
+        className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border cursor-pointer outline-none font-[inherit] whitespace-nowrap ${
+          selectedName
+            ? "border-emerald-600/30 bg-emerald-600/[0.08] text-emerald-600"
+            : "border-gray-400/40 bg-gray-400/[0.08] text-gray-400"
+        }`}
       >
         <MapPin size={10} />
         {selectedName ?? "Section"}
@@ -64,38 +61,28 @@ export function SectionPicker({ sections, value, onChange }: { sections: Section
 
       {/* Popover via portal */}
       {open && typeof document !== "undefined" && createPortal(
-        <div ref={popoverRef} style={{
-          position: "fixed", top: pos.top, left: pos.left, zIndex: 9999,
-          background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.12)", width: "240px",
-          display: "flex", flexDirection: "column", maxHeight: "280px",
-        }}>
+        <div ref={popoverRef} className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg w-60 flex flex-col max-h-[280px]" style={{ top: pos.top, left: pos.left }}>
           {/* Search — fixed top */}
-          <div style={{ padding: "8px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
-            <div style={{ position: "relative" }}>
-              <Search size={13} style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+          <div className="p-2 border-b border-gray-100 shrink-0">
+            <div className="relative">
+              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search sections..."
-                style={{
-                  width: "100%", padding: "6px 8px 6px 28px", fontSize: "12px", border: "1px solid #e5e7eb",
-                  borderRadius: "6px", outline: "none", boxSizing: "border-box",
-                }}
+                className="w-full py-1.5 pl-7 pr-2 text-xs border border-gray-200 rounded-md outline-none"
               />
             </div>
           </div>
 
-          <div style={{ overflowY: "auto", scrollbarWidth: "none", flex: 1 }}>
+          <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: "none" }}>
             {/* Clear */}
             {value && (
               <div
                 onClick={() => pick("")}
-                style={{ padding: "6px 12px", fontSize: "11px", color: "#9ca3af", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                className="px-3 py-1.5 text-[11px] text-gray-400 cursor-pointer hover:bg-gray-50"
               >
                 Clear section
               </div>
@@ -104,21 +91,19 @@ export function SectionPicker({ sections, value, onChange }: { sections: Section
             {/* Racks */}
             {racks.length > 0 && (
               <>
-                <div style={{ padding: "6px 12px 4px", fontSize: "9px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div className="px-3 pt-1.5 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                   Clothing Racks
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", padding: "2px 10px 8px" }}>
+                <div className="flex flex-wrap gap-1 px-2.5 pb-2 pt-0.5">
                   {racks.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => pick(s.id)}
-                      style={{
-                        padding: "4px 10px", fontSize: "11px", fontWeight: 600, borderRadius: "6px",
-                        border: `1px solid ${s.id === value ? "#059669" : "#e5e7eb"}`,
-                        background: s.id === value ? "#ecfdf5" : "#fff",
-                        color: s.id === value ? "#059669" : "#374151",
-                        cursor: "pointer", fontFamily: "inherit",
-                      }}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer font-[inherit] ${
+                        s.id === value
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-600"
+                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
                       {s.name}
                     </button>
@@ -130,21 +115,19 @@ export function SectionPicker({ sections, value, onChange }: { sections: Section
             {/* Shelves — grid layout */}
             {shelves.length > 0 && (
               <>
-                <div style={{ padding: "6px 12px 4px", fontSize: "9px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div className="px-3 pt-1.5 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                   Shoe Storage
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "3px", padding: "2px 10px 8px" }}>
+                <div className="grid grid-cols-5 gap-0.5 px-2.5 pb-2 pt-0.5">
                   {shelves.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => pick(s.id)}
-                      style={{
-                        padding: "4px 0", fontSize: "11px", fontWeight: 500, borderRadius: "4px", textAlign: "center",
-                        border: `1px solid ${s.id === value ? "#059669" : "#f3f4f6"}`,
-                        background: s.id === value ? "#ecfdf5" : "#f9fafb",
-                        color: s.id === value ? "#059669" : "#6b7280",
-                        cursor: "pointer", fontFamily: "inherit",
-                      }}
+                      className={`py-1 text-[11px] font-medium rounded text-center border cursor-pointer font-[inherit] ${
+                        s.id === value
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-600"
+                          : "border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100"
+                      }`}
                     >
                       {s.name}
                     </button>
@@ -158,21 +141,18 @@ export function SectionPicker({ sections, value, onChange }: { sections: Section
               <div
                 key={s.id}
                 onClick={() => pick(s.id)}
-                style={{
-                  padding: "6px 12px", fontSize: "12px", cursor: "pointer",
-                  fontWeight: s.id === value ? 600 : 400,
-                  color: s.id === value ? "#059669" : "#374151",
-                  background: s.id === value ? "#ecfdf5" : "",
-                }}
-                onMouseEnter={(e) => { if (s.id !== value) e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={(e) => { if (s.id !== value) e.currentTarget.style.background = ""; }}
+                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 ${
+                  s.id === value
+                    ? "font-semibold text-emerald-600 bg-emerald-50"
+                    : "font-normal text-gray-700"
+                }`}
               >
                 {s.name}
               </div>
             ))}
 
             {racks.length === 0 && shelves.length === 0 && other.length === 0 && (
-              <div style={{ padding: "12px", fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>No sections match</div>
+              <div className="p-3 text-xs text-gray-400 text-center">No sections match</div>
             )}
           </div>
         </div>,

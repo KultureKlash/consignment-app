@@ -58,7 +58,7 @@ async function reorderVariantsBySizes(admin: AdminApiContext, shopifyProductId: 
 
 function deriveSku(product: Product, variant: Variant): string {
   const isFootwear = !product.category || product.category.startsWith("Footwear");
-  if (isFootwear && product.styleId) return product.styleId;
+  if (isFootwear && product.sku) return product.sku;
   return variant.gtin || "";
 }
 

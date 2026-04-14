@@ -33,7 +33,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       OR: [
         { variant: { product: { title: { contains: search } } } },
         { variant: { product: { brand: { contains: search } } } },
-        { variant: { product: { styleId: { contains: search } } } },
+        { variant: { product: { sku: { contains: search } } } },
         { variant: { size: { contains: search } } },
       ],
     }];
