@@ -20,8 +20,8 @@ import {
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
 import ListingsFilter from "~/components/admin/ListingsFilter";
-import ListingsTable from "~/components/admin/ListingsTable";
-import type { EditApproveFields, EditProductFields } from "~/components/admin/ListingsTable";
+import ListingsTable from "~/components/admin/listings";
+import type { EditApproveFields, EditProductFields } from "~/components/admin/listings";
 import Pagination from "~/components/shared/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
 

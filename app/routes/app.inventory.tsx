@@ -8,8 +8,8 @@ import { createListing, cancelListing } from "~/services/listings.server";
 import { adminEditListing } from "~/services/submission.server";
 import prisma from "~/db.server";
 import CreateListingForm from "~/components/admin/CreateListingForm";
-import ListingsTable from "~/components/admin/ListingsTable";
-import type { EditApproveFields } from "~/components/admin/ListingsTable";
+import ListingsTable from "~/components/admin/listings";
+import type { EditApproveFields } from "~/components/admin/listings";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
