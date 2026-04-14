@@ -11,6 +11,7 @@ import {
   activateListing,
   adminEditAndApprove,
   adminEditListing,
+  adminEditProduct,
   bulkApproveListing,
   bulkActivateListing,
   approveWithdrawal,
@@ -20,7 +21,7 @@ import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
 import ListingsFilter from "~/components/admin/ListingsFilter";
 import ListingsTable from "~/components/admin/ListingsTable";
-import type { EditApproveFields } from "~/components/admin/ListingsTable";
+import type { EditApproveFields, EditProductFields } from "~/components/admin/ListingsTable";
 import Pagination from "~/components/shared/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
 
@@ -124,19 +125,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { intent };
     }
 
+    if (intent === "edit-product") {
+      const { adminEditProductSchema, parseForm } = await import("~/lib/validation");
+      const data = parseForm(adminEditProductSchema, formData);
+      await adminEditProduct({
+        admin,
+        productId: data.productId,
+        title: data.title,
+        brand: data.brand,
+        category: data.category,
+        styleId: data.styleId,
+        imageData: data.imageData,
+      });
+      return { intent };
+    }
+
     if (intent === "admin-edit-approve") {
       const { adminEditListingSchema, parseForm } = await import("~/lib/validation");
       const data = parseForm(adminEditListingSchema, formData);
       await adminEditAndApprove({
         listingId: data.listingId,
-        title: data.title,
-        brand: data.brand,
-        category: data.category,
-        styleId: data.styleId,
         size: data.size,
         gtin: data.gtin,
         price: data.price,
-        imageData: data.imageData,
       });
       return { intent };
     }
@@ -147,15 +158,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await adminEditListing({
         admin,
         listingId: data.listingId,
-        title: data.title,
-        brand: data.brand,
-        category: data.category,
-        styleId: data.styleId,
         size: data.size,
         gtin: data.gtin,
         price: data.price,
         cost: data.cost,
-        imageData: data.imageData,
       });
       return { intent };
     }
@@ -350,6 +356,13 @@ export default function Listings() {
     approvalFetcher.submit(submitData, { method: "POST" });
   };
 
+  const handleEditProduct = (productId: string, fields: EditProductFields) => {
+    const submitData: Record<string, string> = { intent: "edit-product", productId, ...fields };
+    if (fields.imageData) submitData.imageData = fields.imageData;
+    else delete submitData.imageData;
+    sectionFetcher.submit(submitData, { method: "POST" });
+  };
+
   const handleBulkApprove = () => {
     if (selectedIds.size === 0) return;
     approvalFetcher.submit(
@@ -506,6 +519,7 @@ export default function Listings() {
           onCompleteWithdrawal={handleCompleteWithdrawal}
           onEditApprove={handleEditApprove}
           onAdminEdit={handleAdminEdit}
+          onEditProduct={handleEditProduct}
           onQuickAdd={handleQuickAdd}
           isLoading={cancelLoading || approvalLoading}
           isNavigating={isNavigating}

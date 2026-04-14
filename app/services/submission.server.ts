@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
-import { ensureShopifyProductAndVariant, updateShopifyProductImage } from "~/services/shopify/products.server";
+import { ensureShopifyProductAndVariant, updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
 import { generateBarcode, parseCategory } from "~/lib/categories";
 
@@ -206,28 +206,71 @@ export async function rejectListing({
   });
 }
 
-// ── Admin: Edit listing fields and approve in one step ──
+// ── Admin: Edit product-level fields (title, brand, category, image) ──
 
-export async function adminEditAndApprove({
-  listingId,
+export async function adminEditProduct({
+  admin,
+  productId,
   title,
   brand,
   category,
   styleId,
-  size,
-  gtin,
-  price,
   imageData,
 }: {
-  listingId: string;
+  admin: AdminApiContext;
+  productId: string;
   title?: string;
   brand?: string;
   category?: string;
-  styleId?: string | null;
+  styleId?: string;
+  imageData?: string;
+}) {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) throw new Error("Product not found");
+
+  const updated = await prisma.product.update({
+    where: { id: productId },
+    data: {
+      ...(title !== undefined ? { title } : {}),
+      ...(brand !== undefined ? { brand: brand || null } : {}),
+      ...(category !== undefined ? { category: category || null } : {}),
+      ...(styleId !== undefined ? { styleId: styleId || null } : {}),
+    },
+  });
+
+  // Upload image if provided
+  if (imageData && updated.shopifyProductId) {
+    try {
+      await updateShopifyProductImage({ admin, productId, shopifyProductId: updated.shopifyProductId, imageData });
+    } catch (err) {
+      console.error("Image upload to Shopify failed:", err);
+    }
+  }
+
+  // Sync title/brand/category to Shopify
+  if (updated.shopifyProductId) {
+    try {
+      await updateShopifyProduct({ admin, product: updated });
+    } catch (err) {
+      console.error("Shopify product update failed:", err);
+    }
+  }
+
+  return updated;
+}
+
+// ── Admin: Edit listing fields and approve in one step ──
+
+export async function adminEditAndApprove({
+  listingId,
+  size,
+  gtin,
+  price,
+}: {
+  listingId: string;
   size?: string;
   gtin?: string;
   price?: number;
-  imageData?: string;
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
@@ -238,60 +281,25 @@ export async function adminEditAndApprove({
     throw new Error(`Cannot edit and approve listing with status "${listing.status}"`);
   }
 
-  // Rebuild product/variant if fields changed
-  let variantId = listing.variantId;
-  const currentProduct = listing.variant.product;
-
-  const needsNewProduct =
-    (title && title !== currentProduct.title) ||
-    (brand && brand !== currentProduct.brand) ||
-    (category && category !== currentProduct.category) ||
-    (styleId !== undefined && styleId !== currentProduct.styleId);
-
-  if (needsNewProduct) {
-    const product = await findOrCreateProduct({
-      styleId: styleId !== undefined ? styleId : currentProduct.styleId,
-      title: title ?? currentProduct.title,
-      brand: brand ?? currentProduct.brand ?? undefined,
-      category: category ?? currentProduct.category ?? undefined,
-    });
-    const variant = await findOrCreateVariant({
-      productId: product.id,
-      size: size ?? listing.variant.size,
-      gtin: gtin ?? listing.variant.gtin ?? undefined,
-    });
-    variantId = variant.id;
-  } else if (size && size !== listing.variant.size) {
-    const variant = await findOrCreateVariant({
-      productId: currentProduct.id,
-      size,
-      gtin: gtin ?? listing.variant.gtin ?? undefined,
-    });
-    variantId = variant.id;
-  } else if (gtin && gtin !== (listing.variant.gtin ?? "")) {
-    // GTIN changed on the same variant — update it directly
-    await prisma.variant.update({
-      where: { id: listing.variantId },
-      data: { gtin },
-    });
+  // Update variant in-place (product edits are separate)
+  const variantUpdate: Record<string, unknown> = {};
+  if (size && size !== listing.variant.size) variantUpdate.size = size;
+  if (gtin !== undefined && gtin !== (listing.variant.gtin ?? "")) {
+    // GTIN uniqueness check
+    if (gtin) {
+      const existing = await prisma.variant.findFirst({ where: { gtin, id: { not: listing.variantId } } });
+      if (existing) throw new Error(`Barcode "${gtin}" is already assigned to another variant`);
+    }
+    variantUpdate.gtin = gtin || null;
   }
 
-  // Store image on the resolved product if admin uploaded one
-  if (imageData) {
-    const resolvedVariant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
-      select: { productId: true },
-    });
-    await prisma.product.update({
-      where: { id: resolvedVariant.productId },
-      data: { imageUrl: imageData },
-    });
+  if (Object.keys(variantUpdate).length > 0) {
+    await prisma.variant.update({ where: { id: listing.variantId }, data: variantUpdate });
   }
 
   return prisma.listing.update({
     where: { id: listingId },
     data: {
-      variantId,
       ...(price !== undefined ? { price } : {}),
       status: "approved_awaiting_dropoff",
       approvedAt: new Date(),
@@ -307,27 +315,17 @@ const TERMINAL_STATUSES = ["sold", "cancelled", "rejected", "withdrawn"];
 export async function adminEditListing({
   admin,
   listingId,
-  title,
-  brand,
-  category,
-  styleId,
   size,
   gtin,
   price,
   cost,
-  imageData,
 }: {
   admin?: AdminApiContext;
   listingId: string;
-  title?: string;
-  brand?: string;
-  category?: string;
-  styleId?: string | null;
   size?: string;
   gtin?: string;
   price?: number;
   cost?: number | null;
-  imageData?: string;
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
@@ -338,91 +336,57 @@ export async function adminEditListing({
     throw new Error(`Cannot edit listing with status "${listing.status}"`);
   }
 
-  // Rebuild product/variant if fields changed (same dedup logic as adminEditAndApprove)
-  let variantId = listing.variantId;
-  const currentProduct = listing.variant.product;
-
-  const needsNewProduct =
-    (title && title !== currentProduct.title) ||
-    (brand && brand !== currentProduct.brand) ||
-    (category && category !== currentProduct.category) ||
-    (styleId !== undefined && styleId !== currentProduct.styleId);
-
-  if (needsNewProduct) {
-    const product = await findOrCreateProduct({
-      styleId: styleId !== undefined ? styleId : currentProduct.styleId,
-      title: title ?? currentProduct.title,
-      brand: brand ?? currentProduct.brand ?? undefined,
-      category: category ?? currentProduct.category ?? undefined,
-    });
-    const variant = await findOrCreateVariant({
-      productId: product.id,
-      size: size ?? listing.variant.size,
-      gtin: gtin ?? listing.variant.gtin ?? undefined,
-    });
-    variantId = variant.id;
-  } else if (size && size !== listing.variant.size) {
-    const variant = await findOrCreateVariant({
-      productId: currentProduct.id,
-      size,
-      gtin: gtin ?? listing.variant.gtin ?? undefined,
-    });
-    variantId = variant.id;
-  } else if (gtin && gtin !== (listing.variant.gtin ?? "")) {
-    await prisma.variant.update({
-      where: { id: listing.variantId },
-      data: { gtin },
-    });
+  // Update variant fields in-place (product edits are separate)
+  const variantUpdate: Record<string, unknown> = {};
+  if (size && size !== listing.variant.size) variantUpdate.size = size;
+  if (gtin !== undefined && gtin !== (listing.variant.gtin ?? "")) {
+    // GTIN uniqueness check
+    if (gtin) {
+      const existing = await prisma.variant.findFirst({ where: { gtin, id: { not: listing.variantId } } });
+      if (existing) throw new Error(`Barcode "${gtin}" is already assigned to another variant`);
+    }
+    variantUpdate.gtin = gtin || null;
   }
 
-  // Store image on the resolved product if admin uploaded one
-  if (imageData) {
-    const resolvedVariant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
-      select: { productId: true },
-    });
-    await prisma.product.update({
-      where: { id: resolvedVariant.productId },
-      data: { imageUrl: imageData },
-    });
+  if (Object.keys(variantUpdate).length > 0) {
+    await prisma.variant.update({ where: { id: listing.variantId }, data: variantUpdate });
   }
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
     data: {
-      variantId,
       ...(price !== undefined ? { price } : {}),
       ...(cost !== undefined ? { cost } : {}),
     },
     include: { consignor: true, variant: { include: { product: true } } },
   });
 
-  // Re-sync to Shopify if the listing is live
-  if (admin && ["active", "pending_sale"].includes(listing.status)) {
-    try {
-      const freshProduct = await prisma.product.findUniqueOrThrow({
-        where: { id: updated.variant.product.id },
-      });
+  // Sync variant changes to Shopify if the listing is live and variant is linked
+  if (admin && ["active", "pending_sale"].includes(listing.status) && updated.variant.shopifyVariantId) {
+    const shopifyProductId = updated.variant.product.shopifyProductId;
+    if (shopifyProductId) {
+      try {
+        // Update size + barcode on existing Shopify variant
+        const variantInput: Record<string, unknown> = { id: updated.variant.shopifyVariantId };
+        if (gtin !== undefined) variantInput.barcode = gtin || "";
+        if (size && size !== listing.variant.size) {
+          variantInput.optionValues = [{ name: size, optionName: "Size" }];
+        }
 
-      // Update image on existing Shopify product if admin uploaded a new one
-      const pendingImage = freshProduct.imageUrl?.startsWith("data:") ? freshProduct.imageUrl : undefined;
-      if (pendingImage && freshProduct.shopifyProductId) {
-        await updateShopifyProductImage({
-          admin,
-          productId: freshProduct.id,
-          shopifyProductId: freshProduct.shopifyProductId,
-          imageData: pendingImage,
-        });
+        await admin.graphql(
+          `mutation variantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+            productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+              productVariants { id title barcode }
+              userErrors { field message }
+            }
+          }`,
+          { variables: { productId: shopifyProductId, variants: [variantInput] } },
+        );
+
+        await syncInventory({ admin, variant: updated.variant });
+      } catch (err) {
+        console.error("Shopify sync after listing edit failed:", err);
       }
-
-      await ensureShopifyProductAndVariant({
-        admin,
-        product: freshProduct,
-        variant: updated.variant,
-      });
-      await syncInventory({ admin, variant: updated.variant });
-    } catch (err) {
-      console.error("Shopify sync after edit failed:", err);
     }
   }
 

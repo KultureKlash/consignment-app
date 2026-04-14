@@ -76,6 +76,9 @@ export async function findOrCreateVariant({
   if (existing) {
     // Backfill GTIN if it was missing (pre-migration variants)
     if (!existing.gtin && gtin) {
+      // Check uniqueness before backfilling
+      const duplicate = await prisma.variant.findFirst({ where: { gtin, id: { not: existing.id } } });
+      if (duplicate) return existing; // Skip backfill if GTIN already in use
       return prisma.variant.update({
         where: { id: existing.id },
         data: { gtin },

@@ -119,14 +119,21 @@ export const quickAddListingSchema = z.object({
   cost: optionalPrice,
 });
 
-// ── Admin edit/approve listing ──
+// ── Admin edit product (product-level fields) ──
 
-export const adminEditListingSchema = z.object({
-  listingId: z.string().min(1, "Listing ID is required"),
+export const adminEditProductSchema = z.object({
+  productId: z.string().min(1, "Product ID is required"),
   title: optionalText(),
   brand: optionalText(),
   category: optionalText(),
   styleId: optionalText(100),
+  imageData: optionalText(5_000_000),
+});
+
+// ── Admin edit listing (variant/listing-level fields only) ──
+
+export const adminEditListingSchema = z.object({
+  listingId: z.string().min(1, "Listing ID is required"),
   size: optionalText(30),
   gtin: optionalText(50),
   price: z
@@ -145,7 +152,6 @@ export const adminEditListingSchema = z.object({
       const n = parseFloat(v);
       return isNaN(n) ? undefined : Math.round(n * 100) / 100;
     }),
-  imageData: optionalText(5_000_000), // base64 images can be large
 });
 
 // ── Portal profile update ──

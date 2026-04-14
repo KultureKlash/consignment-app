@@ -126,6 +126,46 @@ async function getAllPublicationIds(admin: AdminApiContext): Promise<string[]> {
   return data.publications.nodes.map((p: { id: string }) => p.id);
 }
 
+/**
+ * Update an existing Shopify product's title, vendor (brand), and category.
+ * Only called when the product has a shopifyProductId.
+ */
+export async function updateShopifyProduct({
+  admin,
+  product,
+}: {
+  admin: AdminApiContext;
+  product: Product;
+}) {
+  if (!product.shopifyProductId) return;
+
+  const taxonomyId = await resolveShopifyTaxonomyId(admin, product.category);
+
+  const response = await admin.graphql(
+    `mutation productUpdate($input: ProductInput!) {
+      productUpdate(input: $input) {
+        product { id title vendor }
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        input: {
+          id: product.shopifyProductId,
+          title: product.title,
+          vendor: product.brand || undefined,
+          ...(taxonomyId ? { category: taxonomyId } : {}),
+        },
+      },
+    },
+  );
+
+  const { data } = await response.json();
+  if (data.productUpdate?.userErrors?.length > 0) {
+    console.error("Shopify productUpdate errors:", data.productUpdate.userErrors);
+  }
+}
+
 export async function ensureShopifyProductAndVariant({
   admin,
   product,

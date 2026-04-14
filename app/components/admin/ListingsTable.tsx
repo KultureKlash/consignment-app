@@ -5,6 +5,7 @@ import { processProductImage } from "~/lib/image-processing";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
 import { compareSizes } from "~/lib/size-order";
 import { fmt } from "~/lib/currency";
+import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
 
 type Listing = {
   id: string;
@@ -21,14 +22,17 @@ type Listing = {
 };
 
 export type EditApproveFields = {
-  title: string;
-  brand: string;
-  category: string;
-  styleId: string;
   size: string;
   gtin: string;
   price: string;
   cost?: string;
+};
+
+export type EditProductFields = {
+  title: string;
+  brand: string;
+  category: string;
+  styleId: string;
   imageData?: string;
 };
 
@@ -66,6 +70,7 @@ type Props = {
   onCompleteWithdrawal?: (listingId: string) => void;
   onEditApprove?: (listingId: string, fields: EditApproveFields) => void;
   onAdminEdit?: (listingId: string, fields: EditApproveFields) => void;
+  onEditProduct?: (productId: string, fields: EditProductFields) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   isNavigating?: boolean;
@@ -521,6 +526,7 @@ export default function ListingsTable({
   onCompleteWithdrawal,
   onEditApprove,
   onAdminEdit,
+  onEditProduct,
   onQuickAdd,
   isLoading,
   isNavigating,
@@ -535,6 +541,7 @@ export default function ListingsTable({
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [editModal, setEditModal] = useState<Listing | null>(null);
+  const [editProductModal, setEditProductModal] = useState<ProductGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const hasSelection = !!selectedIds && !!onSelectionChange;
 
@@ -646,6 +653,7 @@ export default function ListingsTable({
                     onToggleGroup={toggleGroupSelection}
                     sections={sections}
                     onSectionChange={onSectionChange}
+                    onEditProduct={onEditProduct ? (g: ProductGroup) => setEditProductModal(g) : undefined}
                   />
                 );
               })}
@@ -666,6 +674,16 @@ export default function ListingsTable({
               setEditModal(null);
             }}
             onCancel={() => setEditModal(null)}
+          />
+        )}
+        {editProductModal && onEditProduct && (
+          <EditProductModal
+            group={editProductModal}
+            onConfirm={(fields) => {
+              onEditProduct(editProductModal.productId, fields);
+              setEditProductModal(null);
+            }}
+            onCancel={() => setEditProductModal(null)}
           />
         )}
       </>
@@ -850,6 +868,7 @@ function GroupRows({
   onCompleteWithdrawal,
   onEditApprove,
   onAdminEdit,
+  onEditProduct,
   onQuickAdd,
   isLoading,
   colCount,
@@ -872,6 +891,7 @@ function GroupRows({
   onCompleteWithdrawal?: (id: string) => void;
   onEditApprove?: (listing: Listing) => void;
   onAdminEdit?: (listing: Listing) => void;
+  onEditProduct?: (group: ProductGroup) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;
   colCount: number;
@@ -975,6 +995,18 @@ function GroupRows({
                   <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
                     {group.brand}
                   </span>
+                )}
+                {/* Edit product button */}
+                {onEditProduct && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEditProduct(group); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#c4c9d1", transition: "color 0.15s", flexShrink: 0 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#6d7175"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "#c4c9d1"; }}
+                    title="Edit product"
+                  >
+                    <Pencil size={13} />
+                  </button>
                 )}
                 {/* Section badge — click to open picker */}
                 {sections && sections.length > 0 && (
@@ -1401,19 +1433,13 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
   onConfirm: (fields: EditApproveFields) => void;
   onCancel: () => void;
 }) {
-  const [title, setTitle] = useState(listing.variant.product.title);
-  const [brand, setBrand] = useState(listing.variant.product.brand ?? "");
-  const [category, setCategory] = useState(listing.variant.product.category ?? "");
-  const [styleId, setStyleId] = useState(listing.variant.product.styleId ?? "");
   const [size, setSize] = useState(listing.variant.size);
   const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
   const [price, setPrice] = useState(String(fmt(Number(listing.price))));
   const [cost, setCost] = useState(listing.cost != null ? String(listing.cost) : "");
-  const [imageData, setImageData] = useState("");
-  const currentImageUrl = listing.variant.product.imageUrl ?? null;
   const isStoreOwned = listing.consignor.storeOwned ?? false;
 
-  const canSubmit = title.trim() && size.trim() && Number(price) > 0;
+  const canSubmit = size.trim() && Number(price) > 0;
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.currentTarget.style.borderColor = "#7c3aed";
@@ -1424,43 +1450,9 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
     e.currentTarget.style.boxShadow = "none";
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert("Image must be under 10MB"); return; }
-    try {
-      const processed = await processProductImage(file);
-      setImageData(processed);
-    } catch {
-      alert("Failed to process image");
-    }
-  };
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "480px",
-          width: "100%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}
-      >
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+      <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "420px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
           <Pencil size={16} color="#7c3aed" />
           <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>
@@ -1468,193 +1460,52 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
           </h3>
         </div>
         <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>
-          {mode === "edit-approve"
-            ? "Fix any mistakes, then approve the listing in one step."
-            : "Edit listing details."}
+          {mode === "edit-approve" ? "Fix variant details, then approve." : "Edit variant details."}
         </p>
 
+        {/* Product info (read-only) */}
+        <div style={{ padding: "10px 12px", borderRadius: "8px", background: "#f9fafb", marginBottom: "16px", fontSize: "12px" }}>
+          <div style={{ fontWeight: 600, color: "#1a1a1a" }}>{listing.variant.product.title}</div>
+          <div style={{ color: "#6d7175", marginTop: "2px" }}>
+            {listing.consignor.name}
+            {isStoreOwned && <span style={{ marginLeft: "6px", padding: "1px 6px", borderRadius: "4px", background: "#dbeafe", color: "#1e40af", fontWeight: 600, fontSize: "10px" }}>Store</span>}
+          </div>
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {/* Product Image */}
-          <div>
-            <label style={editLabelStyle}>Product Image</label>
-            {imageData ? (
-              <div style={{ position: "relative", width: "96px", height: "96px" }}>
-                <img src={imageData} alt="Product" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
-                <button
-                  type="button"
-                  onClick={() => setImageData("")}
-                  style={{
-                    position: "absolute", top: "4px", right: "4px",
-                    width: "20px", height: "20px", borderRadius: "50%",
-                    background: "rgba(0,0,0,0.6)", color: "#fff",
-                    border: "none", cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: 0,
-                  }}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ) : currentImageUrl && !currentImageUrl.startsWith("data:") ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <img src={currentImageUrl} alt="Current" style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
-                <label style={{
-                  display: "flex", alignItems: "center", gap: "6px",
-                  padding: "6px 12px", borderRadius: "8px",
-                  border: "1px solid #d1d5db", background: "#fff",
-                  fontSize: "12px", fontWeight: 500, color: "#6d7175",
-                  cursor: "pointer",
-                }}>
-                  <Camera size={14} />
-                  Replace
-                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-                </label>
-              </div>
-            ) : (
-              <label style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "8px 12px", borderRadius: "8px",
-                border: "1px dashed #d1d5db", background: "#f9fafb",
-                fontSize: "13px", color: "#6d7175",
-                cursor: "pointer",
-              }}>
-                <Camera size={14} />
-                Upload photo
-                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-              </label>
-            )}
-          </div>
-
-          <div>
-            <label style={editLabelStyle}>Product Title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={editInputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-            />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div>
-              <label style={editLabelStyle}>Brand</label>
-              <input
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                style={editInputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-            </div>
-            <div>
-              <label style={editLabelStyle}>Category</label>
-              <input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={editInputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label style={editLabelStyle}>Style ID</label>
-            <input
-              value={styleId}
-              onChange={(e) => setStyleId(e.target.value)}
-              style={editInputStyle}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              placeholder="Optional"
-            />
-          </div>
-
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
               <label style={editLabelStyle}>Size</label>
-              <input
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                style={editInputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
+              <input value={size} onChange={(e) => setSize(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
             <div>
               <label style={editLabelStyle}>GTIN / Barcode</label>
-              <input
-                value={gtin}
-                onChange={(e) => setGtin(e.target.value)}
-                style={{ ...editInputStyle, fontFamily: "monospace" }}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="Optional"
-              />
+              <input value={gtin} onChange={(e) => setGtin(e.target.value)} style={{ ...editInputStyle, fontFamily: "monospace" }} onFocus={handleFocus} onBlur={handleBlur} placeholder="Optional" />
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: isStoreOwned ? "1fr 1fr" : "1fr", gap: "12px" }}>
             <div>
               <label style={editLabelStyle}>Price ($)</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                style={editInputStyle}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
+              <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
             {isStoreOwned && (
               <div>
                 <label style={editLabelStyle}>Cost ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={cost}
-                  onChange={(e) => setCost(e.target.value)}
-                  style={editInputStyle}
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                  placeholder="0.00"
-                />
+                <input type="text" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} style={editInputStyle} onFocus={handleFocus} onBlur={handleBlur} placeholder="0.00" />
               </div>
             )}
           </div>
         </div>
 
-        {/* Consignor info (read-only) */}
-        <div style={{ marginTop: "12px", padding: "8px 12px", borderRadius: "8px", background: "#f9fafb", fontSize: "12px", color: "#6d7175" }}>
-          {listing.consignor.name} ({listing.consignor.email})
-          {isStoreOwned && <span style={{ marginLeft: "6px", padding: "1px 6px", borderRadius: "4px", background: "#dbeafe", color: "#1e40af", fontWeight: 600, fontSize: "10px" }}>Store</span>}
-        </div>
-
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 500,
-              borderRadius: "8px",
-              border: "1px solid #e3e3e3",
-              background: "#fff",
-              color: "#6d7175",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+          <button onClick={onCancel} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", border: "1px solid #e3e3e3", background: "#fff", color: "#6d7175", cursor: "pointer", fontFamily: "inherit" }}>
             Cancel
           </button>
           <button
             onClick={() => onConfirm({
-              title: title.trim(), brand: brand.trim(), category: category.trim(), styleId: styleId.trim(),
               size: size.trim(), gtin: gtin.trim(), price,
               ...(isStoreOwned ? { cost: cost.trim() } : {}),
-              ...(imageData ? { imageData } : {}),
             })}
             disabled={!canSubmit}
             style={{
@@ -1673,6 +1524,113 @@ function EditListingModal({ listing, mode, onConfirm, onCancel }: {
             onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = "#7c3aed"; }}
           >
             {mode === "edit-approve" ? "Save & Approve" : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Product Modal (product-level fields only) ──
+
+function EditProductModal({ group, onConfirm, onCancel }: {
+  group: ProductGroup;
+  onConfirm: (fields: EditProductFields) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(group.title);
+  const [brand, setBrand] = useState(group.brand ?? "");
+  const parsed = group.category ? parseCategory(group.category) : { main: "", sub: undefined };
+  const [mainCat, setMainCat] = useState(parsed.main || "");
+  const [subCat, setSubCat] = useState(parsed.sub || group.category || "");
+  const subOptions = mainCat ? (CATEGORIES[mainCat] ?? []) : [];
+  const [styleId, setStyleId] = useState(group.styleId ?? "");
+  const [imageData, setImageData] = useState<string | undefined>();
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = await processProductImage(file);
+    setImageData(data);
+  };
+
+  const fieldLabel: React.CSSProperties = { fontSize: "11px", fontWeight: 700, color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" };
+  const fieldInput: React.CSSProperties = { width: "100%", padding: "9px 12px", fontSize: "13px", border: "1px solid #e3e3e3", borderRadius: "8px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+      <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "480px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <Pencil size={16} color="#6d7175" />
+          <h3 style={{ fontSize: "15px", fontWeight: 600, margin: 0 }}>Edit Product</h3>
+        </div>
+        <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px" }}>Changes apply to all listings of this product.</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {/* Image */}
+          <div>
+            <p style={fieldLabel}>Product Image</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {(imageData || group.imageUrl) && (
+                <img src={imageData || group.imageUrl!} alt="" style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e3e3e3" }} />
+              )}
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#fff", fontSize: "12px", fontWeight: 500, color: "#6d7175", cursor: "pointer" }}>
+                <Camera size={14} />
+                {group.imageUrl ? "Replace" : "Upload"}
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <p style={fieldLabel}>Title</p>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} style={fieldInput} />
+          </div>
+
+          {/* Brand */}
+          <div>
+            <p style={fieldLabel}>Brand</p>
+            <input value={brand} onChange={(e) => setBrand(e.target.value)} style={fieldInput} />
+          </div>
+
+          {/* Category */}
+          <div style={{ display: "grid", gridTemplateColumns: subOptions.length > 0 ? "1fr 1fr" : "1fr", gap: "12px" }}>
+            <div>
+              <p style={fieldLabel}>Category</p>
+              <select value={mainCat} onChange={(e) => { setMainCat(e.target.value); setSubCat(""); }} style={{ ...fieldInput, cursor: "pointer", appearance: "auto" }}>
+                <option value="">Select...</option>
+                {MAIN_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {subOptions.length > 0 && (
+              <div>
+                <p style={fieldLabel}>Subcategory</p>
+                <select value={subCat} onChange={(e) => setSubCat(e.target.value)} style={{ ...fieldInput, cursor: "pointer", appearance: "auto" }}>
+                  <option value="">Select...</option>
+                  {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Style ID */}
+          <div>
+            <p style={fieldLabel}>Style ID</p>
+            <input value={styleId} onChange={(e) => setStyleId(e.target.value)} style={fieldInput} placeholder="Optional" />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "20px" }}>
+          <button onClick={onCancel} style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 500, borderRadius: "8px", border: "1px solid #e3e3e3", background: "#fff", color: "#6d7175", cursor: "pointer", fontFamily: "inherit" }}>
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm({ title: title.trim(), brand: brand.trim(), category: subCat || mainCat, styleId: styleId.trim(), imageData })}
+            disabled={!title.trim()}
+            style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 600, borderRadius: "8px", border: "none", background: !title.trim() ? "#9ca3af" : "#111827", color: "#fff", cursor: !title.trim() ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+          >
+            Save Changes
           </button>
         </div>
       </div>
