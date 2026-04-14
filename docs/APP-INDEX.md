@@ -88,8 +88,6 @@
 
 | Component | Purpose |
 |-----------|---------|
-| `ListingsTable.tsx` | Grouped listings table — expand/collapse, inline edit, bulk actions, section picker |
-| `CreateListingForm.tsx` | Full listing creation form — product search, category, size, price, image |
 | `ListingsFilter.tsx` | Filter bar — search, status/category/consignor/section chip filters |
 | `StatsCard.tsx` | Dashboard stat card — icon, value, trend, info tooltip |
 | `ActionItem.tsx` | Action required item — glowing color line, count |
@@ -98,7 +96,52 @@
 | `DateRangeFilter.tsx` | Date picker — presets + DayPicker calendar |
 | `Dropdown.tsx` | Portal-rendered dropdown container |
 | `QuickAddPopover.tsx` | Quick-add listing popover from listings table |
+| `BulkActionBar.tsx` | Floating bulk-action toolbar — approve, activate, cancel selected listings |
 | `Pagination.tsx` | Page navigation (shared) |
+
+#### Listings (`app/components/admin/listings/`)
+
+Refactored from the monolithic `ListingsTable.tsx` into focused sub-components.
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | Shared TypeScript types — Listing, ProductGroup, VariantInfo, SortKey, Props, EditApproveFields, EditProductFields |
+| `helpers.tsx` | Shared styles and utility functions — sorting, formatting, inline-edit styles |
+| `SectionPicker.tsx` | Portal-rendered store-section dropdown with search |
+| `GroupRows.tsx` | Expandable product group rows — variant listing rows, inline actions, quick-add |
+| `RejectModal.tsx` | Rejection reason modal |
+| `EditListingModal.tsx` | Edit listing fields modal — price, cost, section, status |
+| `EditProductModal.tsx` | Edit product fields modal — title, brand, category, image |
+| `ListingsTable.tsx` | Main listings table — orchestrates group rows, modals, bulk selection |
+| `index.ts` | Barrel export — default ListingsTable + type re-exports |
+
+#### Create Listing (`app/components/admin/create-listing/`)
+
+Refactored from the monolithic `CreateListingForm.tsx` into focused sub-components.
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | Shared TypeScript types — Consignor, FormFields, ProductResult |
+| `helpers.ts` | Section card styles, field label helper, form utility functions |
+| `SectionHeader.tsx` | Reusable section header with icon and title |
+| `ProductSearch.tsx` | Typeahead product search with result list |
+| `CategoryPicker.tsx` | Main category + subcategory + taxonomy search pickers |
+| `ImageUpload.tsx` | Drag-and-drop / click image upload with preview |
+| `VariantFields.tsx` | Size, condition, GTIN, barcode fields |
+| `CreateListingForm.tsx` | Main form — orchestrates all sub-components, handles submit |
+| `index.ts` | Barrel export — default CreateListingForm |
+
+#### Payouts (`app/components/admin/payouts/`)
+
+Refactored payout page sections into standalone components.
+
+| File | Purpose |
+|------|---------|
+| `helpers.tsx` | Shared types (UnpaidEntry, PayoutRef), StatCard component, CSV download helpers |
+| `UnpaidSection.tsx` | Unpaid consignors section — expandable rows, create payout action, CSV download |
+| `PendingSection.tsx` | Pending payouts section — mark invoiced/paid actions, CSV download |
+| `HistorySection.tsx` | Completed payouts history section — expandable rows, CSV download |
+| `index.ts` | Barrel export — all sections, helpers, types |
 
 ### Portal (`app/components/portal/`)
 
@@ -110,6 +153,22 @@
 | `DateRangePicker.tsx` | Glass-themed date picker — presets + DayPicker, portal rendering |
 | `InfoTip.tsx` | Info tooltip (hover/tap for explanation) |
 
+#### Listings (`app/components/portal/listings/`)
+
+Refactored portal listings page into focused sub-components.
+
+| File | Purpose |
+|------|---------|
+| `helpers.ts` | Status constants (labels, colors, tabs), groupByProduct utility, ListingRow/ProductGroup types |
+| `StatusBadge.tsx` | Colored pill badge for listing status |
+| `InlinePrice.tsx` | Inline-editable price field with fetcher submit |
+| `ListingGroup.tsx` | Desktop product group — expandable variant rows, action buttons |
+| `MobileDetailDrawer.tsx` | Full-screen mobile drawer for listing details and actions |
+| `ConfirmModal.tsx` | Reusable confirmation dialog (cancel, withdraw, delete) |
+| `StatusTabs.tsx` | Active/Inactive/All status filter tab bar |
+| `useInfiniteScroll.ts` | Infinite scroll hook — fetches next page on scroll, merges results |
+| `index.ts` | Barrel export — StatusBadge, InlinePrice, ListingGroup, MobileDetailDrawer, ConfirmModal |
+
 ---
 
 ## Services
@@ -120,7 +179,7 @@
 |---------|---------|
 | `catalog.server.ts` | findOrCreateProduct, findOrCreateVariant |
 | `listings.server.ts` | createListing, cancelListing, bulkCancelListings, restoreListing |
-| `submission.server.ts` | approveListing, rejectListing, activateListing, adminEditAndApprove, adminEditListing, requestWithdrawal, approveWithdrawal, completeWithdrawal |
+| `submission.server.ts` | Barrel re-export — delegates to `app/services/submission/` sub-modules (see below) |
 | `inventory.server.ts` | syncInventory — sets price + qty on Shopify variant, manages inventory levels |
 | `listing-queries.server.ts` | queryListings — filters, pagination, grouped mode |
 | `orders.server.ts` | processOrder, refundOrder, getConsignorBalance, creditOrder |
@@ -132,12 +191,33 @@
 | `otp.server.ts` | generateOtp, verifyOtp |
 | `webhooks.server.ts` | withWebhookDedup (idempotency) |
 
+### Submission (`app/services/submission/`)
+
+Refactored from the monolithic `submission.server.ts` into focused sub-modules.
+
+| Service | Purpose |
+|---------|---------|
+| `portal.server.ts` | submitListing, updateSubmittedListing, deleteSubmittedListing — consignor-facing submission actions |
+| `approval.server.ts` | approveListing, rejectListing — admin approval/rejection |
+| `edit.server.ts` | adminEditAndApprove, adminEditListing, adminEditProduct — admin inline editing |
+| `lifecycle.server.ts` | activateListing, requestWithdrawal, approveWithdrawal, completeWithdrawal — listing lifecycle transitions |
+| `bulk.server.ts` | bulkApproveListing, bulkActivateListing — bulk admin actions |
+
+### Admin (`app/services/admin/`)
+
+| Service | Purpose |
+|---------|---------|
+| `listing-actions.server.ts` | Route-level action handler — dispatches listing form intents (approve, reject, edit, cancel, restore, bulk ops) |
+
 ### Portal (`app/services/portal/`)
 
 | Service | Purpose |
 |---------|---------|
 | `auth.server.ts` | authenticatePortal, createSessionCookie, createImpersonationToken, verifyImpersonationToken |
-| `dashboard.server.ts` | getConsignorDashboard, getConsignorPayouts, getConsignorSales, getConsignorNotifications |
+| `dashboard.server.ts` | getConsignorDashboard — slimmed down, delegates to notifications/sales/payouts sub-modules |
+| `notifications.server.ts` | buildNotifications, getConsignorNotifications — portal notification feed |
+| `sales.server.ts` | getConsignorSales — sales history with filters and date range |
+| `payouts.server.ts` | getConsignorPayouts — payout history for portal view |
 | `products.server.ts` | searchProducts, getMarketData |
 
 ### Shopify (`app/services/shopify/`)
@@ -146,6 +226,14 @@
 |---------|---------|
 | `products.server.ts` | ensureShopifyProductAndVariant, updateShopifyProduct, updateShopifyProductImage, backfillProductImages |
 | `taxonomy.server.ts` | resolveShopifyTaxonomyId (search-based), searchShopifyTaxonomy |
+
+---
+
+## Hooks (`app/hooks/`)
+
+| Hook | Purpose |
+|------|---------|
+| `useListingToasts.ts` | Shows toast notifications for listing action fetcher results, with optional post-action callback |
 
 ---
 

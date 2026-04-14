@@ -1,6 +1,8 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Variant } from "@prisma/client";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { logger } from "~/lib/logger.server";
 
 export async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(`#graphql
@@ -31,7 +33,7 @@ export async function syncInventory({
 
   // Find the lowest active price for this variant
   const lowestListing = await prisma.listing.findFirst({
-    where: { variantId: variant.id, status: "active" },
+    where: { variantId: variant.id, status: LISTING_STATUS.ACTIVE },
     orderBy: { price: "asc" },
     select: { price: true },
   });
@@ -42,7 +44,7 @@ export async function syncInventory({
   } else {
     // Count active listings at the lowest price tier (per-item model: each listing = 1 unit)
     totalQuantity = await prisma.listing.count({
-      where: { variantId: variant.id, status: "active", price: lowestListing.price },
+      where: { variantId: variant.id, status: LISTING_STATUS.ACTIVE, price: lowestListing.price },
     });
   }
 
@@ -155,5 +157,22 @@ export async function syncInventory({
   const priceErrors = priceData.data.productVariantsBulkUpdate.userErrors;
   if (priceErrors.length > 0) {
     throw new Error(`Shopify price sync error: ${priceErrors[0].message}`);
+  }
+}
+
+/** Best-effort Shopify inventory sync — logs errors instead of throwing. */
+export async function safeSyncInventory({
+  admin,
+  variant,
+  context,
+}: {
+  admin: AdminApiContext;
+  variant: Variant;
+  context?: string;
+}): Promise<void> {
+  try {
+    await syncInventory({ admin, variant });
+  } catch (err) {
+    logger.error(`Shopify sync failed${context ? ` during ${context}` : ""}`, { error: err instanceof Error ? err.message : String(err) });
   }
 }

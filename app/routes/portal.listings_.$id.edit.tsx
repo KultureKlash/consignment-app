@@ -7,6 +7,7 @@ import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { updateSubmittedListing } from "~/services/submission.server";
 import prisma from "~/db.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { loader as portalLoader } from "./portal";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -19,7 +20,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   });
 
   if (!listing) throw redirect("/portal/listings");
-  if (listing.status !== "submitted") throw redirect("/portal/listings");
+  if (listing.status !== LISTING_STATUS.SUBMITTED) throw redirect("/portal/listings");
 
   return { consignor, listing };
 }

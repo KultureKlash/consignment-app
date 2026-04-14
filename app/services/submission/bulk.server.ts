@@ -1,28 +1,29 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { activateListing } from "./lifecycle.server";
+import { checkinListing } from "./lifecycle.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Admin: Bulk approve ──
 
 export async function bulkApproveListing({ listingIds }: { listingIds: string[] }) {
   const listings = await prisma.listing.findMany({
-    where: { id: { in: listingIds }, status: "submitted" },
+    where: { id: { in: listingIds }, status: LISTING_STATUS.SUBMITTED },
+    select: { id: true },
   });
 
   if (listings.length === 0) return { approved: 0 };
 
-  const now = new Date();
   await prisma.listing.updateMany({
     where: { id: { in: listings.map((l) => l.id) } },
-    data: { status: "approved_awaiting_dropoff", approvedAt: now },
+    data: { status: LISTING_STATUS.APPROVED, approvedAt: new Date() },
   });
 
   return { approved: listings.length };
 }
 
-// ── Admin: Bulk activate ──
+// ── Admin: Bulk check-in ──
 
-export async function bulkActivateListing({
+export async function bulkCheckinListing({
   admin,
   listingIds,
 }: {
@@ -34,7 +35,7 @@ export async function bulkActivateListing({
 
   for (const id of listingIds) {
     try {
-      await activateListing({ admin, listingId: id });
+      await checkinListing({ admin, listingId: id });
       activated++;
     } catch (err) {
       errors.push(`${id}: ${err instanceof Error ? err.message : String(err)}`);

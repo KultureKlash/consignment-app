@@ -328,8 +328,8 @@ export default function Consignors() {
                     <select
                       value={newProvince}
                       onChange={(e) => setNewProvince(e.target.value)}
-                      onFocus={handleFocus as any}
-                      onBlur={handleBlurStyle as any}
+                      onFocus={handleFocus}
+                      onBlur={handleBlurStyle}
                       style={{ ...inputStyle, cursor: "pointer" }}
                     >
                       <option value="QC">Quebec (QC)</option>

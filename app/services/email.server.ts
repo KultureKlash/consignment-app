@@ -1,9 +1,11 @@
+import { logger } from "~/lib/logger.server";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
 /**
  * Send a 6-digit OTP code via email.
- * Falls back to console.log in dev when no API key is set.
+ * Falls back to logger.info in dev when no API key is set.
  */
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
   const subject = `Your Konsign login code: ${code}`;
@@ -19,7 +21,7 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   `;
 
   if (!RESEND_API_KEY) {
-    console.log(`\n📧 [DEV] OTP code for ${to}: ${code}\n`);
+    logger.info("[DEV] OTP code generated", { to, code });
     return;
   }
 
@@ -34,7 +36,7 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   });
 
   if (error) {
-    console.error("Failed to send OTP email:", error);
+    logger.error("Failed to send OTP email", { error: String(error) });
     throw new Error("Failed to send verification code. Please try again.");
   }
 }

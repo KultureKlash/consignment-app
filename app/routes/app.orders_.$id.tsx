@@ -10,6 +10,7 @@ import {
   ArrowLeft, ShoppingBag, DollarSign,
   TrendingUp, Users, Package, Clock, FileText,
 } from "lucide-react";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -57,8 +58,8 @@ const statusColors: Record<string, { bg: string; color: string }> = {
   open: { bg: "#ecfdf5", color: "#059669" },
   cancelled: { bg: "#fef2f2", color: "#dc2626" },
   refunded: { bg: "#fffbeb", color: "#d97706" },
-  sold: { bg: "#ecfdf5", color: "#059669" },
-  pending_sale: { bg: "#fffbeb", color: "#d97706" },
+  [LISTING_STATUS.SOLD]: { bg: "#ecfdf5", color: "#059669" },
+  [LISTING_STATUS.PENDING_SALE]: { bg: "#fffbeb", color: "#d97706" },
 };
 
 function badge(label: string, colors: { bg: string; color: string }): React.CSSProperties {
@@ -226,7 +227,7 @@ export default function OrderDetail() {
               const consignor = item.listing.consignor;
               const saleTx = item.transactions.find((tx) => tx.type === "sale");
               const isLast = i === order.items.length - 1;
-              const isPending = order.paymentStatus === "pending" && item.status === "sold";
+              const isPending = order.paymentStatus === "pending" && item.status === LISTING_STATUS.SOLD;
               const displayStatus = isPending ? "pending" : item.status;
               const displayColors = isPending
                 ? { bg: "#fffbeb", color: "#d97706" }

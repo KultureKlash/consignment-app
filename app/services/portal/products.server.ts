@@ -1,4 +1,6 @@
 import prisma from "~/db.server";
+import { searchProducts as searchProductsBase } from "~/services/catalog.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 export type PortalProductResult = {
   id: string;
@@ -11,24 +13,7 @@ export type PortalProductResult = {
 };
 
 export async function searchProducts(query: string): Promise<PortalProductResult[]> {
-  if (!query.trim()) return [];
-
-  const q = query.trim();
-  const qLower = q.toLowerCase();
-
-  const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { title: { contains: q } },
-        { title: { contains: qLower } },
-        { styleId: { contains: q } },
-        { styleId: { contains: q.toUpperCase() } },
-      ],
-    },
-    include: { variants: { orderBy: { size: "asc" } } },
-    take: 10,
-    orderBy: { title: "asc" },
-  });
+  const products = await searchProductsBase(query, { includeVariants: true });
 
   return products.map((p) => ({
     id: p.id,
@@ -37,14 +22,14 @@ export async function searchProducts(query: string): Promise<PortalProductResult
     brand: p.brand,
     category: p.category,
     imageUrl: p.imageUrl && !p.imageUrl.startsWith("data:") ? p.imageUrl : null,
-    variants: p.variants.map((v) => ({ id: v.id, size: v.size, gtin: v.gtin })),
+    variants: (p.variants ?? []).map((v) => ({ id: v.id, size: v.size, gtin: v.gtin })),
   }));
 }
 
 export async function getVariantMarketData(variantId: string) {
   // Lowest active price for this variant
   const lowestListing = await prisma.listing.findFirst({
-    where: { variantId, status: "active" },
+    where: { variantId, status: LISTING_STATUS.ACTIVE },
     orderBy: { price: "asc" },
     select: { price: true },
   });

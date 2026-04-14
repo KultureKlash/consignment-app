@@ -70,11 +70,11 @@ export function checkRateLimit(
   return null;
 }
 
-/** Extract client IP from request (works behind proxies). */
+/** Extract client IP from request. Uses rightmost x-forwarded-for entry
+ *  (the IP added by the trusted reverse proxy, not the client-controlled first entry). */
 export function getClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  // Fallback — won't have a real IP in dev
+  if (forwarded) return forwarded.split(",").at(-1)!.trim();
   return "127.0.0.1";
 }
 

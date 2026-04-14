@@ -90,3 +90,30 @@ export async function findOrCreateVariant({
     data: { productId, size, gtin: gtin || null },
   });
 }
+
+/** Search products by title, brand, or styleId (case-insensitive for SQLite). */
+export async function searchProducts(
+  query: string,
+  opts?: { includeVariants?: boolean; exclude?: string },
+) {
+  const q = query.trim();
+  if (!q) return [];
+  const qLower = q.toLowerCase();
+
+  return prisma.product.findMany({
+    where: {
+      ...(opts?.exclude ? { id: { not: opts.exclude } } : {}),
+      OR: [
+        { title: { contains: q } },
+        { title: { contains: qLower } },
+        { brand: { contains: q } },
+        { brand: { contains: qLower } },
+        { styleId: { contains: q } },
+        { styleId: { contains: q.toUpperCase() } },
+      ],
+    },
+    include: opts?.includeVariants ? { variants: { orderBy: { size: "asc" } } } : undefined,
+    take: 10,
+    orderBy: { title: "asc" },
+  });
+}

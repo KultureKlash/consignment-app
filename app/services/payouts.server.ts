@@ -114,7 +114,6 @@ export async function createPayout({
     throw new Error("No transactions selected");
   }
 
-  // Fetch all transactions
   const transactions = await prisma.transaction.findMany({
     where: { id: { in: transactionIds } },
     include: { payoutItems: true },
@@ -139,7 +138,6 @@ export async function createPayout({
     }
   }
 
-  // Calculate total from consignorAmount
   const amount = transactions.reduce((sum, tx) => sum + tx.consignorAmount, 0);
 
   if (amount <= 0) {

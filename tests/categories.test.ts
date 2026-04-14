@@ -8,12 +8,11 @@ import {
   buildCategory,
   parseCategory,
   isFootwear,
-  abbreviateBrand,
-  abbreviateSubcategory,
   generateBarcode,
   CATEGORIES,
   MAIN_CATEGORIES,
 } from "~/lib/categories";
+import { abbreviateBrand, abbreviateSubcategory } from "~/lib/categories/barcode";
 
 describe("categories", () => {
   describe("autoSuggest", () => {

@@ -19,12 +19,12 @@ export {
 } from "./submission/edit.server";
 
 export {
-  activateListing,
+  checkinListing,
   approveWithdrawal,
   completeWithdrawal,
 } from "./submission/lifecycle.server";
 
 export {
   bulkApproveListing,
-  bulkActivateListing,
+  bulkCheckinListing,
 } from "./submission/bulk.server";

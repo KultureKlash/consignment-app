@@ -1,5 +1,6 @@
 import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 type FeedEvent = {
   event: string;
@@ -28,11 +29,11 @@ export async function getDashboardData() {
     prisma.order.count(),
     prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
     prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
-    prisma.listing.aggregate({ where: { status: "active" }, _sum: { price: true } }),
-    prisma.listing.count({ where: { status: "submitted" } }),
-    prisma.listing.count({ where: { status: "approved_awaiting_dropoff" } }),
-    prisma.listing.count({ where: { status: "withdrawal_requested" } }),
-    prisma.listing.count({ where: { status: "pending_pickup" } }),
+    prisma.listing.aggregate({ where: { status: LISTING_STATUS.ACTIVE }, _sum: { price: true } }),
+    prisma.listing.count({ where: { status: LISTING_STATUS.SUBMITTED } }),
+    prisma.listing.count({ where: { status: LISTING_STATUS.APPROVED } }),
+    prisma.listing.count({ where: { status: LISTING_STATUS.WITHDRAWAL_REQUESTED } }),
+    prisma.listing.count({ where: { status: LISTING_STATUS.PENDING_PICKUP } }),
   ]);
 
   const totalSales = salesAgg._sum.grossAmount ?? 0;
@@ -128,7 +129,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     const product = listing.variant.product.title;
     const size = listing.variant.size;
 
-    if (listing.status === "sold" && listing.soldAt) {
+    if (listing.status === LISTING_STATUS.SOLD && listing.soldAt) {
       events.push({
         event: `${product} (${size}) sold for $${fmt(listing.price)}`,
         time: relativeTime(now, listing.soldAt),
@@ -137,7 +138,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
       });
     }
 
-    if (listing.status === "pending_sale" && listing.soldAt) {
+    if (listing.status === LISTING_STATUS.PENDING_SALE && listing.soldAt) {
       events.push({
         event: `${product} (${size}) ordered, awaiting payment`,
         time: relativeTime(now, listing.soldAt),

@@ -1,4 +1,4 @@
-import { randomInt } from "crypto";
+import { randomInt, timingSafeEqual } from "crypto";
 import prisma from "~/db.server";
 import { sendOtpEmail } from "~/services/email.server";
 
@@ -27,10 +27,17 @@ export async function requestOtp(email: string): Promise<{ success: boolean; err
     return { error: "Your account has been suspended. Please contact the store for more information." };
   }
 
-  // Delete any existing OTPs for this email
+  // Per-email rate limit: max 3 OTP requests per hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recentCount = await prisma.otpCode.count({
+    where: { email: normalizedEmail, createdAt: { gte: oneHourAgo } },
+  });
+  if (recentCount >= 3) {
+    return { error: "Too many code requests. Please wait before trying again." };
+  }
+
   await prisma.otpCode.deleteMany({ where: { email: normalizedEmail } });
 
-  // Generate 6-digit code
   const code = String(randomInt(100000, 999999));
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_SECONDS * 1000);
 
@@ -81,8 +88,11 @@ export async function verifyOtp(email: string, code: string) {
     return { error: "Too many failed attempts. Please request a new code." };
   }
 
-  // Wrong code — increment attempts
-  if (otp.code !== code) {
+  // Wrong code — constant-time comparison to prevent timing attacks
+  const codeMatch =
+    otp.code.length === code.length &&
+    timingSafeEqual(Buffer.from(otp.code), Buffer.from(code));
+  if (!codeMatch) {
     await prisma.otpCode.update({
       where: { id: otp.id },
       data: { attempts: otp.attempts + 1 },
@@ -97,13 +107,12 @@ export async function verifyOtp(email: string, code: string) {
     data: { usedAt: new Date() },
   });
 
-  // Fetch consignor
   const consignor = await prisma.consignor.findUnique({
     where: { email: normalizedEmail },
   });
 
   if (!consignor) {
-    return { error: "Account not found." };
+    return { error: "Invalid code or email. Please try again." };
   }
 
   if (consignor.status === "suspended") {

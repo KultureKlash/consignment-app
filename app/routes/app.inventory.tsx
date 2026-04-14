@@ -7,7 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { createListing, cancelListing } from "~/services/listings.server";
 import { adminEditListing } from "~/services/submission.server";
 import prisma from "~/db.server";
-import CreateListingForm from "~/components/admin/CreateListingForm";
+import CreateListingForm from "~/components/admin/create-listing";
 import ListingsTable from "~/components/admin/listings";
 import type { EditApproveFields } from "~/components/admin/listings";
 

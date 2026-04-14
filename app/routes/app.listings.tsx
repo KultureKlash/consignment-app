@@ -4,31 +4,19 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { cancelListing, bulkCancelListings, createListing, restoreListing } from "~/services/listings.server";
-import {
-  approveListing,
-  rejectListing,
-  activateListing,
-  adminEditAndApprove,
-  adminEditListing,
-  adminEditProduct,
-  bulkApproveListing,
-  bulkActivateListing,
-  approveWithdrawal,
-  completeWithdrawal,
-} from "~/services/submission.server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listing-queries.server";
+import { handleListingAction } from "~/services/admin/listing-actions.server";
+import { useListingToasts } from "~/hooks/useListingToasts";
 import ListingsFilter from "~/components/admin/ListingsFilter";
 import ListingsTable from "~/components/admin/listings";
 import type { EditApproveFields, EditProductFields } from "~/components/admin/listings";
 import Pagination from "~/components/shared/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
+import BulkActionBar from "~/components/admin/BulkActionBar";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-
-  // One-time backfill: fetch image URLs from Shopify for products missing them
   const { backfillProductImages } = await import("~/services/shopify/products.server");
   await backfillProductImages(admin);
 
@@ -40,7 +28,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const sortBy = (url.searchParams.get("sortBy") as "date" | "price" | "status") || "date";
   const sortDir = (url.searchParams.get("sortDir") as "asc" | "desc") || "desc";
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-
   const sectionId = url.searchParams.get("sectionId") ?? "";
 
   const [result, consignors, sections] = await Promise.all([
@@ -50,11 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       category: category || undefined,
       consignorId: consignorId || undefined,
       sectionId: sectionId || undefined,
-      sortBy,
-      sortDir,
-      page,
-      limit: 25,
-      grouped: true,
+      sortBy, sortDir, page, limit: 25, grouped: true,
     }),
     prisma.consignor.findMany({ select: { id: true, name: true, storeOwned: true }, orderBy: { name: "asc" } }),
     prisma.storeSection.findMany({ select: { id: true, name: true }, orderBy: { sortOrder: "asc" } }),
@@ -66,146 +49,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
-  const intent = formData.get("intent") as string;
-
   try {
-    if (intent === "cancel") {
-      const listing = await cancelListing({
-        admin,
-        listingId: formData.get("listingId") as string,
-      });
-      return { listing, intent };
-    }
-
-    if (intent === "bulk-cancel") {
-      const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
-      const result = await bulkCancelListings({ admin, listingIds: ids });
-      return {
-        cancelled: result.cancelled,
-        syncErrors: result.errors,
-        intent,
-      };
-    }
-
-    if (intent === "quick-add") {
-      const { quickAddListingSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(quickAddListingSchema, formData);
-      const listing = await createListing({
-        admin,
-        title: data.title,
-        brand: data.brand,
-        category: data.category,
-        styleId: data.styleId,
-        size: data.size,
-        gtin: data.gtin,
-        price: data.price,
-        count: data.quantity,
-        consignorId: data.consignorId,
-        cost: data.cost,
-      });
-      return { listing, intent, quantity: data.quantity };
-    }
-
-    if (intent === "approve") {
-      const listingId = formData.get("listingId") as string;
-      await approveListing({ listingId });
-      return { intent };
-    }
-
-    if (intent === "reject") {
-      const { rejectListingSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(rejectListingSchema, formData);
-      await rejectListing({ listingId: data.listingId, reason: data.reason });
-      return { intent };
-    }
-
-    if (intent === "activate") {
-      const listingId = formData.get("listingId") as string;
-      await activateListing({ admin, listingId });
-      return { intent };
-    }
-
-    if (intent === "edit-product") {
-      const { adminEditProductSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(adminEditProductSchema, formData);
-      await adminEditProduct({
-        admin,
-        productId: data.productId,
-        title: data.title,
-        brand: data.brand,
-        category: data.category,
-        styleId: data.styleId,
-        imageData: data.imageData,
-      });
-      return { intent };
-    }
-
-    if (intent === "admin-edit-approve") {
-      const { adminEditListingSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(adminEditListingSchema, formData);
-      await adminEditAndApprove({
-        listingId: data.listingId,
-        size: data.size,
-        gtin: data.gtin,
-        price: data.price,
-      });
-      return { intent };
-    }
-
-    if (intent === "admin-edit") {
-      const { adminEditListingSchema, parseForm } = await import("~/lib/validation");
-      const data = parseForm(adminEditListingSchema, formData);
-      await adminEditListing({
-        admin,
-        listingId: data.listingId,
-        size: data.size,
-        gtin: data.gtin,
-        price: data.price,
-        cost: data.cost,
-      });
-      return { intent };
-    }
-
-    if (intent === "bulk-approve") {
-      const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
-      const result = await bulkApproveListing({ listingIds: ids });
-      return { approved: result.approved, intent };
-    }
-
-    if (intent === "bulk-activate") {
-      const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
-      const result = await bulkActivateListing({ admin, listingIds: ids });
-      return { activated: result.activated, syncErrors: result.errors, intent };
-    }
-
-    if (intent === "approve-withdrawal") {
-      const listingId = formData.get("listingId") as string;
-      await approveWithdrawal({ admin, listingId });
-      return { intent };
-    }
-
-    if (intent === "complete-withdrawal") {
-      const listingId = formData.get("listingId") as string;
-      await completeWithdrawal({ listingId });
-      return { intent };
-    }
-
-    if (intent === "set-section") {
-      const productId = formData.get("productId") as string;
-      const sectionId = (formData.get("sectionId") as string) || null;
-      await prisma.product.update({ where: { id: productId }, data: { sectionId } });
-      return { intent };
-    }
-
-    if (intent === "restore") {
-      await restoreListing({ admin, listingId: formData.get("listingId") as string });
-      return { intent };
-    }
-
-    throw new Error("Invalid intent");
+    return await handleListingAction(admin, formData);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return { error: message, intent };
+    return { error: message, intent: formData.get("intent") as string };
   }
 };
 
@@ -226,188 +74,37 @@ export default function Listings() {
   const addLoading = ["loading", "submitting"].includes(addFetcher.state);
   const approvalLoading = ["loading", "submitting"].includes(approvalFetcher.state);
 
-  // Clear selection on page/filter change
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [listings]);
+  useEffect(() => { setSelectedIds(new Set()); }, [listings]);
 
-  useEffect(() => {
-    const data = cancelFetcher.data as Record<string, unknown> | undefined;
-    if (!data) return;
-    if (data.error) {
-      shopify.toast.show(data.error as string);
-    } else if (data.intent === "cancel") {
-      shopify.toast.show("Listing cancelled");
-    } else if (data.intent === "bulk-cancel") {
-      const count = data.cancelled as number;
-      const syncErrors = (data.syncErrors as string[]) ?? [];
-      const msg = `Cancelled ${count} listing${count !== 1 ? "s" : ""}`;
-      shopify.toast.show(syncErrors.length > 0 ? `${msg} (Shopify sync had ${syncErrors.length} error${syncErrors.length !== 1 ? "s" : ""} — will retry)` : msg);
-      setSelectedIds(new Set());
-    }
-  }, [cancelFetcher.data, shopify]);
-
-  // Quick-add toast
-  useEffect(() => {
-    const data = addFetcher.data as Record<string, unknown> | undefined;
-    if (!data) return;
-    if (data.error) {
-      shopify.toast.show(data.error as string);
-    } else if (data.intent === "quick-add") {
-      const qty = (data.quantity as number) ?? 1;
-      shopify.toast.show(`Added ${qty} listing${qty !== 1 ? "s" : ""}`);
-      setQuickAdd(null);
-    }
-  }, [addFetcher.data, shopify]);
-
-  // Approval/reject/activate toast
-  useEffect(() => {
-    const data = approvalFetcher.data as Record<string, unknown> | undefined;
-    if (!data) return;
-    if (data.error) {
-      shopify.toast.show(data.error as string);
-    } else if (data.intent === "approve") {
-      shopify.toast.show("Listing approved");
-    } else if (data.intent === "reject") {
-      shopify.toast.show("Listing rejected");
-    } else if (data.intent === "activate") {
-      shopify.toast.show("Listing activated & synced to Shopify");
-    } else if (data.intent === "admin-edit-approve") {
-      shopify.toast.show("Listing updated & approved");
-    } else if (data.intent === "admin-edit") {
-      shopify.toast.show("Listing updated");
-    } else if (data.intent === "bulk-approve") {
-      const count = data.approved as number;
-      shopify.toast.show(`Approved ${count} listing${count !== 1 ? "s" : ""}`);
-      setSelectedIds(new Set());
-    } else if (data.intent === "approve-withdrawal") {
-      shopify.toast.show("Withdrawal approved — pending pickup");
-    } else if (data.intent === "complete-withdrawal") {
-      shopify.toast.show("Withdrawal complete — item withdrawn");
-    } else if (data.intent === "bulk-activate") {
-      const count = data.activated as number;
-      const syncErrors = (data.syncErrors as string[]) ?? [];
-      const msg = `Activated ${count} listing${count !== 1 ? "s" : ""}`;
-      shopify.toast.show(syncErrors.length > 0 ? `${msg} (${syncErrors.length} sync error${syncErrors.length !== 1 ? "s" : ""})` : msg);
-      setSelectedIds(new Set());
-    }
-  }, [approvalFetcher.data, shopify]);
+  useListingToasts(shopify, { cancel: cancelFetcher, add: addFetcher, approval: approvalFetcher }, {
+    clearSelection: () => setSelectedIds(new Set()),
+    closeQuickAdd: () => setQuickAdd(null),
+  });
 
   const handleFilterChange = (params: Record<string, string>) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       for (const [key, value] of Object.entries(params)) {
-        if (value) {
-          next.set(key, value);
-        } else {
-          next.delete(key);
-        }
+        if (value) next.set(key, value); else next.delete(key);
       }
       return next;
     });
   };
 
-  const handleCancel = (listingId: string) => {
-    cancelFetcher.submit({ intent: "cancel", listingId }, { method: "POST" });
-  };
-
-  const handleRestore = (listingId: string) => {
-    cancelFetcher.submit({ intent: "restore", listingId }, { method: "POST" });
-  };
-
-  const handleBulkCancel = () => {
-    if (selectedIds.size === 0) return;
-    cancelFetcher.submit(
-      { intent: "bulk-cancel", listingIds: Array.from(selectedIds).join(",") },
-      { method: "POST" },
-    );
-  };
-
-  const handleApprove = (listingId: string) => {
-    approvalFetcher.submit({ intent: "approve", listingId }, { method: "POST" });
-  };
-
-  const handleReject = (listingId: string, reason: string) => {
-    approvalFetcher.submit({ intent: "reject", listingId, reason }, { method: "POST" });
-  };
-
-  const handleActivate = (listingId: string) => {
-    approvalFetcher.submit({ intent: "activate", listingId }, { method: "POST" });
-  };
-
-  const handleApproveWithdrawal = (listingId: string) => {
-    approvalFetcher.submit({ intent: "approve-withdrawal", listingId }, { method: "POST" });
-  };
-
-  const handleCompleteWithdrawal = (listingId: string) => {
-    approvalFetcher.submit({ intent: "complete-withdrawal", listingId }, { method: "POST" });
-  };
-
-  const handleEditApprove = (listingId: string, fields: EditApproveFields) => {
-    approvalFetcher.submit(
-      { intent: "admin-edit-approve", listingId, ...fields },
-      { method: "POST" },
-    );
-  };
-
-  const handleAdminEdit = (listingId: string, fields: EditApproveFields) => {
-    const submitData: Record<string, string> = { intent: "admin-edit", listingId, ...fields };
-    if (!fields.cost) delete submitData.cost;
-    approvalFetcher.submit(submitData, { method: "POST" });
-  };
-
-  const handleEditProduct = (productId: string, fields: EditProductFields) => {
-    const submitData: Record<string, string> = { intent: "edit-product", productId, ...fields };
-    if (fields.imageData) submitData.imageData = fields.imageData;
-    else delete submitData.imageData;
-    sectionFetcher.submit(submitData, { method: "POST" });
-  };
-
-  const handleBulkApprove = () => {
-    if (selectedIds.size === 0) return;
-    approvalFetcher.submit(
-      { intent: "bulk-approve", listingIds: Array.from(selectedIds).join(",") },
-      { method: "POST" },
-    );
-  };
-
-  const handleBulkActivate = () => {
-    if (selectedIds.size === 0) return;
-    approvalFetcher.submit(
-      { intent: "bulk-activate", listingIds: Array.from(selectedIds).join(",") },
-      { method: "POST" },
-    );
-  };
-
-  const handlePageChange = (newPage: number) => {
-    handleFilterChange({ page: String(newPage) });
-  };
-
-  const handleSortChange = (column: "date" | "price" | "status") => {
-    const newDir = column === sortBy && sortDir === "desc" ? "asc" : "desc";
-    handleFilterChange({ sortBy: column, sortDir: newDir, page: "1" });
-  };
+  const submitCancel = (intent: string, data: Record<string, string>) =>
+    cancelFetcher.submit({ intent, ...data }, { method: "POST" });
+  const submitApproval = (intent: string, data: Record<string, string>) =>
+    approvalFetcher.submit({ intent, ...data }, { method: "POST" });
 
   const handleQuickAdd = (productId: string, anchorEl: HTMLElement) => {
-    // Toggle: close if already open for this product
-    if (quickAdd?.productId === productId) {
-      setQuickAdd(null);
-      return;
-    }
-    setQuickAdd({ productId, anchorEl });
+    setQuickAdd(quickAdd?.productId === productId ? null : { productId, anchorEl });
   };
 
-  const handleQuickAddSubmit = (fields: Record<string, string>) => {
-    addFetcher.submit(fields, { method: "POST" });
-  };
-
-  // Build quick-add data from the product group
   const quickAddData = (() => {
     if (!quickAdd) return null;
     const groupListing = listings.find((l) => l.variant.product.id === quickAdd.productId);
     if (!groupListing) return null;
     const product = groupListing.variant.product;
-    // Deduplicate variants from all listings of this product
     const variantMap = new Map<string, { size: string; gtin: string | null }>();
     for (const l of listings) {
       if (l.variant.product.id === quickAdd.productId && !variantMap.has(l.variant.size)) {
@@ -416,9 +113,7 @@ export default function Listings() {
     }
     return {
       productId: quickAdd.productId,
-      title: product.title,
-      brand: product.brand,
-      styleId: product.styleId,
+      title: product.title, brand: product.brand, styleId: product.styleId,
       category: (product as { category?: string | null }).category ?? null,
       variants: Array.from(variantMap.values()),
     };
@@ -431,165 +126,61 @@ export default function Listings() {
           {total} listing{total !== 1 ? "s" : ""} total
         </div>
         <ListingsFilter
-          search={filters.search}
-          status={filters.status}
-          category={filters.category}
-          consignorId={filters.consignorId}
-          sectionId={filters.sectionId}
-          consignors={consignors}
-          sections={sections}
-          onFilterChange={handleFilterChange}
+          search={filters.search} status={filters.status} category={filters.category}
+          consignorId={filters.consignorId} sectionId={filters.sectionId}
+          consignors={consignors} sections={sections} onFilterChange={handleFilterChange}
         />
-
-        {/* Bulk action bar */}
-        {selectedIds.size > 0 ? (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "8px 8px 8px 16px",
-            background: "#fff",
-            border: "1px solid rgba(227,227,227,0.6)",
-            borderRadius: "10px",
-            marginBottom: "12px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a" }}>
-                {selectedIds.size} selected
-              </span>
-              <span
-                onClick={() => setSelectedIds(new Set())}
-                style={{
-                  fontSize: "12px",
-                  color: "#9ca3af",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "#6d7175"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "#9ca3af"; }}
-              >
-                Clear
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {/* Show bulk approve if any selected are submitted */}
-              {listings.some((l) => selectedIds.has(l.id) && l.status === "submitted") && (
-                <BulkActionButton
-                  label={approvalLoading ? "Approving..." : "Approve selected"}
-                  onClick={handleBulkApprove}
-                  disabled={approvalLoading}
-                  bg="#0d9488"
-                  bgHover="#0f766e"
-                />
-              )}
-              {/* Show bulk activate if any selected are approved_awaiting_dropoff */}
-              {listings.some((l) => selectedIds.has(l.id) && l.status === "approved_awaiting_dropoff") && (
-                <BulkActionButton
-                  label={approvalLoading ? "Activating..." : "Activate selected"}
-                  onClick={handleBulkActivate}
-                  disabled={approvalLoading}
-                  bg="#2c6ecb"
-                  bgHover="#1e5aab"
-                />
-              )}
-              {/* Show bulk cancel if any selected are active */}
-              {listings.some((l) => selectedIds.has(l.id) && l.status === "active") && (
-                <BulkActionButton
-                  label={cancelLoading ? "Deleting..." : "Delete selected"}
-                  onClick={handleBulkCancel}
-                  disabled={cancelLoading}
-                  bg="#7f1d1d"
-                  bgHover="#991b1b"
-                />
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        <ListingsTable
-          listings={listings}
-          grouped
-          onCancel={handleCancel}
-          onRestore={handleRestore}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onActivate={handleActivate}
-          onApproveWithdrawal={handleApproveWithdrawal}
-          onCompleteWithdrawal={handleCompleteWithdrawal}
-          onEditApprove={handleEditApprove}
-          onAdminEdit={handleAdminEdit}
-          onEditProduct={handleEditProduct}
-          onQuickAdd={handleQuickAdd}
-          isLoading={cancelLoading || approvalLoading}
-          isNavigating={isNavigating}
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onSortChange={handleSortChange}
+        <BulkActionBar
           selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          sections={sections}
-          onSectionChange={(productId, sectionId) => {
-            sectionFetcher.submit(
-              { intent: "set-section", productId, sectionId: sectionId ?? "" },
-              { method: "POST" },
-            );
-          }}
+          listings={listings}
+          approvalLoading={approvalLoading}
+          cancelLoading={cancelLoading}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onBulkApprove={() => submitApproval("bulk-approve", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkCancel={() => submitCancel("bulk-cancel", { listingIds: Array.from(selectedIds).join(",") })}
         />
-
+        <ListingsTable
+          listings={listings} grouped
+          onCancel={(id) => submitCancel("cancel", { listingId: id })}
+          onRestore={(id) => submitCancel("restore", { listingId: id })}
+          onApprove={(id) => submitApproval("approve", { listingId: id })}
+          onReject={(id, reason) => submitApproval("reject", { listingId: id, reason })}
+          onCheckin={(id) => submitApproval("checkin", { listingId: id })}
+          onApproveWithdrawal={(id) => submitApproval("approve-withdrawal", { listingId: id })}
+          onCompleteWithdrawal={(id) => submitApproval("complete-withdrawal", { listingId: id })}
+          onEditApprove={(id, fields: EditApproveFields) => submitApproval("admin-edit-approve", { listingId: id, ...fields })}
+          onAdminEdit={(id, fields: EditApproveFields) => {
+            const d: Record<string, string> = { listingId: id, ...fields };
+            if (!fields.cost) delete d.cost;
+            submitApproval("admin-edit", d);
+          }}
+          onEditProduct={(productId, fields: EditProductFields) => {
+            const d: Record<string, string> = { productId, ...fields };
+            if (!fields.imageData) delete d.imageData;
+            sectionFetcher.submit({ intent: "edit-product", ...d }, { method: "POST" });
+          }}
+          onQuickAdd={handleQuickAdd}
+          isLoading={cancelLoading || approvalLoading} isNavigating={isNavigating}
+          sortBy={sortBy} sortDir={sortDir}
+          onSortChange={(col) => handleFilterChange({ sortBy: col, sortDir: col === sortBy && sortDir === "desc" ? "asc" : "desc", page: "1" })}
+          selectedIds={selectedIds} onSelectionChange={setSelectedIds}
+          sections={sections}
+          onSectionChange={(productId, sectionId) =>
+            sectionFetcher.submit({ intent: "set-section", productId, sectionId: sectionId ?? "" }, { method: "POST" })
+          }
+        />
         {quickAdd && quickAddData && (
           <QuickAddPopover
-            anchorEl={quickAdd.anchorEl}
-            data={quickAddData}
-            consignors={consignors}
-            onSubmit={handleQuickAddSubmit}
-            onClose={() => setQuickAdd(null)}
-            isSubmitting={addLoading}
+            anchorEl={quickAdd.anchorEl} data={quickAddData} consignors={consignors}
+            onSubmit={(fields) => addFetcher.submit(fields, { method: "POST" })}
+            onClose={() => setQuickAdd(null)} isSubmitting={addLoading}
           />
         )}
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-          total={total}
-          limit={25}
-        />
+        <Pagination page={page} totalPages={totalPages} onPageChange={(p) => handleFilterChange({ page: String(p) })} total={total} limit={25} />
       </s-section>
     </s-page>
   );
 }
 
-function BulkActionButton({ label, onClick, disabled, bg, bgHover }: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  bg: string;
-  bgHover: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        padding: "7px 16px",
-        fontSize: "12px",
-        fontWeight: 600,
-        borderRadius: "10px",
-        border: "none",
-        background: disabled ? bgHover : bg,
-        color: "#fff",
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontFamily: "inherit",
-        transition: "all 0.2s ease",
-      }}
-      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)"; } }}
-      onMouseLeave={(e) => { if (!disabled) { e.currentTarget.style.background = bg; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } }}
-    >
-      {label}
-    </button>
-  );
-}
-
-export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
-};
+export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);

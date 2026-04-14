@@ -1,6 +1,7 @@
 import type { Listing, ProductGroup, VariantInfo, SortKey } from "./types";
 import { thStyle, tdStyle } from "~/lib/admin/listing-ui";
 import { compareSizes } from "~/lib/size-order";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Shared styles ──
 
@@ -226,10 +227,10 @@ const statusCountColors: Record<string, { bg: string; color: string }> = {
 };
 
 export function StatusCounts({ listings }: { listings: Listing[] }) {
-  const submitted = listings.filter((l) => l.status === "submitted").length;
-  const approved = listings.filter((l) => l.status === "approved_awaiting_dropoff").length;
-  const active = listings.filter((l) => l.status === "active").length;
-  const sold = listings.filter((l) => l.status === "sold").length;
+  const submitted = listings.filter((l) => l.status === LISTING_STATUS.SUBMITTED).length;
+  const approved = listings.filter((l) => l.status === LISTING_STATUS.APPROVED).length;
+  const active = listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).length;
+  const sold = listings.filter((l) => l.status === LISTING_STATUS.SOLD).length;
   const counts = [
     { label: "submitted", count: submitted },
     { label: "approved", count: approved },

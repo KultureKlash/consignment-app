@@ -1,18 +1,19 @@
 import prisma from "~/db.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Admin: Approve a submitted listing ──
 
 export async function approveListing({ listingId }: { listingId: string }) {
   const listing = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
 
-  if (listing.status !== "submitted") {
+  if (listing.status !== LISTING_STATUS.SUBMITTED) {
     throw new Error(`Cannot approve listing with status "${listing.status}"`);
   }
 
   return prisma.listing.update({
     where: { id: listingId },
     data: {
-      status: "approved_awaiting_dropoff",
+      status: LISTING_STATUS.APPROVED,
       approvedAt: new Date(),
     },
     include: { consignor: true, variant: { include: { product: true } } },
@@ -30,14 +31,14 @@ export async function rejectListing({
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
 
-  if (listing.status !== "submitted") {
+  if (listing.status !== LISTING_STATUS.SUBMITTED) {
     throw new Error(`Cannot reject listing with status "${listing.status}"`);
   }
 
   return prisma.listing.update({
     where: { id: listingId },
     data: {
-      status: "rejected",
+      status: LISTING_STATUS.REJECTED,
       rejectedAt: new Date(),
       rejectionReason: reason,
     },
@@ -63,7 +64,7 @@ export async function adminEditAndApprove({
     include: { variant: { include: { product: true } } },
   });
 
-  if (listing.status !== "submitted") {
+  if (listing.status !== LISTING_STATUS.SUBMITTED) {
     throw new Error(`Cannot edit and approve listing with status "${listing.status}"`);
   }
 
@@ -86,7 +87,7 @@ export async function adminEditAndApprove({
     where: { id: listingId },
     data: {
       ...(price !== undefined ? { price } : {}),
-      status: "approved_awaiting_dropoff",
+      status: LISTING_STATUS.APPROVED,
       approvedAt: new Date(),
     },
     include: { consignor: true, variant: { include: { product: true } } },

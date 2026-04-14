@@ -1,8 +1,8 @@
+import type { ActionFunctionArgs } from "react-router";
 import { json } from "@remix-run/node";
 import prisma from "~/db.server";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function action({ request }: any) {
+export async function action({ request }: ActionFunctionArgs) {
   const body = await request.json();
 
   const { title, brand, styleId, sizes } = body;

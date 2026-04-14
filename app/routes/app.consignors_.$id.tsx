@@ -3,6 +3,8 @@ import { Link, useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { logger } from "~/lib/logger.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
 import { syncInventory } from "~/services/inventory.server";
@@ -57,7 +59,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
           await syncInventory({ admin, variant });
         } catch (err) {
-          console.error(`Shopify sync failed for variant ${variantId}:`, err);
+          logger.error("Shopify sync failed for variant", { variantId, error: err instanceof Error ? err.message : String(err) });
         }
       }
 
@@ -67,7 +69,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const { admin } = await authenticate.admin(request);
 
       // Get variant IDs of paused listings before reactivating (for Shopify sync)
-      const variantIds = await getConsignorVariantIds(id, "paused");
+      const variantIds = await getConsignorVariantIds(id, LISTING_STATUS.PAUSED);
 
       const { reactivatedCount } = await unsuspendConsignor(id);
 
@@ -77,7 +79,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
           await syncInventory({ admin, variant });
         } catch (err) {
-          console.error(`Shopify sync failed for variant ${variantId}:`, err);
+          logger.error("Shopify sync failed for variant", { variantId, error: err instanceof Error ? err.message : String(err) });
         }
       }
 
@@ -463,8 +465,8 @@ export default function ConsignorDetail() {
                     <select
                       value={province}
                       onChange={(e) => setProvince(e.target.value)}
-                      onFocus={handleFocus as any}
-                      onBlur={handleBlurStyle as any}
+                      onFocus={handleFocus}
+                      onBlur={handleBlurStyle}
                       style={{ ...inputStyle, cursor: "pointer" }}
                     >
                       <option value="QC">Quebec (QC)</option>

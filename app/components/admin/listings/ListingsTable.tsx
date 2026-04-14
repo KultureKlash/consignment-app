@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Package } from "lucide-react";
 import { thStyle, tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
 import { fmt } from "~/lib/currency";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { Listing, ProductGroup, Props } from "./types";
 import {
   sortableThStyle,
@@ -89,7 +90,7 @@ export default function ListingsTable({
     onSelectionChange(next);
   };
 
-  const selectableStatuses = ["submitted", "approved_awaiting_dropoff", "active"];
+  const selectableStatuses = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE];
   const selectableListings = listings.filter((l) => selectableStatuses.includes(l.status));
   const allSelectableSelected = selectableListings.length > 0 && selectableListings.every((l) => selectedIds?.has(l.id));
 
@@ -168,9 +169,9 @@ export default function ListingsTable({
         {editModal && (onEditApprove || onAdminEdit) && (
           <EditListingModal
             listing={editModal}
-            mode={editModal.status === "submitted" && onEditApprove ? "edit-approve" : "edit"}
+            mode={editModal.status === LISTING_STATUS.SUBMITTED && onEditApprove ? "edit-approve" : "edit"}
             onConfirm={(fields) => {
-              if (editModal.status === "submitted" && onEditApprove) {
+              if (editModal.status === LISTING_STATUS.SUBMITTED && onEditApprove) {
                 onEditApprove(editModal.id, fields);
               } else if (onAdminEdit) {
                 onAdminEdit(editModal.id, fields);
@@ -264,7 +265,7 @@ function FlatRow({
   isSelected: boolean;
   onToggle: () => void;
 }) {
-  const isSelectable = ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status);
+  const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
   return (
     <tr
       style={flatRowStyle}
@@ -341,7 +342,7 @@ function FlatRow({
       </td>
       {onCancel && (
         <td style={tdStyle}>
-          {l.status === "active" ? (
+          {l.status === LISTING_STATUS.ACTIVE ? (
             <s-button
               tone="critical"
               variant="tertiary"

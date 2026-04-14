@@ -1,5 +1,6 @@
 import prisma from "~/db.server";
 import { getConsignorBalance } from "~/services/orders.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 /**
  * Get full consignor detail: profile + balance + listing status counts.
@@ -123,8 +124,8 @@ export async function suspendConsignor(id: string, reason?: string, pauseListing
   let pausedCount = 0;
   if (pauseListings) {
     const result = await prisma.listing.updateMany({
-      where: { consignorId: id, status: "active" },
-      data: { status: "paused" },
+      where: { consignorId: id, status: LISTING_STATUS.ACTIVE },
+      data: { status: LISTING_STATUS.PAUSED },
     });
     pausedCount = result.count;
   }
@@ -164,8 +165,8 @@ export async function unsuspendConsignor(id: string) {
 
   // Reactivate paused listings
   const result = await prisma.listing.updateMany({
-    where: { consignorId: id, status: "paused" },
-    data: { status: "active" },
+    where: { consignorId: id, status: LISTING_STATUS.PAUSED },
+    data: { status: LISTING_STATUS.ACTIVE },
   });
 
   const updated = await prisma.consignor.update({

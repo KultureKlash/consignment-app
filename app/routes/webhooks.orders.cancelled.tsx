@@ -1,26 +1,11 @@
-import type { ActionFunctionArgs } from "react-router";
-import { authenticate, unauthenticated } from "../shopify.server";
+import { unauthenticated } from "../shopify.server";
 import { cancelOrder } from "~/services/orders.server";
-import { withWebhookDedup } from "~/services/webhooks.server";
+import { createWebhookHandler } from "~/services/webhooks.server";
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, topic, payload } = await authenticate.webhook(request);
-
-  console.log(`Received ${topic} webhook for ${shop}`);
-
-  const webhookId = request.headers.get("X-Shopify-Webhook-Id") ?? `cancel-${payload.id}`;
-  const shopifyOrderId = `gid://shopify/Order/${payload.id}`;
-
-  const { admin } = await unauthenticated.admin(shop);
-
-  try {
-    await withWebhookDedup(webhookId, topic, shopifyOrderId, () =>
-      cancelOrder({ admin, shopifyOrderId })
-    );
-    console.log(`Order ${payload.id} cancelled successfully`);
-  } catch (error) {
-    console.error(`Order ${payload.id} cancellation failed:`, error);
-  }
-
-  return new Response();
-};
+export const action = createWebhookHandler({
+  idPrefix: "cancel",
+  handler: async ({ shop, shopifyObjectId }) => {
+    const { admin } = await unauthenticated.admin(shop);
+    await cancelOrder({ admin, shopifyOrderId: shopifyObjectId });
+  },
+});

@@ -7,9 +7,9 @@ import {
   deleteSubmittedListing,
   approveListing,
   rejectListing,
-  activateListing,
+  checkinListing,
   bulkApproveListing,
-  bulkActivateListing,
+  bulkCheckinListing,
   updateActiveListingPrice,
   requestWithdrawal,
   approveWithdrawal,
@@ -256,9 +256,9 @@ describe("submission pipeline", () => {
     });
   });
 
-  // ── Activate ──
+  // ── Check-in ──
 
-  describe("activateListing", () => {
+  describe("checkinListing", () => {
     it("transitions approved → active and syncs to Shopify", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
@@ -271,7 +271,7 @@ describe("submission pipeline", () => {
       });
 
       await approveListing({ listingId: listing.id });
-      const activated = await activateListing({ admin, listingId: listing.id });
+      const activated = await checkinListing({ admin, listingId: listing.id });
 
       expect(activated.status).toBe("active");
       expect(activated.listedAt).toBeTruthy();
@@ -288,8 +288,8 @@ describe("submission pipeline", () => {
       });
 
       await expect(
-        activateListing({ admin, listingId: listing.id }),
-      ).rejects.toThrow('Cannot activate listing with status "submitted"');
+        checkinListing({ admin, listingId: listing.id }),
+      ).rejects.toThrow('Cannot check in listing with status "submitted"');
     });
 
     it("auto-generates barcode for non-footwear without GTIN", async () => {
@@ -304,7 +304,7 @@ describe("submission pipeline", () => {
       });
 
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       const variant = await prisma.variant.findUniqueOrThrow({
         where: { id: listing.variant.id },
@@ -338,7 +338,7 @@ describe("submission pipeline", () => {
     });
   });
 
-  describe("bulkActivateListing", () => {
+  describe("bulkCheckinListing", () => {
     it("activates multiple approved listings", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
@@ -347,7 +347,7 @@ describe("submission pipeline", () => {
       await approveListing({ listingId: l1.id });
       await approveListing({ listingId: l2.id });
 
-      const result = await bulkActivateListing({ admin, listingIds: [l1.id, l2.id] });
+      const result = await bulkCheckinListing({ admin, listingIds: [l1.id, l2.id] });
       expect(result.activated).toBe(2);
       expect(result.errors).toHaveLength(0);
     });
@@ -357,7 +357,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const l1 = await submitListing({ consignorId: consignor.id, title: "Fail", size: "7", price: 50 });
 
-      const result = await bulkActivateListing({ admin, listingIds: [l1.id] });
+      const result = await bulkCheckinListing({ admin, listingIds: [l1.id] });
       expect(result.activated).toBe(0);
       expect(result.errors).toHaveLength(1);
     });
@@ -371,7 +371,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Price Test", size: "9", price: 200 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       const updated = await updateActiveListingPrice({
         listingId: listing.id,
@@ -413,7 +413,7 @@ describe("submission pipeline", () => {
       const other = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Auth Test", size: "10", price: 300 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       await expect(
         updateActiveListingPrice({ listingId: listing.id, consignorId: other.id, price: 250 }),
@@ -425,7 +425,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Zero Price", size: "11", price: 150 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       await expect(
         updateActiveListingPrice({ listingId: listing.id, consignorId: consignor.id, price: 0 }),
@@ -445,7 +445,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Withdraw Me", size: "10", price: 300 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       const updated = await requestWithdrawal({ listingId: listing.id, consignorId: consignor.id });
       expect(updated.status).toBe("withdrawal_requested");
@@ -469,7 +469,7 @@ describe("submission pipeline", () => {
       const consignor2 = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor1.id, title: "Not Yours", size: "8", price: 180 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       await expect(
         requestWithdrawal({ listingId: listing.id, consignorId: consignor2.id }),
@@ -485,7 +485,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Full Withdraw", size: "11", price: 350 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
       await requestWithdrawal({ listingId: listing.id, consignorId: consignor.id });
 
       const updated = await approveWithdrawal({ admin, listingId: listing.id });
@@ -500,7 +500,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Active Not WR", size: "10", price: 250 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       await expect(
         approveWithdrawal({ admin, listingId: listing.id }),
@@ -516,7 +516,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Pickup Done", size: "10", price: 300 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
       await requestWithdrawal({ listingId: listing.id, consignorId: consignor.id });
       await approveWithdrawal({ admin, listingId: listing.id });
 
@@ -529,7 +529,7 @@ describe("submission pipeline", () => {
       const consignor = await createTestConsignor();
       const listing = await submitListing({ consignorId: consignor.id, title: "Not Pending", size: "9", price: 200 });
       await approveListing({ listingId: listing.id });
-      await activateListing({ admin, listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
 
       await expect(
         completeWithdrawal({ listingId: listing.id }),

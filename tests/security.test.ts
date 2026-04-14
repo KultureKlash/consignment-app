@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
+import { LISTING_STATUS, TERMINAL_STATUSES, ACTIVE_STATUSES } from "~/lib/listing-statuses";
 import {
   authenticatePortal,
   createSessionCookie,
@@ -141,6 +142,19 @@ describe("OTP login flow", () => {
     expect(count).toBe(1); // Only latest OTP exists
   });
 
+  it("ATTACK: blocks more than 3 OTP requests per hour (per-email rate limit)", async () => {
+    const email = "otp-flood@test.com";
+    await createTestConsignor({ email });
+    // requestOtp deletes old ones, so manually insert 3 recent codes to simulate history
+    for (let i = 0; i < 3; i++) {
+      await prisma.otpCode.create({
+        data: { email, code: String(100000 + i), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+      });
+    }
+    const result = await requestOtp(email);
+    expect(result.error).toContain("Too many code requests");
+  });
+
   it("verifyOtp succeeds with correct code", async () => {
     const c = await createTestConsignor({ email: "verify@test.com" });
     await requestOtp("verify@test.com");
@@ -162,6 +176,18 @@ describe("OTP login flow", () => {
     const result = await verifyOtp("wrong@test.com", "000000");
     expect(result).toHaveProperty("error");
     expect((result as any).error).toContain("Invalid code");
+  });
+
+  it("ATTACK: verifyOtp does not leak account existence", async () => {
+    // Create OTP for a non-existent account
+    const fakeEmail = "noone-verify@test.com";
+    await prisma.otpCode.create({
+      data: { email: fakeEmail, code: "123456", expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+    });
+    const result = await verifyOtp(fakeEmail, "123456");
+    expect(result).toHaveProperty("error");
+    expect((result as any).error).toContain("Invalid code or email");
+    expect((result as any).error).not.toContain("Account not found");
   });
 
   it("ATTACK: verifyOtp burns OTP after 3 wrong attempts", async () => {
@@ -404,7 +430,22 @@ describe("Input validation — Zod schemas", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// 5. AUTHORIZATION — can't access other consignors' data
+// 5. LISTING STATUS CONSTANTS — single source of truth
+// ═══════════════════════════════════════════════════════════
+
+describe("Listing status constants", () => {
+  it("has all 10 statuses", () => {
+    expect(Object.keys(LISTING_STATUS)).toHaveLength(11);
+  });
+
+  it("TERMINAL and ACTIVE don't overlap", () => {
+    const overlap = ACTIVE_STATUSES.filter((s) => TERMINAL_STATUSES.includes(s));
+    expect(overlap).toHaveLength(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 6. AUTHORIZATION — can't access other consignors' data
 // ═══════════════════════════════════════════════════════════
 
 describe("Authorization — ownership checks", () => {

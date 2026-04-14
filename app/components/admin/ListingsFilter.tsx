@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, MapPin } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { inputStyle, searchInputStyle, searchIconWrap, handleFocus, handleBlurStyle } from "~/lib/admin/listing-ui";
 import CustomSelect from "~/components/admin/CustomSelect";
 
@@ -22,17 +23,17 @@ type Props = {
 
 const STATUS_OPTIONS = [
   { label: "All", value: "all" },
-  { label: "Submitted", value: "submitted" },
-  { label: "Awaiting Drop-off", value: "approved_awaiting_dropoff" },
-  { label: "Active", value: "active" },
-  { label: "Paused", value: "paused" },
-  { label: "Pending Sale", value: "pending_sale" },
-  { label: "Sold", value: "sold" },
-  { label: "Rejected", value: "rejected" },
-  { label: "Cancelled", value: "cancelled" },
-  { label: "Withdrawal", value: "withdrawal_requested" },
-  { label: "Pickup", value: "pending_pickup" },
-  { label: "Withdrawn", value: "withdrawn" },
+  { label: "Submitted", value: LISTING_STATUS.SUBMITTED },
+  { label: "Awaiting Drop-off", value: LISTING_STATUS.APPROVED },
+  { label: "Active", value: LISTING_STATUS.ACTIVE },
+  { label: "Paused", value: LISTING_STATUS.PAUSED },
+  { label: "Pending Sale", value: LISTING_STATUS.PENDING_SALE },
+  { label: "Sold", value: LISTING_STATUS.SOLD },
+  { label: "Rejected", value: LISTING_STATUS.REJECTED },
+  { label: "Cancelled", value: LISTING_STATUS.CANCELLED },
+  { label: "Withdrawal", value: LISTING_STATUS.WITHDRAWAL_REQUESTED },
+  { label: "Pickup", value: LISTING_STATUS.PENDING_PICKUP },
+  { label: "Withdrawn", value: LISTING_STATUS.WITHDRAWN },
 ];
 
 export default function ListingsFilter({

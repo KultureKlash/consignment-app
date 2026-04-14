@@ -4,6 +4,7 @@ import type { Product, Variant } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify/taxonomy.server";
 import { getPrimaryLocationId } from "~/services/inventory.server";
 import { compareSizes } from "~/lib/size-order";
+import { logger } from "~/lib/logger.server";
 
 /** Reorder variants on a Shopify product so sizes display in logical order */
 async function reorderVariantsBySizes(admin: AdminApiContext, shopifyProductId: string) {
@@ -51,7 +52,7 @@ async function reorderVariantsBySizes(admin: AdminApiContext, shopifyProductId: 
   const reorderData = await reorderRes.json();
   const reorderErrors = reorderData.data?.productVariantsBulkReorder?.userErrors;
   if (reorderErrors?.length > 0) {
-    console.error("Variant reorder failed:", reorderErrors);
+    logger.error("Variant reorder failed", { errors: reorderErrors });
   }
 }
 
@@ -162,119 +163,205 @@ export async function updateShopifyProduct({
 
   const { data } = await response.json();
   if (data.productUpdate?.userErrors?.length > 0) {
-    console.error("Shopify productUpdate errors:", data.productUpdate.userErrors);
+    logger.error("Shopify productUpdate errors", { errors: data.productUpdate.userErrors });
   }
 }
 
-export async function ensureShopifyProductAndVariant({
-  admin,
-  product,
-  variant,
-  taxonomyId,
-  imageData,
-}: {
-  admin: AdminApiContext;
-  product: Product;
-  variant: Variant;
-  taxonomyId?: string | null;
-  imageData?: string;
-}): Promise<void> {
-  // Both already synced — nothing to do
-  if (product.shopifyProductId && variant.shopifyVariantId) return;
-
-  // Product not in Shopify — create product + first variant in one call
-  if (!product.shopifyProductId) {
-    // Resolve Shopify taxonomy ID: prefer explicit override, fallback to auto-resolve from category
-    const resolvedTaxonomyId = taxonomyId ?? await resolveShopifyTaxonomyId(admin, product.category);
-
-    // Upload image via staged uploads if provided (Shopify doesn't accept base64 data URLs directly)
-    const stagedImageUrl = imageData ? await uploadImageToShopify(admin, imageData) : undefined;
-
-    const response = await admin.graphql(
+/** Poll Shopify until the product's first image is processed and return its CDN URL */
+async function pollForImageUrl(
+  admin: AdminApiContext,
+  shopifyProductId: string
+): Promise<string | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const imgRes = await admin.graphql(
       `#graphql
-      mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
-        productCreate(product: $product, media: $media) {
-          product {
-            id
-            variants(first: 1) {
-              nodes {
+      query productImages($id: ID!) {
+        product(id: $id) {
+          images(first: 1) { nodes { url } }
+        }
+      }`,
+      { variables: { id: shopifyProductId } }
+    );
+    const imgData = await imgRes.json();
+    const url = imgData.data.product?.images?.nodes?.[0]?.url ?? null;
+    if (url) return url;
+  }
+  return null;
+}
+
+/** Upload product image via staged uploads, attach to product, and poll for processed CDN URL */
+async function uploadProductImage(
+  admin: AdminApiContext,
+  shopifyProductId: string,
+  imageData: string
+): Promise<string | null> {
+  const stagedUrl = await uploadImageToShopify(admin, imageData);
+
+  await admin.graphql(
+    `#graphql
+    mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+      productCreateMedia(productId: $productId, media: $media) {
+        media { id }
+        mediaUserErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        productId: shopifyProductId,
+        media: [{ originalSource: stagedUrl, mediaContentType: "IMAGE" }],
+      },
+    }
+  );
+
+  return pollForImageUrl(admin, shopifyProductId);
+}
+
+/** Enable inventory tracking on a variant and activate at primary location */
+async function enableInventoryTracking(
+  admin: AdminApiContext,
+  inventoryItemId: string,
+  extraInput?: Record<string, unknown>
+): Promise<void> {
+  await admin.graphql(
+    `#graphql
+    mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+      inventoryItemUpdate(id: $id, input: $input) {
+        userErrors { field message }
+      }
+    }`,
+    { variables: { id: inventoryItemId, input: { tracked: true, ...extraInput } } }
+  );
+
+  const locationId = await getPrimaryLocationId(admin);
+  const activateRes = await admin.graphql(
+    `#graphql
+    mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
+      inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
+        inventoryLevel { id }
+        userErrors { field message }
+      }
+    }`,
+    { variables: { inventoryItemId: inventoryItemId, locationId } }
+  );
+  await activateRes.json();
+}
+
+/** Create a new Shopify product with first variant, taxonomy, image, and inventory tracking */
+async function createShopifyProduct(
+  admin: AdminApiContext,
+  product: Product,
+  variant: Variant,
+  opts: { taxonomyId?: string | null; imageData?: string }
+): Promise<void> {
+  const resolvedTaxonomyId = opts.taxonomyId ?? await resolveShopifyTaxonomyId(admin, product.category);
+  const stagedImageUrl = opts.imageData ? await uploadImageToShopify(admin, opts.imageData) : undefined;
+
+  const response = await admin.graphql(
+    `#graphql
+    mutation productCreate($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
+      productCreate(product: $product, media: $media) {
+        product {
+          id
+          variants(first: 1) {
+            nodes {
+              id
+              inventoryItem {
                 id
-                inventoryItem {
-                  id
-                }
               }
             }
           }
-          userErrors {
-            field
-            message
-          }
         }
-      }`,
-      {
-        variables: {
-          product: {
-            title: product.title,
-            ...(product.brand ? { vendor: product.brand } : {}),
-            ...(product.category ? { productType: product.category } : {}),
-            ...(resolvedTaxonomyId ? { category: resolvedTaxonomyId } : {}),
-            status: "ACTIVE",
-            productOptions: [
-              { name: "Size", values: [{ name: variant.size }] },
-            ],
-          },
-          ...(stagedImageUrl ? { media: [{ originalSource: stagedImageUrl, mediaContentType: "IMAGE" }] } : {}),
-        },
+        userErrors {
+          field
+          message
+        }
       }
-    );
-
-    const { data } = await response.json();
-    const { product: shopifyProduct, userErrors } = data.productCreate;
-
-    if (userErrors.length > 0) {
-      throw new Error(`Shopify productCreate error: ${userErrors[0].message}`);
+    }`,
+    {
+      variables: {
+        product: {
+          title: product.title,
+          ...(product.brand ? { vendor: product.brand } : {}),
+          ...(product.category ? { productType: product.category } : {}),
+          ...(resolvedTaxonomyId ? { category: resolvedTaxonomyId } : {}),
+          status: "ACTIVE",
+          productOptions: [
+            { name: "Size", values: [{ name: variant.size }] },
+          ],
+        },
+        ...(stagedImageUrl ? { media: [{ originalSource: stagedImageUrl, mediaContentType: "IMAGE" }] } : {}),
+      },
     }
+  );
 
-    const shopifyVariant = shopifyProduct.variants.nodes[0];
+  const { data } = await response.json();
+  const { product: shopifyProduct, userErrors } = data.productCreate;
 
-    // Publish to all sales channels so it appears on storefront, Shop app, POS
-    const publicationIds = await getAllPublicationIds(admin);
+  if (userErrors.length > 0) {
+    throw new Error(`Shopify productCreate error: ${userErrors[0].message}`);
+  }
+
+  const shopifyVariant = shopifyProduct.variants.nodes[0];
+
+  // Publish to all sales channels so it appears on storefront, Shop app, POS
+  const publicationIds = await getAllPublicationIds(admin);
+  await admin.graphql(
+    `#graphql
+    mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+      publishablePublish(id: $id, input: $input) {
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        id: shopifyProduct.id,
+        input: publicationIds.map((publicationId) => ({ publicationId })),
+      },
+    }
+  );
+
+  // Poll for processed image URL if we uploaded one
+  const finalImageUrl = stagedImageUrl
+    ? await pollForImageUrl(admin, shopifyProduct.id)
+    : null;
+
+  // Enable inventory tracking + activate at primary location
+  await enableInventoryTracking(admin, shopifyVariant.inventoryItem.id);
+
+  // Persist Shopify IDs locally
+  await Promise.all([
+    prisma.product.update({
+      where: { id: product.id },
+      data: {
+        shopifyProductId: shopifyProduct.id,
+        ...(finalImageUrl ? { imageUrl: finalImageUrl } : {}),
+      },
+    }),
+    prisma.variant.update({
+      where: { id: variant.id },
+      data: {
+        shopifyVariantId: shopifyVariant.id,
+        inventoryItemId: shopifyVariant.inventoryItem.id,
+      },
+    }),
+  ]);
+
+  // Set barcode on the variant + SKU on the inventory item
+  const sku = deriveSku(product, variant);
+  if (variant.gtin) {
     await admin.graphql(
       `#graphql
-      mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
-        publishablePublish(id: $id, input: $input) {
+      mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+        productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+          productVariants { id barcode }
           userErrors { field message }
         }
       }`,
-      {
-        variables: {
-          id: shopifyProduct.id,
-          input: publicationIds.map((publicationId) => ({ publicationId })),
-        },
-      }
+      { variables: { productId: shopifyProduct.id, variants: [{ id: shopifyVariant.id, barcode: variant.gtin }] } }
     );
-
-    // Poll for processed image URL (Shopify media processing is async)
-    let shopifyImageUrl: string | null = null;
-    if (stagedImageUrl) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const imgRes = await admin.graphql(
-          `#graphql
-          query productImages($id: ID!) {
-            product(id: $id) {
-              images(first: 1) { nodes { url } }
-            }
-          }`,
-          { variables: { id: shopifyProduct.id } }
-        );
-        const imgData = await imgRes.json();
-        shopifyImageUrl = imgData.data.product?.images?.nodes?.[0]?.url ?? null;
-        if (shopifyImageUrl) break;
-      }
-    }
-
-    // Enable inventory tracking FIRST — must complete before syncInventory runs
+  }
+  if (sku) {
     await admin.graphql(
       `#graphql
       mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
@@ -282,70 +369,18 @@ export async function ensureShopifyProductAndVariant({
           userErrors { field message }
         }
       }`,
-      { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true } } }
+      { variables: { id: shopifyVariant.inventoryItem.id, input: { sku } } }
     );
-
-    // Activate inventory at the primary location (required before inventorySetQuantities works)
-    const locationId = await getPrimaryLocationId(admin);
-    const activateRes = await admin.graphql(
-      `#graphql
-      mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
-        inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
-          inventoryLevel { id }
-          userErrors { field message }
-        }
-      }`,
-      { variables: { inventoryItemId: shopifyVariant.inventoryItem.id, locationId } }
-    );
-    await activateRes.json();
-
-    await Promise.all([
-      prisma.product.update({
-        where: { id: product.id },
-        data: {
-          shopifyProductId: shopifyProduct.id,
-          ...(shopifyImageUrl ? { imageUrl: shopifyImageUrl } : {}),
-        },
-      }),
-      prisma.variant.update({
-        where: { id: variant.id },
-        data: {
-          shopifyVariantId: shopifyVariant.id,
-          inventoryItemId: shopifyVariant.inventoryItem.id,
-        },
-      }),
-    ]);
-
-    // Set barcode on the variant + SKU on the inventory item
-    const sku = deriveSku(product, variant);
-    if (variant.gtin) {
-      await admin.graphql(
-        `#graphql
-        mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-            productVariants { id barcode }
-            userErrors { field message }
-          }
-        }`,
-        { variables: { productId: shopifyProduct.id, variants: [{ id: shopifyVariant.id, barcode: variant.gtin }] } }
-      );
-    }
-    if (sku) {
-      await admin.graphql(
-        `#graphql
-        mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
-          inventoryItemUpdate(id: $id, input: $input) {
-            userErrors { field message }
-          }
-        }`,
-        { variables: { id: shopifyVariant.inventoryItem.id, input: { sku } } }
-      );
-    }
-
-    return;
   }
+}
 
-  // Product exists in Shopify but this variant doesn't — add the new size
+/** Add a new variant (size) to an existing Shopify product */
+async function addVariantToExistingProduct(
+  admin: AdminApiContext,
+  shopifyProductId: string,
+  variant: Variant,
+  product: Product
+): Promise<void> {
   const response = await admin.graphql(
     `#graphql
     mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
@@ -364,7 +399,7 @@ export async function ensureShopifyProductAndVariant({
     }`,
     {
       variables: {
-        productId: product.shopifyProductId,
+        productId: shopifyProductId,
         variants: [
           {
             optionValues: [{ name: variant.size, optionName: "Size" }],
@@ -386,31 +421,15 @@ export async function ensureShopifyProductAndVariant({
 
   const shopifyVariant = productVariants[0];
 
-  // Enable inventory tracking + set SKU on the inventory item
+  // Enable inventory tracking + set SKU
   const variantSku = deriveSku(product, variant);
-  await admin.graphql(
-    `#graphql
-    mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
-      inventoryItemUpdate(id: $id, input: $input) {
-        userErrors { field message }
-      }
-    }`,
-    { variables: { id: shopifyVariant.inventoryItem.id, input: { tracked: true, ...(variantSku ? { sku: variantSku } : {}) } } }
+  await enableInventoryTracking(
+    admin,
+    shopifyVariant.inventoryItem.id,
+    variantSku ? { sku: variantSku } : undefined
   );
 
-  // Activate inventory at the primary location (required before inventorySetQuantities works)
-  const locationId = await getPrimaryLocationId(admin);
-  await admin.graphql(
-    `#graphql
-    mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
-      inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
-        inventoryLevel { id }
-        userErrors { field message }
-      }
-    }`,
-    { variables: { inventoryItemId: shopifyVariant.inventoryItem.id, locationId } }
-  );
-
+  // Persist Shopify IDs locally
   await prisma.variant.update({
     where: { id: variant.id },
     data: {
@@ -421,10 +440,36 @@ export async function ensureShopifyProductAndVariant({
 
   // Reorder size options so they display sorted in Shopify
   try {
-    await reorderVariantsBySizes(admin, product.shopifyProductId!);
+    await reorderVariantsBySizes(admin, shopifyProductId);
   } catch (err) {
-    console.error("Failed to reorder size options:", err);
+    logger.error("Failed to reorder size options", { error: err instanceof Error ? err.message : String(err) });
   }
+}
+
+export async function ensureShopifyProductAndVariant({
+  admin,
+  product,
+  variant,
+  taxonomyId,
+  imageData,
+}: {
+  admin: AdminApiContext;
+  product: Product;
+  variant: Variant;
+  taxonomyId?: string | null;
+  imageData?: string;
+}): Promise<void> {
+  // Both already synced — nothing to do
+  if (product.shopifyProductId && variant.shopifyVariantId) return;
+
+  // Product not in Shopify — create product + first variant
+  if (!product.shopifyProductId) {
+    await createShopifyProduct(admin, product, variant, { taxonomyId, imageData });
+    return;
+  }
+
+  // Product exists in Shopify but this variant doesn't — add the new size
+  await addVariantToExistingProduct(admin, product.shopifyProductId, variant, product);
 }
 
 /**
@@ -476,44 +521,10 @@ export async function updateShopifyProductImage({
     );
   }
 
-  // 2. Upload and attach new image
-  const stagedUrl = await uploadImageToShopify(admin, imageData);
+  // 2. Upload, attach, and poll for processed image URL
+  const shopifyImageUrl = await uploadProductImage(admin, shopifyProductId, imageData);
 
-  await admin.graphql(
-    `#graphql
-    mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
-      productCreateMedia(productId: $productId, media: $media) {
-        media { id }
-        mediaUserErrors { field message }
-      }
-    }`,
-    {
-      variables: {
-        productId: shopifyProductId,
-        media: [{ originalSource: stagedUrl, mediaContentType: "IMAGE" }],
-      },
-    }
-  );
-
-  // 3. Poll for processed image URL
-  let shopifyImageUrl: string | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await new Promise((r) => setTimeout(r, 2000));
-    const imgRes = await admin.graphql(
-      `#graphql
-      query productImages($id: ID!) {
-        product(id: $id) {
-          images(first: 1) { nodes { url } }
-        }
-      }`,
-      { variables: { id: shopifyProductId } }
-    );
-    const imgData = await imgRes.json();
-    shopifyImageUrl = imgData.data.product?.images?.nodes?.[0]?.url ?? null;
-    if (shopifyImageUrl) break;
-  }
-
-  // 4. Update local product with CDN URL (replacing base64)
+  // 3. Update local product with CDN URL (replacing base64)
   if (shopifyImageUrl) {
     await prisma.product.update({
       where: { id: productId },

@@ -10,14 +10,14 @@ import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
 import { downloadStatement } from "~/lib/pdf";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { getConsignorPayouts } from "~/services/portal/dashboard.server";
+import { getConsignorPayouts } from "~/services/portal/payouts.server";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
-  const data = await getConsignorPayouts(consignor.id, consignor.storeOwned);
+  const data = await getConsignorPayouts(consignor.id, { storeOwned: consignor.storeOwned });
   return { consignor, ...data };
 }
 

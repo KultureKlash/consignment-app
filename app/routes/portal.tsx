@@ -2,7 +2,7 @@ import { Outlet, redirect } from "react-router";
 import type { LoaderFunctionArgs, LinksFunction } from "react-router";
 import { useLoaderData } from "react-router";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { getConsignorNotifications } from "~/services/portal/dashboard.server";
+import { getConsignorNotifications } from "~/services/portal/notifications.server";
 import { Sidebar, BottomTabBar } from "~/components/portal/Sidebar";
 import portalStyles from "~/portal.css?url";
 

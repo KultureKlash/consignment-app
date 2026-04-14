@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useFetcher } from "react-router";
 import { Bell, ShoppingBag, CreditCard, CheckCircle, Truck, XCircle, PackageX, MapPin } from "lucide-react";
-import type { PortalNotification } from "~/services/portal/dashboard.server";
+import type { PortalNotification } from "~/services/portal/notifications.server";
 
 function getInitials(name: string): string {
   return name

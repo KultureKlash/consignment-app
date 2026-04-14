@@ -1,5 +1,6 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { parseCategory } from "~/lib/categories";
+import { logger } from "~/lib/logger.server";
 
 // In-memory cache: search term → taxonomy GID (survives across requests within same process)
 const taxonomyCache = new Map<string, string | null>();
@@ -87,7 +88,7 @@ export async function resolveShopifyTaxonomyId(
     taxonomyCache.set(searchTerm, id);
     return id;
   } catch (err) {
-    console.error("Taxonomy resolution failed:", err);
+    logger.error("Taxonomy resolution failed", { error: err instanceof Error ? err.message : String(err), searchTerm });
     return null;
   }
 }

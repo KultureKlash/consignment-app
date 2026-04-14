@@ -1,208 +1,206 @@
 # Coding Standards & Architecture Rules
 
-This document defines coding standards and architectural rules for the marketplace application.
-
-The goal is to maintain **consistent, scalable, and maintainable code**.
+These rules are the law. Every pattern here exists because we found a real problem and fixed it. Follow them exactly.
 
 ---
 
-# Architecture Rules
-
-The project follows a strict service-based architecture.
-
-Routes should not contain business logic.
+## Architecture
 
 ```
 routes → services → database / external APIs
 ```
 
-Routes are responsible only for:
+Routes do ONLY: authentication, request validation, call service, return response. Zero business logic in routes.
 
-• authentication
-• request validation
-• calling services
-• returning responses
-
-Business logic must exist inside the `services` layer.
+Services own one concern. Services can call other services. Database is source of truth — Shopify mirrors data.
 
 ---
 
-# Service Layer Structure
+## File Size Limits
 
-Services contain the core marketplace logic.
+| Type | Max Lines |
+|------|-----------|
+| Service files | 500 |
+| Route files | 200 |
+| Components | 400 |
+| Functions | 80 |
 
-Examples:
-
-```
-services/
-  catalog.server.ts
-  listings.server.ts
-  inventory.server.ts
-  orders.server.ts
-  payouts.server.ts
-```
-
-Responsibilities:
-
-catalog → product catalog logic
-listings → consignor inventory
-inventory → Shopify inventory synchronization
-orders → order allocation and processing
-payouts → financial payouts and balances
-
-Services may call other services when necessary.
+Split large files into folders with barrel re-exports. Split large functions into focused helpers.
 
 ---
 
-# Database Rules
+## Functions
 
-Prisma models represent the **source of truth** for the marketplace.
-
-Key principles:
-
-• Shopify data must not be treated as the source of truth
-• Inventory exists in the database
-• Shopify mirrors inventory for storefront display
-
-All database writes must happen through Prisma.
-
----
-
-# Shopify Integration Rules
-
-Shopify is used as a storefront and checkout system.
-
-The application is responsible for:
-
-• catalog management
-• listing management
-• inventory aggregation
-• price synchronization
-• order allocation
-
-Shopify product data must always be linked using stored IDs:
-
-```
-shopify_product_id
-shopify_variant_id
-```
+- **Max 80 lines per function.** If it does 5+ things, break it up. Each function does one thing.
+- **Name by domain language, not technical action.** `checkinListing` not `activateListing`. Use what the store staff calls it.
+- **No boolean positional parameters.** Use options objects:
+  ```typescript
+  // Bad: getConsignorDashboard(id, true)
+  // Good: getConsignorDashboard(id, { storeOwned: true })
+  ```
+- **No god functions.** If a function fetches, validates, transforms, saves, AND syncs — split it.
 
 ---
 
-# Inventory Rules
+## Comments
 
-Marketplace inventory comes from listings.
-
-```
-Shopify Inventory = SUM(listings.quantity)
-```
-
-Inventory updates must be triggered when:
-
-• listings are created
-• listing quantities change
-• orders allocate listings
-• orders are cancelled or refunded
+- **Never comment WHAT code does.** Only comment WHY.
+  ```typescript
+  // Bad: "// Fetch consignor" before prisma.consignor.findUnique
+  // Bad: "// Create listing" before prisma.listing.create
+  // Good: "// Re-fetch: ensureVariantBarcode may have written a new gtin"
+  // Good: "// Idempotency: skip if already processed"
+  ```
+- **No emoji in comments.** Ever. No numbered steps (1️⃣ 2️⃣). No decorative emoji.
+- **Section dividers are fine:** `// ── Admin: Approve ──`
+- **If the code needs a comment to be understood, the code is too complex.** Simplify first.
 
 ---
 
-# Order Allocation Rules
+## Logging
 
-Orders are allocated using the following priority:
+Use `logger` from `~/lib/logger.server` — **never bare `console.log` or `console.error`**.
 
-1. Lowest listing price
-2. FIFO tie breaker using `activated_at`
+```typescript
+import { logger } from "~/lib/logger.server";
 
-Allocation must occur inside a **database transaction** to prevent overselling.
+logger.info("Webhook received", { topic, shop });
+logger.error("Shopify sync failed", { listingId, error: err.message });
+```
+
+- `logger.info` for successful operations and lifecycle events
+- `logger.error` for failures — always include context object with relevant IDs
+- No logging in components (server-side only)
 
 ---
 
-# Code Organization
+## Constants & Magic Strings
 
-Files should remain small and focused.
-
-Recommended limits:
-
-• service files < 500 lines
-• route files < 200 lines
-
-Large logic blocks should be split into helper functions.
+- **Use `LISTING_STATUS` from `~/lib/listing-statuses`** — never raw status strings like `"submitted"` or `"active"` in service/component code.
+- If a string value is used in 2+ places, extract it to a constant.
+- Status groups (`TERMINAL_STATUSES`, `ACTIVE_STATUSES`) live in `listing-statuses.ts`.
 
 ---
 
-# Naming Conventions
+## Components
 
-Use consistent naming patterns.
+- **Max 10 props per component.** Beyond that, use React Context.
+- **Prop drilling max 2 levels.** If passing through 3+ levels, create a Context provider.
+- **No inline `style={{}}` in new code.** Existing admin inline styles are grandfathered until Tailwind migration. Portal uses Tailwind — keep it that way.
+- **Use `useCreateListing()` pattern** as the reference for Context-based form state management.
 
-Database fields:
+---
+
+## Data Fetching
+
+- **Never re-fetch a record passed as a parameter** unless it may have changed mid-function. If you must re-fetch, comment WHY.
+  ```typescript
+  // Good: re-fetch needed because ensureVariantBarcode updated gtin
+  const freshVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
+  ```
+- **Use `select` when only IDs are needed** — don't fetch full objects for ID-only operations.
+- **Use `include` strategically** — don't over-include relations you won't use.
+
+---
+
+## Security
+
+These rules exist because we found and fixed real vulnerabilities:
+
+- **Use `timingSafeEqual` for secret comparison** (OTP codes, tokens). Never `===` for secrets.
+- **Use rightmost IP from x-forwarded-for** — first entry is client-controlled and spoofable.
+- **Validate all numeric inputs with Zod schemas.** Never bare `parseFloat` for prices.
+- **Always scope queries by authenticated user ID.** Every portal query must include `consignorId`. No IDOR.
+- **Per-email rate limiting on OTP.** Max 3 requests per hour per email, on top of IP-based limits.
+- **Generic error messages for auth.** Don't leak whether an email exists ("Invalid code or email" not "Account not found").
+
+---
+
+## Error Handling
+
+```typescript
+// Domain errors (user-facing): plain descriptive string
+throw new Error("Cannot check in listing — status must be approved");
+
+// System errors (dev-facing): use logger with context
+logger.error("Shopify sync failed", { listingId, error: err.message });
+```
+
+- Don't silently swallow errors. Log them at minimum.
+- Shopify sync failures are best-effort — log and continue. Use `safeSyncInventory()`.
+- Use `findUniqueOrThrow` when the record must exist (throws clear error).
+
+---
+
+## TypeScript
+
+- Avoid `any`. Use `unknown` or defined interfaces.
+- Only use `eslint-disable` for `any` when the type genuinely can't be narrowed (Shopify GraphQL responses, jsPDF plugins).
+- Use `as const` for constant objects.
+
+---
+
+## Testing
+
+- **Every feature needs tests.** No exceptions.
+- **Test before committing.** Run `npm run build && npx vitest run` before every commit.
+- **Security-sensitive code needs explicit attack tests** (IDOR, rate limiting, input validation).
+- **Use feature branches.** Never commit directly to main.
+
+---
+
+## Naming
+
+| Thing | Convention | Example |
+|-------|-----------|---------|
+| DB fields | snake_case | `shopify_product_id` |
+| TS variables/functions | camelCase | `checkinListing` |
+| Types/interfaces | PascalCase | `ListingStatus` |
+| Constants | UPPER_SNAKE | `LISTING_STATUS` |
+| Components | PascalCase | `ConsignorPicker` |
+| Files | kebab-case or camelCase | `listing-statuses.ts` |
+
+---
+
+## Project Structure
 
 ```
-snake_case
-```
-
-TypeScript variables and functions:
-
-```
-camelCase
-```
-
-Classes and types:
-
-```
-PascalCase
+app/
+  components/
+    admin/           — admin UI (inline styles, Shopify theme)
+      listings/      — ListingsTable + sub-components
+      create-listing/ — CreateListingForm + Context + sub-components
+      payouts/       — Payout page sections
+    portal/          — consignor portal (Tailwind, dark glass theme)
+      listings/      — Portal listing components
+    shared/          — Cross-cutting components
+  services/
+    submission/      — Listing submission lifecycle (approve, edit, checkin, withdraw)
+    portal/          — Consignor-facing services (dashboard, sales, payouts, auth)
+    shopify/         — Shopify API integration (products, taxonomy)
+    admin/           — Admin action dispatchers
+    (root)           — Core services (catalog, listings, orders, payouts, inventory)
+  lib/
+    categories/      — Category constants, auto-suggest, barcode generation
+    admin/           — Admin UI helpers and styles
+    (root)           — Shared utilities (validation, tax, currency, pdf, logger)
+  hooks/             — React hooks (useListingToasts, etc.)
+  routes/            — Flat dot-notation (app.*, portal.*, webhooks.*)
 ```
 
 ---
 
-# Error Handling
+## What NOT to Do (Lessons Learned)
 
-Errors should not be silently ignored.
+These patterns were found and removed. Don't reintroduce them:
 
-Use structured error handling:
-
-• service-level error handling
-• meaningful error messages
-• logging when appropriate
-
----
-
-# TypeScript Rules
-
-Avoid using `any`.
-
-Use explicit types whenever possible.
-
-Prefer:
-
-```
-unknown
-```
-
-or defined interfaces.
-
----
-
-# Code Readability
-
-Code should be written for clarity.
-
-Prefer:
-
-• descriptive variable names
-• small functions
-• clear separation of responsibilities
-
-Avoid deeply nested logic when possible.
-
----
-
-# Future Development
-
-When adding new features:
-
-1. Determine which service is responsible
-2. Implement logic inside the service
-3. Expose functionality via routes if needed
-4. Update documentation when architecture changes
-
-Maintaining consistency is critical for long-term scalability.
+1. **No emoji in code** — screams AI-generated
+2. **No "what" comments** — if the comment restates the next line, delete it
+3. **No console.log** — use the structured logger
+4. **No 20+ prop components** — use Context
+5. **No magic status strings** — use LISTING_STATUS constants
+6. **No boolean positional params** — use options objects
+7. **No god functions** — max 80 lines, single responsibility
+8. **No re-fetching passed parameters** — unless data changed (and comment why)
+9. **No `===` for secrets** — use timingSafeEqual
+10. **No first-IP from x-forwarded-for** — use rightmost (last)

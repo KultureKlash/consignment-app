@@ -8,7 +8,7 @@ import { DateRangePicker } from "~/components/portal/DateRangePicker";
 import { fmt } from "~/lib/currency";
 import { downloadStatement } from "~/lib/pdf";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { getConsignorSales } from "~/services/portal/dashboard.server";
+import { getConsignorSales } from "~/services/portal/sales.server";
 import type { loader as portalLoader } from "./portal";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -22,7 +22,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const data = await getConsignorSales(consignor.id, {
     search: search || undefined,
     status: status !== "all" ? status : undefined,
-  }, consignor.storeOwned);
+  }, { storeOwned: consignor.storeOwned });
 
   return {
     consignor: { name: consignor.name, taxStatus: consignor.taxStatus, province: consignor.province },

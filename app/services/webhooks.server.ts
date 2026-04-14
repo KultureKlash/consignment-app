@@ -1,6 +1,61 @@
+import type { ActionFunctionArgs } from "react-router";
 import prisma from "~/db.server";
+import { logger } from "~/lib/logger.server";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+// ── Webhook handler factory ──────────────────────────────────────────
+// DRYs up the 4 order/refund webhook routes that share the same
+// authenticate → dedup → handle → log → return 200 pattern.
+
+interface WebhookHandlerOptions {
+  /** Prefix for the fallback webhook ID (e.g. "order", "paid", "refund") */
+  idPrefix: string;
+  /**
+   * Extract the Shopify object GID used for dedup grouping.
+   * Defaults to `gid://shopify/Order/${payload.id}`.
+   */
+  getObjectId?: (payload: Record<string, any>) => string;
+  /** The actual business logic. Receives everything it might need. */
+  handler: (ctx: {
+    shop: string;
+    payload: Record<string, any>;
+    shopifyObjectId: string;
+    request: Request;
+  }) => Promise<void>;
+}
+
+/**
+ * Creates a Remix `action` for a Shopify webhook route.
+ * Handles authentication, dedup, success/error logging, and always returns 200.
+ */
+export function createWebhookHandler(opts: WebhookHandlerOptions) {
+  return async ({ request }: ActionFunctionArgs) => {
+    const { authenticate } = await import("~/shopify.server");
+    const { shop, topic, payload } = await authenticate.webhook(request);
+
+    logger.info("Webhook received", { topic, shop });
+
+    const webhookId =
+      request.headers.get("X-Shopify-Webhook-Id") ??
+      `${opts.idPrefix}-${payload.id}`;
+
+    const shopifyObjectId = opts.getObjectId
+      ? opts.getObjectId(payload)
+      : `gid://shopify/Order/${payload.id}`;
+
+    try {
+      await withWebhookDedup(webhookId, topic, shopifyObjectId, () =>
+        opts.handler({ shop, payload, shopifyObjectId, request }),
+      );
+      logger.info("Webhook processed", { topic, shopifyObjectId });
+    } catch (error) {
+      logger.error("Webhook processing failed", { topic, shopifyObjectId, error: error instanceof Error ? error.message : String(error) });
+    }
+
+    return new Response();
+  };
+}
 
 /**
  * Webhook deduplication wrapper. Ensures each Shopify webhook event
@@ -21,7 +76,7 @@ export async function withWebhookDedup<T>(
 
   if (existing) {
     if (existing.status === "completed") {
-      console.log(`Webhook ${shopifyEventId} already processed, skipping`);
+      logger.info("Webhook already processed, skipping", { shopifyEventId });
       return null;
     }
 
@@ -29,17 +84,17 @@ export async function withWebhookDedup<T>(
     if (existing.status === "processing") {
       const age = Date.now() - existing.createdAt.getTime();
       if (age < STALE_THRESHOLD_MS) {
-        console.log(`Webhook ${shopifyEventId} still processing (${Math.round(age / 1000)}s), skipping`);
+        logger.info("Webhook still processing, skipping", { shopifyEventId, ageSeconds: Math.round(age / 1000) });
         return null;
       }
       // Stale — allow retry by deleting the old record
-      console.log(`Webhook ${shopifyEventId} stale (${Math.round(age / 1000)}s), retrying`);
+      logger.info("Webhook stale, retrying", { shopifyEventId, ageSeconds: Math.round(age / 1000) });
       await prisma.webhookEvent.delete({ where: { id: existing.id } });
     }
 
     // If "failed", allow retry
     if (existing.status === "failed") {
-      console.log(`Webhook ${shopifyEventId} previously failed, retrying`);
+      logger.info("Webhook previously failed, retrying", { shopifyEventId });
       await prisma.webhookEvent.delete({ where: { id: existing.id } });
     }
   }

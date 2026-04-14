@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
 import { tdStyle, statusBadge, relativeTime, statusLabel } from "~/lib/admin/listing-ui";
 import { fmt } from "~/lib/currency";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { Listing, ProductGroup, SectionOption, SortKey } from "./types";
 import {
   groupHeaderStyle,
@@ -33,7 +34,7 @@ export function GroupRows({
   onRestore,
   onApprove,
   onReject,
-  onActivate,
+  onCheckin,
   onApproveWithdrawal,
   onCompleteWithdrawal,
   onEditApprove,
@@ -56,7 +57,7 @@ export function GroupRows({
   onRestore?: (id: string) => void;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
-  onActivate?: (id: string) => void;
+  onCheckin?: (id: string) => void;
   onApproveWithdrawal?: (id: string) => void;
   onCompleteWithdrawal?: (id: string) => void;
   onEditApprove?: (listing: Listing) => void;
@@ -95,7 +96,7 @@ export function GroupRows({
       })
     : group.listings;
 
-  const groupSelectableIds = group.listings.filter((l) => ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status)).map((l) => l.id);
+  const groupSelectableIds = group.listings.filter((l) => [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status)).map((l) => l.id);
   const allGroupSelected = hasSelection && groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedIds?.has(id));
 
   const scrollRef = useCallback((node: HTMLTableRowElement | null) => {
@@ -229,7 +230,7 @@ export function GroupRows({
                 </button>
               ) : (
                 <span style={qtyBadgeStyle}>
-                  {group.listings.filter((l) => l.status === "active").length}
+                  {group.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).length}
                 </span>
               )}
             </div>
@@ -273,7 +274,7 @@ export function GroupRows({
 
       {/* Child listing rows */}
       {isExpanded && sortedListings.map((l, i) => {
-        const isSelectable = ["submitted", "approved_awaiting_dropoff", "active"].includes(l.status);
+        const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
         return (
           <tr
             key={l.id}
@@ -320,7 +321,7 @@ export function GroupRows({
             {(onCancel || onApprove) && (
               <td style={tdStyle}>
                 <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  {l.status === "submitted" && onApprove && (
+                  {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
                     <>
                       <ActionBtn
                         label="Approve"
@@ -355,18 +356,18 @@ export function GroupRows({
                       )}
                     </>
                   )}
-                  {l.status === "approved_awaiting_dropoff" && onActivate && (
+                  {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                     <ActionBtn
-                      label="Activate"
+                      label="Check in"
                       icon={<Zap size={13} />}
                       color="#2c6ecb"
                       bg="#eff6ff"
                       border="#bfdbfe"
-                      onClick={() => onActivate(l.id)}
+                      onClick={() => onCheckin(l.id)}
                       disabled={isLoading}
                     />
                   )}
-                  {onAdminEdit && !["submitted", "sold", "cancelled", "rejected", "withdrawn"].includes(l.status) && (
+                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
                     <ActionBtn
                       label="Edit"
                       icon={<Pencil size={13} />}
@@ -377,7 +378,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {l.status === "active" && onCancel && (
+                  {l.status === LISTING_STATUS.ACTIVE && onCancel && (
                     <ActionBtn
                       label="Cancel"
                       icon={<X size={13} />}
@@ -388,7 +389,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {l.status === "withdrawal_requested" && onApproveWithdrawal && (
+                  {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
                     <ActionBtn
                       label="Approve Withdrawal"
                       icon={<Check size={13} />}
@@ -399,7 +400,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {l.status === "pending_pickup" && onCompleteWithdrawal && (
+                  {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
                     <ActionBtn
                       label="Picked Up"
                       icon={<Check size={13} />}
@@ -410,7 +411,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {l.status === "cancelled" && onRestore && (
+                  {l.status === LISTING_STATUS.CANCELLED && onRestore && (
                     <ActionBtn
                       label="Restore"
                       icon={<Zap size={13} />}
@@ -421,7 +422,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {!["submitted", "approved_awaiting_dropoff", "active", "withdrawal_requested", "pending_pickup", "cancelled"].includes(l.status) && (
+                  {![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP, LISTING_STATUS.CANCELLED].includes(l.status) && (
                     <span style={{ color: "#d1d5db" }}>{"\u2014"}</span>
                   )}
                 </div>

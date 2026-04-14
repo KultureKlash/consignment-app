@@ -23,7 +23,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) return null;
 
-  const data = await getConsignorDashboard(consignor.id, consignor.storeOwned);
+  const data = await getConsignorDashboard(consignor.id, { storeOwned: consignor.storeOwned });
   return { ...data };
 }
 

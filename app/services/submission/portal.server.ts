@@ -1,6 +1,8 @@
 import prisma from "~/db.server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
 import { syncInventory } from "~/services/inventory.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { logger } from "~/lib/logger.server";
 
 /** Throws if the consignor account is suspended. Used by all portal-facing functions. */
 async function requireActiveConsignor(consignorId: string) {
@@ -38,7 +40,6 @@ export async function submitListing({
 }) {
   await requireActiveConsignor(consignorId);
 
-  // Find or create product + variant (reuses existing catalog dedup logic)
   const product = await findOrCreateProduct({ styleId, title, brand, category });
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
@@ -59,7 +60,7 @@ export async function submitListing({
         consignorId,
         variantId: variant.id,
         price,
-        status: "submitted",
+        status: LISTING_STATUS.SUBMITTED,
         submittedAt: now,
       },
       include: {
@@ -98,7 +99,7 @@ export async function updateSubmittedListing({
   if (listing.consignorId !== consignorId) {
     throw new Error("Not authorized");
   }
-  if (listing.status !== "submitted") {
+  if (listing.status !== LISTING_STATUS.SUBMITTED) {
     throw new Error("Can only edit submitted listings");
   }
 
@@ -151,7 +152,7 @@ export async function deleteSubmittedListing({
   if (listing.consignorId !== consignorId) {
     throw new Error("Not authorized");
   }
-  if (listing.status !== "submitted") {
+  if (listing.status !== LISTING_STATUS.SUBMITTED) {
     throw new Error("Can only delete submitted listings");
   }
 
@@ -180,11 +181,10 @@ export async function updateActiveListingPrice({
   if (listing.consignorId !== consignorId) {
     throw new Error("Not authorized");
   }
-  if (listing.status !== "active" && listing.status !== "approved_awaiting_dropoff") {
+  if (listing.status !== LISTING_STATUS.ACTIVE && listing.status !== LISTING_STATUS.APPROVED) {
     throw new Error("Can only update price on active or awaiting drop-off listings");
   }
 
-  // Update price in DB
   const updated = await prisma.listing.update({
     where: { id: listingId },
     data: { price },
@@ -206,7 +206,7 @@ export async function updateActiveListingPrice({
       await syncInventory({ admin, variant });
     }
   } catch (err) {
-    console.error("Shopify price sync failed (will retry on next operation):", err);
+    logger.error("Shopify price sync failed (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
   }
 
   return updated;
@@ -231,13 +231,13 @@ export async function requestWithdrawal({
   if (listing.consignorId !== consignorId) {
     throw new Error("Not authorized");
   }
-  if (listing.status !== "active") {
+  if (listing.status !== LISTING_STATUS.ACTIVE) {
     throw new Error("Can only request withdrawal on active listings");
   }
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
-    data: { status: "withdrawal_requested", withdrawnAt: new Date() },
+    data: { status: LISTING_STATUS.WITHDRAWAL_REQUESTED, withdrawnAt: new Date() },
     include: { variant: { include: { product: true } } },
   });
 
@@ -256,7 +256,7 @@ export async function requestWithdrawal({
       await syncInventory({ admin, variant });
     }
   } catch (err) {
-    console.error("Shopify sync failed during withdrawal request:", err);
+    logger.error("Shopify sync failed during withdrawal request", { error: err instanceof Error ? err.message : String(err) });
   }
 
   return updated;

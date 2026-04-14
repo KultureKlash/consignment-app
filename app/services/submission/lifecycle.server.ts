@@ -1,12 +1,14 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
-import { syncInventory } from "~/services/inventory.server";
-import { generateBarcode, parseCategory } from "~/lib/categories";
+import { safeSyncInventory } from "~/services/inventory.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { ensureVariantBarcode } from "~/services/variant-utils.server";
+import { logger } from "~/lib/logger.server";
 
-// ── Admin: Activate listing (check-in / dropoff) → goes live on Shopify ──
+// ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──
 
-export async function activateListing({
+export async function checkinListing({
   admin,
   listingId,
 }: {
@@ -18,8 +20,8 @@ export async function activateListing({
     include: { variant: { include: { product: true } } },
   });
 
-  if (listing.status !== "approved_awaiting_dropoff") {
-    throw new Error(`Cannot activate listing with status "${listing.status}"`);
+  if (listing.status !== LISTING_STATUS.APPROVED) {
+    throw new Error(`Cannot check in listing with status "${listing.status}"`);
   }
 
   const { variant } = listing;
@@ -27,23 +29,12 @@ export async function activateListing({
 
   // Auto-generate barcode for non-footwear if not present
   if (!variant.gtin) {
-    const sub = product.category ? parseCategory(product.category).sub : undefined;
-    let barcode: string | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const candidate = generateBarcode(product.brand ?? undefined, sub, variant.size);
-      const existing = await prisma.variant.findUnique({ where: { gtin: candidate } });
-      if (!existing) { barcode = candidate; break; }
-    }
-    if (!barcode) throw new Error("Failed to generate unique barcode after 3 attempts");
-    await prisma.variant.update({
-      where: { id: variant.id },
-      data: { gtin: barcode },
-    });
+    await ensureVariantBarcode(variant.id, { brand: product.brand, category: product.category, size: variant.size });
   }
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
-    data: { status: "active", listedAt: new Date() },
+    data: { status: LISTING_STATUS.ACTIVE, listedAt: new Date() },
     include: { consignor: true, variant: { include: { product: true } } },
   });
 
@@ -51,27 +42,14 @@ export async function activateListing({
   try {
     const freshVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
     const freshProduct = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
-
     const imageData = freshProduct.imageUrl?.startsWith("data:") ? freshProduct.imageUrl : undefined;
 
-    await ensureShopifyProductAndVariant({
-      admin,
-      product: freshProduct,
-      variant: freshVariant,
-      imageData,
-    });
-
-    if (imageData) {
-      const afterSync = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
-      if (afterSync.imageUrl && !afterSync.imageUrl.startsWith("data:")) {
-        // Already updated, good
-      }
-    }
+    await ensureShopifyProductAndVariant({ admin, product: freshProduct, variant: freshVariant, imageData });
 
     const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
-    await syncInventory({ admin, variant: syncedVariant });
+    await safeSyncInventory({ admin, variant: syncedVariant, context: "activation" });
   } catch (err) {
-    console.error("Shopify sync failed during activation (will retry on next operation):", err);
+    logger.error("Shopify sync failed during activation", { error: err instanceof Error ? err.message : String(err) });
   }
 
   return updated;
@@ -91,22 +69,18 @@ export async function approveWithdrawal({
     include: { variant: true },
   });
 
-  if (listing.status !== "withdrawal_requested") {
+  if (listing.status !== LISTING_STATUS.WITHDRAWAL_REQUESTED) {
     throw new Error(`Cannot approve withdrawal for listing with status "${listing.status}"`);
   }
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
-    data: { status: "pending_pickup", withdrawalApprovedAt: new Date() },
+    data: { status: LISTING_STATUS.PENDING_PICKUP, withdrawalApprovedAt: new Date() },
     include: { consignor: true, variant: { include: { product: true } } },
   });
 
-  try {
-    const variant = await prisma.variant.findUniqueOrThrow({ where: { id: listing.variantId } });
-    await syncInventory({ admin, variant });
-  } catch (err) {
-    console.error("Shopify sync failed during withdrawal approval:", err);
-  }
+  // listing.variant already loaded via include above
+  await safeSyncInventory({ admin, variant: listing.variant, context: "withdrawal approval" });
 
   return updated;
 }
@@ -120,13 +94,13 @@ export async function completeWithdrawal({
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
 
-  if (listing.status !== "pending_pickup") {
+  if (listing.status !== LISTING_STATUS.PENDING_PICKUP) {
     throw new Error(`Cannot complete withdrawal for listing with status "${listing.status}"`);
   }
 
   return prisma.listing.update({
     where: { id: listingId },
-    data: { status: "withdrawn" },
+    data: { status: LISTING_STATUS.WITHDRAWN },
     include: { consignor: true, variant: { include: { product: true } } },
   });
 }

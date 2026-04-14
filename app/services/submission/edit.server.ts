@@ -2,8 +2,8 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
-
-const TERMINAL_STATUSES = ["sold", "cancelled", "rejected", "withdrawn"];
+import { LISTING_STATUS, TERMINAL_STATUSES } from "~/lib/listing-statuses";
+import { logger } from "~/lib/logger.server";
 
 // ── Admin: Edit product-level fields (title, brand, category, image) ──
 
@@ -41,7 +41,7 @@ export async function adminEditProduct({
     try {
       await updateShopifyProductImage({ admin, productId, shopifyProductId: updated.shopifyProductId, imageData });
     } catch (err) {
-      console.error("Image upload to Shopify failed:", err);
+      logger.error("Image upload to Shopify failed", { error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -49,7 +49,7 @@ export async function adminEditProduct({
     try {
       await updateShopifyProduct({ admin, product: updated });
     } catch (err) {
-      console.error("Shopify product update failed:", err);
+      logger.error("Shopify product update failed", { error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -105,7 +105,7 @@ export async function adminEditListing({
     include: { consignor: true, variant: { include: { product: true } } },
   });
 
-  if (admin && ["active", "pending_sale"].includes(listing.status) && updated.variant.shopifyVariantId) {
+  if (admin && [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE].includes(listing.status as any) && updated.variant.shopifyVariantId) {
     const shopifyProductId = updated.variant.product.shopifyProductId;
     if (shopifyProductId) {
       try {
@@ -127,7 +127,7 @@ export async function adminEditListing({
 
         await syncInventory({ admin, variant: updated.variant });
       } catch (err) {
-        console.error("Shopify sync after listing edit failed:", err);
+        logger.error("Shopify sync after listing edit failed", { error: err instanceof Error ? err.message : String(err), listingId });
       }
     }
   }

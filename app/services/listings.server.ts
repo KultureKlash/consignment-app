@@ -3,7 +3,9 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
-import { generateBarcode, parseCategory } from "~/lib/categories";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { ensureVariantBarcode } from "~/services/variant-utils.server";
+import { logger } from "~/lib/logger.server";
 
 export async function createListing({
   admin,
@@ -35,32 +37,16 @@ export async function createListing({
   cost?: number;
 }) {
 
-  // 1️⃣ Find or create product in DB
   const product = await findOrCreateProduct({ styleId, title, brand, category });
-
-  // 2️⃣ Find or create variant in DB
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
-  // 3️⃣ Auto-generate barcode for non-footwear if not provided
   if (!variant.gtin && !gtin) {
-    const sub = category ? parseCategory(category).sub : undefined;
-    let barcode: string | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const candidate = generateBarcode(brand, sub, size);
-      const existing = await prisma.variant.findUnique({ where: { gtin: candidate } });
-      if (!existing) { barcode = candidate; break; }
-    }
-    if (!barcode) throw new Error("Failed to generate unique barcode after 3 attempts");
-    await prisma.variant.update({
-      where: { id: variant.id },
-      data: { gtin: barcode },
-    });
+    await ensureVariantBarcode(variant.id, { brand, category, size });
   }
 
-  // Re-fetch variant to include auto-generated barcode
+  // Re-fetch: ensureVariantBarcode may have written a new gtin
   const freshVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
 
-  // 4️⃣ Create listings FIRST (local DB, always succeeds)
   const listings = [];
   for (let i = 0; i < count; i++) {
     const listing = await prisma.listing.create({
@@ -70,18 +56,17 @@ export async function createListing({
     listings.push(listing);
   }
 
-  // 5️⃣ Shopify sync (best-effort — don't block listing creation)
+  // Best-effort Shopify sync — listing is already saved locally
   try {
-    // Only pass image for new products (no Shopify product yet or no image)
     const needsImage = !product.shopifyProductId && imageData;
     await ensureShopifyProductAndVariant({ admin, product, variant: freshVariant, taxonomyId, imageData: needsImage ? imageData : undefined });
+    // Re-fetch: ensureShopify may have set shopifyVariantId/inventoryItemId
     const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
     await syncInventory({ admin, variant: syncedVariant });
   } catch (err) {
-    console.error("Shopify sync failed (will retry on next operation):", err);
+    logger.error("Shopify sync failed (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
   }
 
-  // Return first listing for backward compat with single-item callers
   return listings[0];
 }
 
@@ -97,13 +82,13 @@ export async function cancelListing({
     include: { variant: true },
   });
 
-  if (listing.status !== "active") {
+  if (listing.status !== LISTING_STATUS.ACTIVE) {
     throw new Error(`Cannot cancel listing with status "${listing.status}"`);
   }
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
-    data: { status: "cancelled" },
+    data: { status: LISTING_STATUS.CANCELLED },
     include: { consignor: true },
   });
 
@@ -124,11 +109,11 @@ export async function restoreListing({
     include: { variant: true, consignor: true },
   });
   if (!listing) throw new Error("Listing not found");
-  if (listing.status !== "cancelled") throw new Error("Only cancelled listings can be restored");
+  if (listing.status !== LISTING_STATUS.CANCELLED) throw new Error("Only cancelled listings can be restored");
 
   const updated = await prisma.listing.update({
     where: { id: listingId },
-    data: { status: "active" },
+    data: { status: LISTING_STATUS.ACTIVE },
     include: { consignor: true },
   });
 
@@ -155,7 +140,7 @@ export async function bulkCancelListings({
   });
 
   // Filter to only active ones
-  const cancellable = listings.filter((l) => l.status === "active");
+  const cancellable = listings.filter((l) => l.status === LISTING_STATUS.ACTIVE);
   const skipped = listings.length - cancellable.length;
 
   if (cancellable.length === 0) {
@@ -166,7 +151,7 @@ export async function bulkCancelListings({
   const cancellableIds = cancellable.map((l) => l.id);
   await prisma.listing.updateMany({
     where: { id: { in: cancellableIds } },
-    data: { status: "cancelled" },
+    data: { status: LISTING_STATUS.CANCELLED },
   });
 
   // 3. Collect unique variants that need Shopify sync

@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
-import { fmt } from "~/lib/currency";
 import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders.server";
+import { buildNotifications } from "./notifications.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 interface MonthlyEarning {
   month: string;
@@ -11,15 +12,6 @@ interface ListingStatusCount {
   label: string;
   value: number;
   max: number;
-  color: string;
-}
-
-export interface PortalNotification {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  time: Date;
   color: string;
 }
 
@@ -83,223 +75,8 @@ function getMonthlyEarnings(
   }));
 }
 
-function buildNotifications(
-  sales: { id: string; createdAt: Date; product: string; consignorAmount: number }[],
-  payouts: { id: string; createdAt: Date; amount: number; status: string }[],
-  rejections: { id: string; rejectedAt: Date; product: string; size: string; reason: string }[] = [],
-  approvals: { id: string; approvedAt: Date; product: string; size: string }[] = [],
-  withdrawals: { id: string; time: Date; product: string; size: string; type: "withdrawal_requested" | "pickup_ready" | "withdrawn" }[] = [],
-): PortalNotification[] {
-  const notifications: PortalNotification[] = [];
-
-  for (const sale of sales) {
-    notifications.push({
-      id: `sale-${sale.id}`,
-      type: "sale",
-      title: "Item Sold",
-      description: `${sale.product} sold for $${fmt(sale.consignorAmount)}`,
-      time: sale.createdAt,
-      color: "text-[hsl(var(--success))]",
-    });
-  }
-
-  for (const payout of payouts) {
-    notifications.push({
-      id: `payout-${payout.id}`,
-      type: "payout",
-      title: payout.status === "paid" ? "Payout Received" : "Payout Pending",
-      description: `$${fmt(payout.amount)} ${payout.status === "paid" ? "paid out" : "pending"}`,
-      time: payout.createdAt,
-      color: payout.status === "paid" ? "text-primary" : "text-[hsl(var(--warning))]",
-    });
-  }
-
-  for (const r of rejections) {
-    notifications.push({
-      id: `rejected-${r.id}`,
-      type: "rejected",
-      title: "Listing Rejected",
-      description: `${r.product} (${r.size}) — ${r.reason}`,
-      time: r.rejectedAt,
-      color: "text-red-400",
-    });
-  }
-
-  for (const a of approvals) {
-    notifications.push({
-      id: `approved-${a.id}`,
-      type: "approved",
-      title: "Listing Approved",
-      description: `${a.product} (${a.size}) — ready for drop-off`,
-      time: a.approvedAt,
-      color: "text-teal-400",
-    });
-  }
-
-  for (const w of withdrawals) {
-    const titles: Record<string, string> = {
-      withdrawal_requested: "Withdrawal Submitted",
-      pickup_ready: "Ready for Pickup",
-      withdrawn: "Withdrawal Complete",
-    };
-    const descriptions: Record<string, string> = {
-      withdrawal_requested: `${w.product} (${w.size}) — withdrawal request sent`,
-      pickup_ready: `${w.product} (${w.size}) — approved, come pick up your item`,
-      withdrawn: `${w.product} (${w.size}) — picked up`,
-    };
-    const colors: Record<string, string> = {
-      withdrawal_requested: "text-orange-400",
-      pickup_ready: "text-cyan-400",
-      withdrawn: "text-muted-foreground",
-    };
-    notifications.push({
-      id: `${w.type}-${w.id}`,
-      type: w.type,
-      title: titles[w.type],
-      description: descriptions[w.type],
-      time: w.time,
-      color: colors[w.type],
-    });
-  }
-
-  notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  return notifications.slice(0, 20);
-}
-
-/** Check if in-app notifications are enabled from prefs JSON */
-function isInAppEnabled(prefsJson: string | null | undefined): boolean {
-  if (!prefsJson) return true; // null = all enabled
-  try {
-    const parsed = JSON.parse(prefsJson);
-    // New format: { inApp: boolean, email: boolean }
-    if (typeof parsed.inApp === "boolean") return parsed.inApp;
-    // Legacy format: { disabled: string[] } — treat as enabled
-    return true;
-  } catch {
-    return true;
-  }
-}
-
-export async function getConsignorNotifications(
-  consignorId: string,
-  notificationsReadAt: Date | null,
-  notificationPrefs?: string | null,
-): Promise<{
-  items: PortalNotification[];
-  unreadCount: number;
-}> {
-  const [recentSales, recentPayouts, recentRejections, recentApprovals, withdrawalListings] = await Promise.all([
-    prisma.transaction.findMany({
-      where: { consignorId, type: "sale" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: {
-        orderItem: {
-          include: {
-            listing: {
-              include: { variant: { include: { product: true } } },
-            },
-          },
-        },
-      },
-    }),
-    prisma.payout.findMany({
-      where: { consignorId },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, createdAt: true, amount: true, status: true },
-    }),
-    prisma.listing.findMany({
-      where: { consignorId, status: "rejected", rejectedAt: { not: null } },
-      orderBy: { rejectedAt: "desc" },
-      take: 10,
-      include: { variant: { include: { product: true } } },
-    }),
-    prisma.listing.findMany({
-      where: { consignorId, status: "approved_awaiting_dropoff", approvedAt: { not: null } },
-      orderBy: { approvedAt: "desc" },
-      take: 10,
-      include: { variant: { include: { product: true } } },
-    }),
-    // All withdrawal-related listings (covers all 3 statuses)
-    prisma.listing.findMany({
-      where: { consignorId, status: { in: ["withdrawal_requested", "pending_pickup", "withdrawn"] }, withdrawnAt: { not: null } },
-      orderBy: { withdrawnAt: "desc" },
-      take: 10,
-      include: { variant: { include: { product: true } } },
-    }),
-  ]);
-
-  const saleNotifs = recentSales.map((tx) => ({
-    id: tx.id,
-    createdAt: tx.createdAt,
-    product: tx.orderItem?.listing.variant.product.title ?? "Unknown",
-    consignorAmount: tx.consignorAmount,
-  }));
-
-  const rejectionNotifs = recentRejections.map((l) => ({
-    id: l.id,
-    rejectedAt: l.rejectedAt!,
-    product: l.variant.product.title,
-    size: l.variant.size,
-    reason: l.rejectionReason ?? "No reason provided",
-  }));
-
-  const approvalNotifs = recentApprovals.map((l) => ({
-    id: l.id,
-    approvedAt: l.approvedAt!,
-    product: l.variant.product.title,
-    size: l.variant.size,
-  }));
-
-  // Build withdrawal notifications — each listing generates a notification for its current step
-  // plus any earlier steps it has passed through
-  const withdrawalNotifs: { id: string; time: Date; product: string; size: string; type: "withdrawal_requested" | "pickup_ready" | "withdrawn" }[] = [];
-
-  for (const l of withdrawalListings) {
-    // Step 1: withdrawal requested (always present for these statuses)
-    withdrawalNotifs.push({
-      id: l.id,
-      time: l.withdrawnAt!,
-      product: l.variant.product.title,
-      size: l.variant.size,
-      type: "withdrawal_requested",
-    });
-
-    // Step 2: pickup ready (pending_pickup or withdrawn have been approved)
-    if (l.status === "pending_pickup" || l.status === "withdrawn") {
-      withdrawalNotifs.push({
-        id: l.id,
-        // Use withdrawnAt + 1ms offset so it sorts after the request notification
-        time: new Date((l.withdrawnAt as Date).getTime() + 1000),
-        product: l.variant.product.title,
-        size: l.variant.size,
-        type: "pickup_ready",
-      });
-    }
-
-    // Step 3: withdrawn (final state)
-    if (l.status === "withdrawn") {
-      withdrawalNotifs.push({
-        id: l.id,
-        time: new Date((l.withdrawnAt as Date).getTime() + 2000),
-        product: l.variant.product.title,
-        size: l.variant.size,
-        type: "withdrawn",
-      });
-    }
-  }
-
-  const allItems = buildNotifications(saleNotifs, recentPayouts, rejectionNotifs, approvalNotifs, withdrawalNotifs);
-  const inAppEnabled = isInAppEnabled(notificationPrefs);
-  const items = inAppEnabled ? allItems : [];
-  const unreadCount = notificationsReadAt
-    ? items.filter((item) => new Date(item.time) > notificationsReadAt).length
-    : items.length;
-  return { items, unreadCount };
-}
-
-export async function getConsignorDashboard(consignorId: string, storeOwned = false) {
+export async function getConsignorDashboard(consignorId: string, opts: { storeOwned?: boolean } = {}) {
+  const storeOwned = opts.storeOwned ?? false;
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -324,11 +101,11 @@ export async function getConsignorDashboard(consignorId: string, storeOwned = fa
     storeOwned ? Promise.resolve(0) : getConsignorPaidTotal(consignorId),
 
     prisma.listing.count({
-      where: { consignorId, status: "active" },
+      where: { consignorId, status: LISTING_STATUS.ACTIVE },
     }),
 
     prisma.listing.count({
-      where: { consignorId, status: "sold" },
+      where: { consignorId, status: LISTING_STATUS.SOLD },
     }),
 
     // Payout breakdown: awaiting invoice (status=pending)
@@ -403,7 +180,7 @@ export async function getConsignorDashboard(consignorId: string, storeOwned = fa
 
     // Inventory value: sum of prices for active listings
     prisma.listing.aggregate({
-      where: { consignorId, status: "active" },
+      where: { consignorId, status: LISTING_STATUS.ACTIVE },
       _sum: { price: true },
     }),
 
@@ -482,147 +259,5 @@ export async function getConsignorDashboard(consignorId: string, storeOwned = fa
       profit: tx.salePrice - tx.cost,
       date: tx.createdAt,
     })),
-  };
-}
-
-export async function getConsignorPayouts(consignorId: string, storeOwned = false) {
-  if (storeOwned) {
-    return { payouts: [], unbatchedTxs: [], storeOwned: true };
-  }
-
-  const payouts = await prisma.payout.findMany({
-    where: { consignorId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      items: {
-        include: {
-          transaction: {
-            include: {
-              orderItem: {
-                include: {
-                  order: true,
-                  listing: {
-                    include: { variant: { include: { product: true } } },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  // Unbatched sale transactions (not in any payout yet)
-  const unbatchedTxs = await prisma.transaction.findMany({
-    where: { consignorId, type: "sale", payoutItems: { none: {} } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      orderItem: {
-        include: {
-          order: true,
-          listing: {
-            include: { variant: { include: { product: true } } },
-          },
-        },
-      },
-    },
-  });
-
-  return { payouts, unbatchedTxs };
-}
-
-export async function getConsignorSales(
-  consignorId: string,
-  filters: { search?: string; status?: string } = {},
-  storeOwned = false,
-) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { consignorId, type: "sale" };
-
-  // Status filter: "refunded" means the orderItem was refunded
-  if (filters.status === "refunded") {
-    where.orderItem = { status: "refunded" };
-  } else if (filters.status === "sold") {
-    where.orderItem = { status: "sold" };
-  }
-
-  // Search filter
-  if (filters.search) {
-    const s = filters.search;
-    where.OR = [
-      { orderItem: { order: { orderNumber: { contains: s } } } },
-      { orderItem: { listing: { variant: { product: { title: { contains: s } } } } } },
-    ];
-  }
-
-  const txInclude = {
-    orderItem: {
-      include: {
-        order: true,
-        listing: {
-          include: { variant: { include: { product: true } } },
-        },
-      },
-    },
-    payoutItems: {
-      include: { payout: { select: { id: true, status: true } } },
-    },
-  };
-
-  const [transactions, totalEarned, salesCount] = await Promise.all([
-    prisma.transaction.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: txInclude,
-    }),
-    prisma.transaction.aggregate({
-      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
-      _sum: { consignorAmount: true, salePrice: true, cost: true },
-    }),
-    prisma.transaction.count({
-      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
-    }),
-  ]);
-
-  const totalSalePrice = totalEarned._sum.salePrice ?? 0;
-  const totalCost = totalEarned._sum.cost ?? 0;
-  const totalEarnedVal = storeOwned
-    ? totalSalePrice - totalCost
-    : (totalEarned._sum.consignorAmount ?? 0);
-  const avgSale = salesCount > 0 ? totalSalePrice / salesCount : 0;
-
-  const sales = transactions.map((tx) => {
-    const payoutItem = tx.payoutItems[0];
-    let payoutStatus: "unbatched" | "pending" | "paid" = "unbatched";
-    if (payoutItem) {
-      payoutStatus = payoutItem.payout.status === "paid" ? "paid" : "pending";
-    }
-
-    return {
-      id: tx.id,
-      product: tx.orderItem?.listing.variant.product.title ?? "Unknown",
-      size: tx.orderItem?.listing.variant.size ?? "",
-      orderNumber: tx.orderItem?.order.orderNumber ?? "",
-      salePrice: tx.salePrice,
-      cost: tx.cost,
-      fee: tx.feeAmount,
-      payout: tx.consignorAmount,
-      profit: tx.salePrice - tx.cost,
-      date: tx.createdAt,
-      status: tx.orderItem?.status ?? "sold",
-      payoutStatus,
-    };
-  });
-
-  return {
-    storeOwned,
-    sales,
-    stats: {
-      totalEarned: totalEarnedVal,
-      itemsSold: salesCount,
-      avgSale: Math.round(avgSale * 100) / 100,
-    },
   };
 }

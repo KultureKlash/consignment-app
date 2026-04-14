@@ -1,4 +1,5 @@
 // Shared styles, helpers, and types for listing-related pages
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Styles ──────────────────────────────────────────────
 
@@ -125,17 +126,17 @@ export function relativeTime(date: string | Date): string {
 
 export function statusLabel(status: string): string {
   const labels: Record<string, string> = {
-    submitted: "submitted",
-    approved_awaiting_dropoff: "awaiting drop-off",
-    active: "active",
-    paused: "paused",
-    pending_sale: "pending",
-    sold: "sold",
-    cancelled: "cancelled",
-    rejected: "rejected",
-    withdrawal_requested: "withdrawal",
-    pending_pickup: "pickup",
-    withdrawn: "withdrawn",
+    [LISTING_STATUS.SUBMITTED]: "submitted",
+    [LISTING_STATUS.APPROVED]: "awaiting drop-off",
+    [LISTING_STATUS.ACTIVE]: "active",
+    [LISTING_STATUS.PAUSED]: "paused",
+    [LISTING_STATUS.PENDING_SALE]: "pending",
+    [LISTING_STATUS.SOLD]: "sold",
+    [LISTING_STATUS.CANCELLED]: "cancelled",
+    [LISTING_STATUS.REJECTED]: "rejected",
+    [LISTING_STATUS.WITHDRAWAL_REQUESTED]: "withdrawal",
+    [LISTING_STATUS.PENDING_PICKUP]: "pickup",
+    [LISTING_STATUS.WITHDRAWN]: "withdrawn",
   };
   return labels[status] ?? status;
 }

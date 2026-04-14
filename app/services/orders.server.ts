@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory.server";
+import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 /**
  * Process an incoming order — allocate per-item listings to order items.
@@ -46,7 +47,6 @@ export async function processOrder({
     let orderTotal = 0;
 
     for (const lineItem of lineItems) {
-      // Find the local variant by Shopify variant ID
       const variant = await tx.variant.findUnique({
         where: { shopifyVariantId: lineItem.shopifyVariantId },
       });
@@ -62,7 +62,7 @@ export async function processOrder({
       // Per-item allocation: find N active listings, lowest price first, FIFO tiebreak
       // SQLite serializes writes implicitly; PostgreSQL needs FOR UPDATE (handled by DB adapter)
       const listings = await tx.listing.findMany({
-        where: { variantId: variant.id, status: "active" },
+        where: { variantId: variant.id, status: LISTING_STATUS.ACTIVE },
         orderBy: [{ price: "asc" }, { createdAt: "asc" }],
         take: lineItem.quantity,
         include: { consignor: true },
@@ -75,13 +75,11 @@ export async function processOrder({
       }
 
       for (const listing of listings) {
-        // Mark listing as pending sale (not yet paid)
         await tx.listing.update({
           where: { id: listing.id },
-          data: { status: "pending_sale", soldAt: new Date() },
+          data: { status: LISTING_STATUS.PENDING_SALE, soldAt: new Date() },
         });
 
-        // Create order item (1 per listing)
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
@@ -94,7 +92,6 @@ export async function processOrder({
       }
     }
 
-    // Update order total
     return tx.order.update({
       where: { id: newOrder.id },
       data: { total: orderTotal },
@@ -176,10 +173,9 @@ export async function creditOrder({
         },
       });
 
-      // Promote listing from pending_sale to sold
       await tx.listing.update({
         where: { id: item.listingId },
-        data: { status: "sold" },
+        data: { status: LISTING_STATUS.SOLD },
       });
     }
 
@@ -244,7 +240,6 @@ export async function cancelOrder({
       await refundItem(tx, { ...item, orderId: order.id }, affectedVariantIds, true, { wasPaid, txType });
     }
 
-    // Update order status and paymentStatus
     await tx.order.update({
       where: { id: order.id },
       data: {
@@ -435,7 +430,6 @@ async function refundItem(
   const txType = options?.txType ?? "refund";
   const postPayout = wasPaid && isPostPaidPayout(item.transactions);
 
-  // Mark order item as refunded
   await tx.orderItem.update({
     where: { id: item.id },
     data: { status: "refunded" },
@@ -454,7 +448,7 @@ async function refundItem(
           consignorId: shopConsignorId,
           variantId: item.listing.variantId,
           price: item.price,
-          status: "active",
+          status: LISTING_STATUS.ACTIVE,
           reassignedFromConsignorId: item.listing.consignorId,
           reassignedFromListingId: item.listingId,
         },
@@ -479,7 +473,7 @@ async function refundItem(
       affectedVariantIds.add(item.listing.variantId);
       await tx.listing.update({
         where: { id: item.listingId },
-        data: { status: "active", soldAt: null },
+        data: { status: LISTING_STATUS.ACTIVE, soldAt: null },
       });
     }
 
