@@ -34,18 +34,12 @@ export async function queryListings(filters: ListingFilters) {
 
   const conditions: Prisma.ListingWhereInput[] = [];
 
-  // Text search (SQLite-compatible: no mode: "insensitive")
   if (search) {
-    const lower = search.toLowerCase();
-    const upper = search.toUpperCase();
     conditions.push({
       OR: [
-        { consignor: { name: { contains: search } } },
-        { consignor: { name: { contains: lower } } },
-        { variant: { product: { title: { contains: search } } } },
-        { variant: { product: { title: { contains: lower } } } },
-        { variant: { product: { sku: { contains: search } } } },
-        { variant: { product: { sku: { contains: upper } } } },
+        { consignor: { name: { contains: search, mode: "insensitive" } } },
+        { variant: { product: { title: { contains: search, mode: "insensitive" } } } },
+        { variant: { product: { sku: { contains: search, mode: "insensitive" } } } },
       ],
     });
   }

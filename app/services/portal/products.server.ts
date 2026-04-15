@@ -56,16 +56,13 @@ export async function getVariantMarketData(variantId: string) {
 export async function searchBrands(query: string): Promise<string[]> {
   if (!query.trim()) return [];
 
-  const q = query.trim().toLowerCase();
   const products = await prisma.product.findMany({
-    where: { brand: { not: null } },
+    where: { brand: { contains: query.trim(), mode: "insensitive" } },
     select: { brand: true },
     distinct: ["brand"],
+    take: 10,
+    orderBy: { brand: "asc" },
   });
 
-  return products
-    .map((p) => p.brand!)
-    .filter((b) => b.toLowerCase().includes(q))
-    .sort()
-    .slice(0, 10);
+  return products.map((p) => p.brand!);
 }

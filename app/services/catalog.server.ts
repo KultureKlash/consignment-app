@@ -8,18 +8,12 @@ export async function findProductBySku(sku: string) {
 }
 
 export async function findProductByTitleAndBrand(title: string, brand?: string) {
-  // SQLite is case-sensitive, so we search with both original and lowercased
-  const titleLower = title.toLowerCase();
-  const products = await prisma.product.findMany({
+  return prisma.product.findFirst({
     where: {
-      OR: [
-        { title, brand: brand ?? null },
-        { title: titleLower, brand: brand ?? null },
-      ],
+      title: { equals: title, mode: "insensitive" },
+      brand: brand ? { equals: brand, mode: "insensitive" } : null,
     },
-    take: 1,
   });
-  return products[0] ?? null;
 }
 
 export async function createProduct({
@@ -116,18 +110,14 @@ export async function searchProducts(
 ) {
   const q = query.trim();
   if (!q) return [];
-  const qLower = q.toLowerCase();
 
   return prisma.product.findMany({
     where: {
       ...(opts?.exclude ? { id: { not: opts.exclude } } : {}),
       OR: [
-        { title: { contains: q } },
-        { title: { contains: qLower } },
-        { brand: { contains: q } },
-        { brand: { contains: qLower } },
-        { sku: { contains: q } },
-        { sku: { contains: q.toUpperCase() } },
+        { title: { contains: q, mode: "insensitive" } },
+        { brand: { contains: q, mode: "insensitive" } },
+        { sku: { contains: q, mode: "insensitive" } },
       ],
     },
     include: opts?.includeVariants ? { variants: { orderBy: { size: "asc" } } } : undefined,

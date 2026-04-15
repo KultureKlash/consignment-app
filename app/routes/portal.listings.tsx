@@ -31,10 +31,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (search) {
     where.AND = [{
       OR: [
-        { variant: { product: { title: { contains: search } } } },
-        { variant: { product: { brand: { contains: search } } } },
-        { variant: { product: { sku: { contains: search } } } },
-        { variant: { size: { contains: search } } },
+        { variant: { product: { title: { contains: search, mode: "insensitive" } } } },
+        { variant: { product: { brand: { contains: search, mode: "insensitive" } } } },
+        { variant: { product: { sku: { contains: search, mode: "insensitive" } } } },
+        { variant: { size: { contains: search, mode: "insensitive" } } },
       ],
     }];
   }
