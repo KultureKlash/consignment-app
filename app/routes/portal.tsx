@@ -1,5 +1,5 @@
 import { Outlet, redirect, useRouteError, isRouteErrorResponse } from "react-router";
-import type { LoaderFunctionArgs, LinksFunction } from "react-router";
+import type { LoaderFunctionArgs, LinksFunction, HeadersFunction } from "react-router";
 import { useLoaderData } from "react-router";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { getConsignorNotifications } from "~/services/portal/notifications.server";
@@ -14,11 +14,26 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
   if (!consignor) throw redirect("/portal/login");
   const notifications = await getConsignorNotifications(consignor.id, consignor.notificationsReadAt, consignor.notificationPrefs);
-  return {
+
+  const data = {
     consignor: { id: consignor.id, name: consignor.name, email: consignor.email, avatarColor: consignor.avatarColor, storeOwned: consignor.storeOwned },
     notifications,
   };
+
+  // Sliding window: refresh session cookie if stale
+  if (consignor.refreshCookie) {
+    return new Response(JSON.stringify(data), {
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": consignor.refreshCookie,
+      },
+    });
+  }
+
+  return data;
 }
+
+export const headers: HeadersFunction = ({ loaderHeaders }) => loaderHeaders;
 
 export default function PortalLayout() {
   const { consignor } = useLoaderData<typeof loader>();

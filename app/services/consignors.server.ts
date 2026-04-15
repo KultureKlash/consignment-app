@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import { getConsignorBalance } from "~/services/orders.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { sendAccountSuspendedEmail } from "~/services/email.server";
 
 /**
  * Get full consignor detail: profile + balance + listing status counts.
@@ -138,6 +139,8 @@ export async function suspendConsignor(id: string, reason?: string, pauseListing
       suspendedAt: new Date(),
     },
   });
+
+  sendAccountSuspendedEmail(updated, reason).catch(() => {});
 
   return { consignor: updated, pausedCount };
 }

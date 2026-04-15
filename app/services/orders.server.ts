@@ -2,6 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { sendItemSoldEmail } from "~/services/email.server";
 
 /**
  * Process an incoming order — allocate per-item listings to order items.
@@ -137,7 +138,7 @@ export async function creditOrder({
     include: {
       items: {
         include: {
-          listing: { include: { consignor: true } },
+          listing: { include: { consignor: true, variant: { include: { product: true } } } },
           transactions: true,
         },
       },
@@ -177,6 +178,13 @@ export async function creditOrder({
         where: { id: item.listingId },
         data: { status: LISTING_STATUS.SOLD },
       });
+
+      sendItemSoldEmail(item.listing.consignor, {
+        product: item.listing.variant.product.title,
+        size: item.listing.variant.size,
+        salePrice: item.price,
+        payoutAmount: consignorAmount,
+      }).catch(() => {});
     }
 
     await tx.order.update({
@@ -534,4 +542,17 @@ export async function getConsignorPaidTotal(consignorId: string): Promise<number
     _sum: { amount: true },
   });
   return result._sum.amount ?? 0;
+}
+
+// ── Fulfill order (Shopify fulfilled webhook) ──
+
+export async function fulfillOrder({ shopifyOrderId }: { shopifyOrderId: string }) {
+  const order = await prisma.order.findUnique({ where: { shopifyId: shopifyOrderId } });
+  if (!order) return;
+  if (order.fulfilledAt) return; // idempotent
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { fulfilledAt: new Date(), status: "fulfilled" },
+  });
 }

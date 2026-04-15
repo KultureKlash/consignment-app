@@ -1,5 +1,6 @@
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { sendListingRejectedEmail } from "~/services/email.server";
 
 // ── Admin: Approve a submitted listing ──
 
@@ -35,7 +36,7 @@ export async function rejectListing({
     throw new Error(`Cannot reject listing with status "${listing.status}"`);
   }
 
-  return prisma.listing.update({
+  const updated = await prisma.listing.update({
     where: { id: listingId },
     data: {
       status: LISTING_STATUS.REJECTED,
@@ -44,6 +45,14 @@ export async function rejectListing({
     },
     include: { consignor: true, variant: { include: { product: true } } },
   });
+
+  sendListingRejectedEmail(updated.consignor, {
+    product: updated.variant.product.title,
+    size: updated.variant.size,
+    reason,
+  }).catch(() => {});
+
+  return updated;
 }
 
 // ── Admin: Edit listing fields and approve in one step ──

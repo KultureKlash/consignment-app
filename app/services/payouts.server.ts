@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { sendPayoutReadyEmail } from "~/services/email.server";
 
 /**
  * Get all data needed for the payouts admin page:
@@ -175,6 +176,11 @@ export async function createPayout({
       },
     },
   });
+
+  sendPayoutReadyEmail(payout.consignor, {
+    amount: payout.amount,
+    itemCount: transactionIds.length,
+  }).catch(() => {});
 
   return payout;
 }

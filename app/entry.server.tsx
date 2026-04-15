@@ -6,6 +6,7 @@ import { type EntryContext } from "react-router";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
 import { validateEnv } from "./lib/env.server";
+import { captureException } from "./lib/sentry.server";
 
 validateEnv();
 
@@ -82,6 +83,7 @@ export default async function handleRequest(
         },
         onError(error) {
           responseStatusCode = 500;
+          captureException(error);
           if (typeof error === "object" && error !== null && "message" in error) {
             const { logger } = require("./lib/logger.server");
             logger.error("React render error", { error: (error as Error).message });

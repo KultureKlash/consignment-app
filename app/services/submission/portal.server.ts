@@ -3,6 +3,7 @@ import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.ser
 import { syncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { logger } from "~/lib/logger.server";
+import { sendSubmissionConfirmedEmail } from "~/services/email.server";
 
 /** Throws if the consignor account is suspended. Used by all portal-facing functions. */
 async function requireActiveConsignor(consignorId: string) {
@@ -71,7 +72,14 @@ export async function submitListing({
     listings.push(listing);
   }
 
-  return listings[0];
+  const first = listings[0];
+  sendSubmissionConfirmedEmail(first.consignor, {
+    product: first.variant.product.title,
+    size: first.variant.size,
+    price: first.price,
+  }).catch(() => {});
+
+  return first;
 }
 
 // ── Portal: Consignor edits a submitted listing ──

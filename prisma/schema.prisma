@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -139,10 +139,13 @@ model Order {
   total         Float
   status        String      @default("open")
   paymentStatus String      @default("pending") // "pending" | "paid"
+  fulfilledAt   DateTime?
 
   items     OrderItem[]
 
   createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
 
 model OrderItem {
@@ -182,6 +185,8 @@ model Transaction {
   payoutItems      PayoutItem[]
 
   createdAt        DateTime @default(now())
+
+  @@index([consignorId, type, createdAt])
 }
 
 model WebhookEvent {
@@ -193,6 +198,8 @@ model WebhookEvent {
   error           String?
   processedAt     DateTime?
   createdAt       DateTime  @default(now())
+
+  @@index([topic, status, createdAt])
 }
 
 model Payout {
@@ -206,6 +213,8 @@ model Payout {
   items        PayoutItem[]
 
   createdAt    DateTime @default(now())
+
+  @@index([consignorId, status, createdAt])
 }
 
 model PayoutItem {

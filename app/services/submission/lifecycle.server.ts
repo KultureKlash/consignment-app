@@ -5,6 +5,7 @@ import { safeSyncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ensureVariantBarcode } from "~/services/catalog.server";
 import { logger } from "~/lib/logger.server";
+import { sendWithdrawalApprovedEmail } from "~/services/email.server";
 
 // ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──
 
@@ -81,6 +82,11 @@ export async function approveWithdrawal({
 
   // listing.variant already loaded via include above
   await safeSyncInventory({ admin, variant: listing.variant, context: "withdrawal approval" });
+
+  sendWithdrawalApprovedEmail(updated.consignor, {
+    product: updated.variant.product.title,
+    size: updated.variant.size,
+  }).catch(() => {});
 
   return updated;
 }

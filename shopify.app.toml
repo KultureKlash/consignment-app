@@ -36,6 +36,10 @@ api_version = "2026-04"
   topics = [ "refunds/create" ]
   uri = "/webhooks/refunds/create"
 
+  [[webhooks.subscriptions]]
+  topics = [ "orders/fulfilled" ]
+  uri = "/webhooks/orders/fulfilled"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_metaobject_definitions,write_metaobjects,write_products,read_locations,write_inventory,read_orders,read_publications,write_publications"

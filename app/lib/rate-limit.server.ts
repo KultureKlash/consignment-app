@@ -1,6 +1,8 @@
 /**
- * Simple in-memory sliding-window rate limiter.
- * For single-process deployments (dev + small prod). Swap to Redis for multi-process.
+ * In-memory sliding-window rate limiter.
+ * Fine for single-instance deployments (Fly, Railway, etc.).
+ * For horizontal scaling (multiple instances), swap getStore() to use Redis:
+ *   npm install ioredis → create RedisStore with REDIS_URL env var.
  */
 
 type RateLimitEntry = { count: number; resetAt: number };
