@@ -145,27 +145,35 @@ export async function createPayout({
     throw new Error("Payout amount must be greater than 0");
   }
 
-  const payout = await prisma.payout.create({
-    data: {
-      consignorId,
-      amount,
-      status: "pending",
-      items: {
-        create: transactionIds.map((transactionId) => ({ transactionId })),
+  // Atomic: re-validate + create inside transaction to prevent double-payout on concurrent requests
+  const payout = await prisma.$transaction(async (tx) => {
+    for (const txn of transactions) {
+      const existing = await tx.payoutItem.findFirst({ where: { transactionId: txn.id } });
+      if (existing) throw new Error(`Transaction ${txn.id} was already included in a payout`);
+    }
+
+    return tx.payout.create({
+      data: {
+        consignorId,
+        amount,
+        status: "pending",
+        items: {
+          create: transactionIds.map((transactionId) => ({ transactionId })),
+        },
       },
-    },
-    include: {
-      consignor: true,
-      items: {
-        include: {
-          transaction: {
-            include: {
-              orderItem: {
-                include: {
-                  order: true,
-                  listing: {
-                    include: {
-                      variant: { include: { product: true } },
+      include: {
+        consignor: true,
+        items: {
+          include: {
+            transaction: {
+              include: {
+                orderItem: {
+                  include: {
+                    order: true,
+                    listing: {
+                      include: {
+                        variant: { include: { product: true } },
+                      },
                     },
                   },
                 },
@@ -174,7 +182,7 @@ export async function createPayout({
           },
         },
       },
-    },
+    });
   });
 
   sendPayoutReadyEmail(payout.consignor, {

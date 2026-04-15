@@ -8,6 +8,8 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     // Run test files sequentially (shared SQLite DB)
     fileParallelism: false,
-    // Tests use the same PostgreSQL (Neon) DB from .env — setup.ts cleans between runs
+    env: {
+      NODE_ENV: "test",
+    },
   },
 });

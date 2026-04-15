@@ -60,20 +60,26 @@ export async function processOrder({
 
       affectedVariantIds.add(variant.id);
 
-      // Per-item allocation: find N active listings, lowest price first, FIFO tiebreak
-      // SQLite serializes writes implicitly; PostgreSQL needs FOR UPDATE (handled by DB adapter)
-      const listings = await tx.listing.findMany({
-        where: { variantId: variant.id, status: LISTING_STATUS.ACTIVE },
-        orderBy: [{ price: "asc" }, { createdAt: "asc" }],
-        take: lineItem.quantity,
-        include: { consignor: true },
-      });
+      // Lock rows with FOR UPDATE SKIP LOCKED to prevent double-selling on concurrent orders
+      const lockedIds = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "Listing"
+        WHERE "variantId" = ${variant.id}
+        AND "status" = ${LISTING_STATUS.ACTIVE}
+        ORDER BY "price" ASC, "createdAt" ASC
+        LIMIT ${lineItem.quantity}
+        FOR UPDATE SKIP LOCKED
+      `;
 
-      if (listings.length < lineItem.quantity) {
+      if (lockedIds.length < lineItem.quantity) {
         throw new Error(
-          `Insufficient inventory for variant ${lineItem.shopifyVariantId}: needed ${lineItem.quantity}, available ${listings.length}`
+          `Insufficient inventory for variant ${lineItem.shopifyVariantId}: needed ${lineItem.quantity}, available ${lockedIds.length}`
         );
       }
+
+      const listings = await tx.listing.findMany({
+        where: { id: { in: lockedIds.map((r) => r.id) } },
+        include: { consignor: true },
+      });
 
       for (const listing of listings) {
         await tx.listing.update({

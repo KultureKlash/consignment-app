@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import type { Prisma } from "@prisma/client";
 import { CATEGORIES } from "~/lib/categories";
+import { logger } from "~/lib/logger.server";
 
 export type ListingFilters = {
   search?: string;
@@ -76,12 +77,16 @@ export async function queryListings(filters: ListingFilters) {
 
   // Grouped mode: paginate by product groups, not individual listings
   if (filters.grouped) {
-    // Step 1: Get all matching listings to extract distinct product IDs in order
+    // Step 1: Get distinct product IDs (lightweight select — only IDs, not full objects)
+    // Trigger: if consistently > 200ms or listings > 100K, switch to PostgreSQL DISTINCT ON
+    const start = Date.now();
     const allMatching = await prisma.listing.findMany({
       where,
       orderBy,
       select: { variant: { select: { productId: true } } },
     });
+    const ms = Date.now() - start;
+    if (ms > 200) logger.warn("Slow grouped listing query", { ms, matchCount: allMatching.length });
 
     // Deduplicate product IDs preserving sort order
     const seen = new Set<string>();
