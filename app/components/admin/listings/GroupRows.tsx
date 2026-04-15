@@ -333,11 +333,11 @@ export function GroupRows({
                   )}
                   {l.status === LISTING_STATUS.ACTIVE && onCancel && (
                     <ActionBtn
-                      label="Cancel"
+                      label="Delete"
                       icon={<X size={13} />}
-                      color="#6d7175"
-                      bg="#f6f6f7"
-                      border="#e3e3e3"
+                      color="#dc2626"
+                      bg="#fef2f2"
+                      border="#fecaca"
                       onClick={() => onCancel(l.id)}
                       disabled={isLoading}
                     />

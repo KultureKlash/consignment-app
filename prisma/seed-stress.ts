@@ -57,12 +57,12 @@ async function main() {
     if (pr["Status"]?.trim() !== "active" || productMap.has(title)) continue;
 
     const sku = pr["Variant SKU"]?.trim() || null;
-    let styleId = sku ? extractStyleId(sku) : null;
-    if (styleId && usedStyleIds.has(styleId)) styleId = null;
-    if (styleId) usedStyleIds.add(styleId);
+    let sku = sku ? extractStyleId(sku) : null;
+    if (sku && usedStyleIds.has(sku)) sku = null;
+    if (sku) usedStyleIds.add(sku);
 
     const p = await prisma.product.create({
-      data: { title, brand: pr["Vendor"]?.trim() || null, category: mapCat(pr["Product Category"]?.trim()), styleId, imageUrl: pr["Image Src"]?.trim() || null },
+      data: { title, brand: pr["Vendor"]?.trim() || null, category: mapCat(pr["Product Category"]?.trim()), sku, imageUrl: pr["Image Src"]?.trim() || null },
     });
     productMap.set(title, p.id);
     pCnt++;

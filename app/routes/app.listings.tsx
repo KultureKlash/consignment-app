@@ -138,11 +138,11 @@ export default function Listings() {
           onClearSelection={() => setSelectedIds(new Set())}
           onBulkApprove={() => submitApproval("bulk-approve", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
-          onBulkCancel={() => submitCancel("bulk-cancel", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkCancel={() => submitCancel("bulk-delete", { listingIds: Array.from(selectedIds).join(",") })}
         />
         <ListingsTable
           listings={listings} grouped
-          onCancel={(id) => submitCancel("cancel", { listingId: id })}
+          onCancel={(id) => submitCancel("delete", { listingId: id })}
           onRestore={(id) => submitCancel("restore", { listingId: id })}
           onApprove={(id) => submitApproval("approve", { listingId: id })}
           onReject={(id, reason) => submitApproval("reject", { listingId: id, reason })}

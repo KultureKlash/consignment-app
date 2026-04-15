@@ -1,4 +1,4 @@
-import { Outlet, redirect } from "react-router";
+import { Outlet, redirect, useRouteError, isRouteErrorResponse } from "react-router";
 import type { LoaderFunctionArgs, LinksFunction } from "react-router";
 import { useLoaderData } from "react-router";
 import { authenticatePortal } from "~/services/portal/auth.server";
@@ -39,6 +39,25 @@ export default function PortalLayout() {
           <Outlet />
         </main>
         <BottomTabBar />
+      </div>
+    </div>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const status = isRouteErrorResponse(error) ? error.status : 500;
+  const message = isRouteErrorResponse(error) ? error.statusText : "Something went wrong";
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(0,0%,7%)]">
+      <div className="text-center px-6">
+        <p className="text-6xl font-bold text-white/20 mb-4">{status}</p>
+        <h1 className="text-xl font-semibold text-white mb-2">{message}</h1>
+        <p className="text-sm text-white/50 mb-6">Please try again or contact support.</p>
+        <a href="/portal/dashboard" className="text-sm text-white/70 underline hover:text-white">
+          Back to dashboard
+        </a>
       </div>
     </div>
   );

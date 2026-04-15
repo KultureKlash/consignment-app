@@ -26,12 +26,12 @@ export function useListingToasts(
     if (!data) return;
     if (data.error) {
       shopify.toast.show(data.error as string);
-    } else if (data.intent === "cancel") {
-      shopify.toast.show("Listing cancelled");
-    } else if (data.intent === "bulk-cancel") {
+    } else if (data.intent === "delete") {
+      shopify.toast.show("Listing deleted");
+    } else if (data.intent === "bulk-delete") {
       const count = data.cancelled as number;
       const syncErrors = (data.syncErrors as string[]) ?? [];
-      const msg = `Cancelled ${count} listing${count !== 1 ? "s" : ""}`;
+      const msg = `Deleted ${count} listing${count !== 1 ? "s" : ""}`;
       shopify.toast.show(
         syncErrors.length > 0
           ? `${msg} (Shopify sync had ${syncErrors.length} error${syncErrors.length !== 1 ? "s" : ""} — will retry)`

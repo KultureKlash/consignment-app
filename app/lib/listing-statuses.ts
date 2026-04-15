@@ -46,7 +46,7 @@ export const STATUS_LABELS: Record<string, string> = {
   [LISTING_STATUS.ACTIVE]: "Active",
   [LISTING_STATUS.PENDING_SALE]: "Pending Sale",
   [LISTING_STATUS.SOLD]: "Sold",
-  [LISTING_STATUS.CANCELLED]: "Cancelled",
+  [LISTING_STATUS.CANCELLED]: "Deleted",
   [LISTING_STATUS.REJECTED]: "Rejected",
   [LISTING_STATUS.WITHDRAWAL_REQUESTED]: "Withdrawal Requested",
   [LISTING_STATUS.PENDING_PICKUP]: "Pending Pickup",

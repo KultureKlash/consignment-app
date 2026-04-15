@@ -44,25 +44,25 @@ async function main() {
   // ── Products & Variants ─────────────────────────────────────
   const productSpecs = [
     // Footwear > Sneakers
-    { title: "Nike Dunk Low Panda", brand: "Nike", category: "Footwear > Sneakers", styleId: "DD1391-100", sizes: ["8", "9", "10", "11"] },
-    { title: "Jordan 1 Retro High OG Chicago", brand: "Jordan", category: "Footwear > Sneakers", styleId: "DZ5485-612", sizes: ["8", "9", "10", "11", "12"] },
-    { title: "Adidas Yeezy Boost 350 V2 Zebra", brand: "Adidas", category: "Footwear > Sneakers", styleId: "CP9654", sizes: ["8", "9", "10", "11"] },
-    { title: "New Balance 550 White Green", brand: "New Balance", category: "Footwear > Sneakers", styleId: "BB550WT1", sizes: ["8", "9", "10", "11"] },
-    { title: "Nike Air Force 1 Low White", brand: "Nike", category: "Footwear > Sneakers", styleId: "CW2288-111", sizes: ["7", "8", "9", "10", "11", "12"] },
-    { title: "Adidas Campus 00s Dark Green", brand: "Adidas", category: "Footwear > Sneakers", styleId: "H03472", sizes: ["8", "9", "10"] },
+    { title: "Nike Dunk Low Panda", brand: "Nike", category: "Footwear > Sneakers", sku: "DD1391-100", sizes: ["8", "9", "10", "11"] },
+    { title: "Jordan 1 Retro High OG Chicago", brand: "Jordan", category: "Footwear > Sneakers", sku: "DZ5485-612", sizes: ["8", "9", "10", "11", "12"] },
+    { title: "Adidas Yeezy Boost 350 V2 Zebra", brand: "Adidas", category: "Footwear > Sneakers", sku: "CP9654", sizes: ["8", "9", "10", "11"] },
+    { title: "New Balance 550 White Green", brand: "New Balance", category: "Footwear > Sneakers", sku: "BB550WT1", sizes: ["8", "9", "10", "11"] },
+    { title: "Nike Air Force 1 Low White", brand: "Nike", category: "Footwear > Sneakers", sku: "CW2288-111", sizes: ["7", "8", "9", "10", "11", "12"] },
+    { title: "Adidas Campus 00s Dark Green", brand: "Adidas", category: "Footwear > Sneakers", sku: "H03472", sizes: ["8", "9", "10"] },
     // Footwear > Boots
-    { title: "Timberland 6-Inch Premium Boot Wheat", brand: "Timberland", category: "Footwear > Boots", styleId: "TB010061", sizes: ["9", "10", "11"] },
-    { title: "UGG Classic Short Boot Chestnut", brand: "UGG", category: "Footwear > Boots", styleId: "1016223", sizes: ["7", "8", "9"] },
+    { title: "Timberland 6-Inch Premium Boot Wheat", brand: "Timberland", category: "Footwear > Boots", sku: "TB010061", sizes: ["9", "10", "11"] },
+    { title: "UGG Classic Short Boot Chestnut", brand: "UGG", category: "Footwear > Boots", sku: "1016223", sizes: ["7", "8", "9"] },
     // Apparel
-    { title: "Supreme Box Logo Hoodie Black", brand: "Supreme", category: "Apparel > Hoodies", styleId: null, sizes: ["S", "M", "L", "XL"] },
-    { title: "Fear of God Essentials Tee Cream", brand: "Fear of God", category: "Apparel > T-Shirts", styleId: null, sizes: ["S", "M", "L", "XL"] },
-    { title: "Nike Tech Fleece Joggers Black", brand: "Nike", category: "Apparel > Jogger Shorts", styleId: null, sizes: ["S", "M", "L"] },
-    { title: "Stussy Basic Crew Sweatshirt Grey", brand: "Stussy", category: "Apparel > Sweatshirts", styleId: null, sizes: ["M", "L", "XL"] },
+    { title: "Supreme Box Logo Hoodie Black", brand: "Supreme", category: "Apparel > Hoodies", sku: null, sizes: ["S", "M", "L", "XL"] },
+    { title: "Fear of God Essentials Tee Cream", brand: "Fear of God", category: "Apparel > T-Shirts", sku: null, sizes: ["S", "M", "L", "XL"] },
+    { title: "Nike Tech Fleece Joggers Black", brand: "Nike", category: "Apparel > Jogger Shorts", sku: null, sizes: ["S", "M", "L"] },
+    { title: "Stussy Basic Crew Sweatshirt Grey", brand: "Stussy", category: "Apparel > Sweatshirts", sku: null, sizes: ["M", "L", "XL"] },
     // Accessories
-    { title: "Louis Vuitton Keepall 55 Monogram", brand: "Louis Vuitton", category: "Accessories > Bags", styleId: null, sizes: ["One Size"] },
-    { title: "Casio G-Shock DW5600E", brand: "Casio", category: "Accessories > Watches", styleId: null, sizes: ["One Size"] },
+    { title: "Louis Vuitton Keepall 55 Monogram", brand: "Louis Vuitton", category: "Accessories > Bags", sku: null, sizes: ["One Size"] },
+    { title: "Casio G-Shock DW5600E", brand: "Casio", category: "Accessories > Watches", sku: null, sizes: ["One Size"] },
     // Headwear
-    { title: "New Era Yankees Fitted 59FIFTY Navy", brand: "New Era", category: "Headwear > Fitted Hats", styleId: null, sizes: ["7 1/4", "7 3/8", "7 1/2"] },
+    { title: "New Era Yankees Fitted 59FIFTY Navy", brand: "New Era", category: "Headwear > Fitted Hats", sku: null, sizes: ["7 1/4", "7 3/8", "7 1/2"] },
   ];
 
   // Price ranges per product (base prices, consignors will list around these)
@@ -92,19 +92,19 @@ async function main() {
 
   for (const spec of productSpecs) {
     let product;
-    if (spec.styleId) {
+    if (spec.sku) {
       product = await prisma.product.upsert({
-        where: { styleId: spec.styleId },
+        where: { sku: spec.sku },
         update: {},
         create: {
           title: spec.title,
           brand: spec.brand,
           category: spec.category,
-          styleId: spec.styleId,
+          sku: spec.sku,
         },
       });
     } else {
-      // No styleId — find by title or create
+      // No sku — find by title or create
       const existing = await prisma.product.findFirst({ where: { title: spec.title } });
       product = existing ?? await prisma.product.create({
         data: {
@@ -117,8 +117,8 @@ async function main() {
 
     for (const size of spec.sizes) {
       // Generate a GTIN for footwear, barcode for others
-      const gtin = spec.styleId
-        ? `${spec.styleId}-${size}-${String(barcodeCounter++).padStart(4, "0")}`
+      const gtin = spec.sku
+        ? `${spec.sku}-${size}-${String(barcodeCounter++).padStart(4, "0")}`
         : null;
 
       const variant = await prisma.variant.upsert({
@@ -130,7 +130,7 @@ async function main() {
           gtin,
         },
       });
-      allVariants.push({ id: variant.id, productId: product.id, size, productTitle: spec.title, productStyleId: spec.styleId });
+      allVariants.push({ id: variant.id, productId: product.id, size, productTitle: spec.title, productStyleId: spec.sku });
     }
   }
   console.log(`  ✓ ${productSpecs.length} products, ${allVariants.length} variants`);

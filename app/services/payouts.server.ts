@@ -144,7 +144,6 @@ export async function createPayout({
     throw new Error("Payout amount must be greater than 0");
   }
 
-  // Create payout + items in a transaction
   const payout = await prisma.payout.create({
     data: {
       consignorId,

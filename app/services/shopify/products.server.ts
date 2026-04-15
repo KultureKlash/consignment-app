@@ -5,6 +5,7 @@ import { resolveShopifyTaxonomyId } from "~/services/shopify/taxonomy.server";
 import { getPrimaryLocationId } from "~/services/inventory.server";
 import { compareSizes } from "~/lib/size-order";
 import { logger } from "~/lib/logger.server";
+import { deriveProductMetafields } from "~/lib/deriveProductMetafields";
 
 /** Reorder variants on a Shopify product so sizes display in logical order */
 async function reorderVariantsBySizes(admin: AdminApiContext, shopifyProductId: string) {
@@ -165,6 +166,12 @@ export async function updateShopifyProduct({
   if (data.productUpdate?.userErrors?.length > 0) {
     logger.error("Shopify productUpdate errors", { errors: data.productUpdate.userErrors });
   }
+
+  // Re-sync metafields when category changes
+  const firstVariant = await prisma.variant.findFirst({ where: { productId: product.id }, orderBy: { createdAt: "asc" } });
+  if (firstVariant) {
+    await setProductMetafields(admin, product.shopifyProductId, product, firstVariant);
+  }
 }
 
 /** Poll Shopify until the product's first image is processed and return its CDN URL */
@@ -245,6 +252,39 @@ async function enableInventoryTracking(
     { variables: { inventoryItemId: inventoryItemId, locationId } }
   );
   await activateRes.json();
+}
+
+/** Set age_group + target_gender metafields on a Shopify product */
+async function setProductMetafields(
+  admin: AdminApiContext,
+  shopifyProductId: string,
+  product: Product,
+  variant: Variant,
+): Promise<void> {
+  const { ageGroup, targetGender } = deriveProductMetafields(product.category, variant.size, product.title);
+
+  const response = await admin.graphql(
+    `#graphql
+    mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields { id }
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        metafields: [
+          { ownerId: shopifyProductId, namespace: "custom", key: "age_group", type: "single_line_text_field", value: ageGroup },
+          { ownerId: shopifyProductId, namespace: "custom", key: "target_gender", type: "single_line_text_field", value: targetGender },
+        ],
+      },
+    },
+  );
+
+  const { data } = await response.json();
+  if (data.metafieldsSet.userErrors.length > 0) {
+    logger.error("Failed to set product metafields", { shopifyProductId, errors: data.metafieldsSet.userErrors });
+  }
 }
 
 /** Create a new Shopify product with first variant, taxonomy, image, and inventory tracking */
@@ -462,9 +502,13 @@ export async function ensureShopifyProductAndVariant({
   // Both already synced — nothing to do
   if (product.shopifyProductId && variant.shopifyVariantId) return;
 
-  // Product not in Shopify — create product + first variant
+  // Product not in Shopify — create product + first variant + metafields
   if (!product.shopifyProductId) {
     await createShopifyProduct(admin, product, variant, { taxonomyId, imageData });
+    const fresh = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    if (fresh.shopifyProductId) {
+      await setProductMetafields(admin, fresh.shopifyProductId, fresh, variant);
+    }
     return;
   }
 

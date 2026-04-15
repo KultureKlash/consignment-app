@@ -454,7 +454,6 @@ async function refundItem(
         },
       });
 
-      // Create audit log
       await tx.reassignmentLog.create({
         data: {
           originalListingId: item.listingId,

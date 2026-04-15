@@ -51,7 +51,7 @@ export async function submitListing({
     });
   }
 
-  // Create count listing rows (per-item model)
+  // Per-item model: each listing = 1 physical item, so create `count` rows
   const now = new Date();
   const listings = [];
   for (let i = 0; i < count; i++) {

@@ -30,7 +30,7 @@ interface ExportData {
     title: string;
     brand: string | null;
     category: string | null;
-    styleId: string | null;
+    sku: string | null;
     description: string | null;
     imageUrl: string | null;
   }>;
@@ -129,7 +129,7 @@ async function main() {
         title: p.title,
         brand: p.brand,
         category: p.category,
-        styleId: p.styleId,
+        sku: p.sku,
         description: p.description,
         imageUrl: p.imageUrl,
       },

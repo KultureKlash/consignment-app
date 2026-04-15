@@ -1,5 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { cancelListing, bulkCancelListings, createListing, restoreListing } from "~/services/listings.server";
+import { deleteListing, bulkDeleteListings, createListing, restoreListing } from "~/services/listings.server";
 import {
   approveListing,
   rejectListing,
@@ -17,17 +17,17 @@ import prisma from "~/db.server";
 export async function handleListingAction(admin: AdminApiContext, formData: FormData) {
   const intent = formData.get("intent") as string;
 
-  if (intent === "cancel") {
-    const listing = await cancelListing({
+  if (intent === "delete") {
+    const listing = await deleteListing({
       admin,
       listingId: formData.get("listingId") as string,
     });
     return { listing, intent };
   }
 
-  if (intent === "bulk-cancel") {
+  if (intent === "bulk-delete") {
     const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
-    const result = await bulkCancelListings({ admin, listingIds: ids });
+    const result = await bulkDeleteListings({ admin, listingIds: ids });
     return { cancelled: result.cancelled, syncErrors: result.errors, intent };
   }
 

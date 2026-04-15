@@ -70,7 +70,7 @@ export async function createListing({
   return listings[0];
 }
 
-export async function cancelListing({
+export async function deleteListing({
   admin,
   listingId,
 }: {
@@ -126,7 +126,7 @@ export async function restoreListing({
  * Bulk cancel listings: updates DB in one transaction, then syncs each
  * affected variant to Shopify once (not per listing) with retries.
  */
-export async function bulkCancelListings({
+export async function bulkDeleteListings({
   admin,
   listingIds,
 }: {

@@ -124,6 +124,23 @@ export function createMockAdmin(opts?: { failOn?: string[] }) {
       });
     }
 
+    // Metafields set
+    if (query.includes("metafieldsSet")) {
+      return mockResponse({
+        metafieldsSet: {
+          metafields: [{ id: "gid://shopify/Metafield/1" }],
+          userErrors: [],
+        },
+      });
+    }
+
+    // Inventory activate
+    if (query.includes("inventoryActivate")) {
+      return mockResponse({
+        inventoryActivate: { userErrors: [] },
+      });
+    }
+
     // Product variants bulk update (price sync)
     if (query.includes("productVariantsBulkUpdate")) {
       return mockResponse({

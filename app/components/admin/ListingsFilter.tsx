@@ -29,7 +29,7 @@ const STATUS_OPTIONS = [
   { label: "Pending Sale", value: LISTING_STATUS.PENDING_SALE },
   { label: "Sold", value: LISTING_STATUS.SOLD },
   { label: "Rejected", value: LISTING_STATUS.REJECTED },
-  { label: "Cancelled", value: LISTING_STATUS.CANCELLED },
+  { label: "Deleted", value: LISTING_STATUS.CANCELLED },
   { label: "Withdrawal", value: LISTING_STATUS.WITHDRAWAL_REQUESTED },
   { label: "Pickup", value: LISTING_STATUS.PENDING_PICKUP },
   { label: "Withdrawn", value: LISTING_STATUS.WITHDRAWN },

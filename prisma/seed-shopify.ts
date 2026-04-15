@@ -127,18 +127,18 @@ async function main() {
       continue;
     }
 
-    // Extract styleId from SKU (e.g. "CT8012-005-10" → "CT8012-005")
-    let styleId = sku ? extractStyleId(sku) : null;
-    // Avoid duplicate styleIds
-    if (styleId && usedStyleIds.has(styleId)) styleId = null;
-    if (styleId) usedStyleIds.add(styleId);
+    // Extract sku from SKU (e.g. "CT8012-005-10" → "CT8012-005")
+    let sku = sku ? extractStyleId(sku) : null;
+    // Avoid duplicate skus
+    if (sku && usedStyleIds.has(sku)) sku = null;
+    if (sku) usedStyleIds.add(sku);
 
     const product = await prisma.product.create({
       data: {
         title,
         brand: vendor,
         category,
-        styleId,
+        sku,
         imageUrl,
       },
     });
@@ -223,7 +223,7 @@ function mapShopifyCategory(shopifyCategory: string | null): string | null {
 }
 
 /**
- * Extract styleId from a SKU.
+ * Extract sku from a SKU.
  * "CT8012-005-10" → "CT8012-005"
  * "DV0833-103-8.5" → "DV0833-103"
  */

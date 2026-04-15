@@ -322,7 +322,7 @@ function FlatRow({
               onClick={() => onCancel(l.id)}
               {...(isLoading ? { disabled: true } : {})}
             >
-              Cancel
+              Delete
             </s-button>
           ) : (
             <span className="text-gray-300">{"\u2014"}</span>

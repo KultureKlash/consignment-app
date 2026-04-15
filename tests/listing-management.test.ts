@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { cancelListing, bulkCancelListings } from "~/services/listings.server";
+import { deleteListing, bulkDeleteListings } from "~/services/listings.server";
 
 async function createTestListing(overrides: { price?: number; status?: string } = {}) {
   const consignor = await createTestConsignor();
@@ -28,12 +28,12 @@ async function createTestListing(overrides: { price?: number; status?: string } 
   return { consignor, product, variant, listing };
 }
 
-describe("cancelListing", () => {
+describe("deleteListing", () => {
   it("sets status to cancelled", async () => {
     const { admin } = createMockAdmin();
     const { listing } = await createTestListing();
 
-    const result = await cancelListing({ admin, listingId: listing.id });
+    const result = await deleteListing({ admin, listingId: listing.id });
 
     expect(result.status).toBe("cancelled");
     const dbListing = await prisma.listing.findUnique({ where: { id: listing.id } });
@@ -44,7 +44,7 @@ describe("cancelListing", () => {
     const { admin, findCalls } = createMockAdmin();
     const { listing } = await createTestListing();
 
-    await cancelListing({ admin, listingId: listing.id });
+    await deleteListing({ admin, listingId: listing.id });
 
     const setCalls = findCalls("inventorySetQuantities");
     expect(setCalls).toHaveLength(1);
@@ -57,7 +57,7 @@ describe("cancelListing", () => {
     const { admin } = createMockAdmin();
     const { listing } = await createTestListing({ status: "cancelled" });
 
-    await expect(cancelListing({ admin, listingId: listing.id }))
+    await expect(deleteListing({ admin, listingId: listing.id }))
       .rejects.toThrow('Cannot cancel listing with status "cancelled"');
   });
 
@@ -65,12 +65,12 @@ describe("cancelListing", () => {
     const { admin } = createMockAdmin();
     const { listing } = await createTestListing({ status: "sold" });
 
-    await expect(cancelListing({ admin, listingId: listing.id }))
+    await expect(deleteListing({ admin, listingId: listing.id }))
       .rejects.toThrow('Cannot cancel listing with status "sold"');
   });
 });
 
-describe("bulkCancelListings", () => {
+describe("bulkDeleteListings", () => {
   async function createTestListingsForBulk(
     count: number,
     overrides: { status?: string; variantId?: string; consignorId?: string } = {}
@@ -116,7 +116,7 @@ describe("bulkCancelListings", () => {
     const { admin } = createMockAdmin();
     const { listings } = await createTestListingsForBulk(5);
 
-    const result = await bulkCancelListings({
+    const result = await bulkDeleteListings({
       admin,
       listingIds: listings.map((l) => l.id),
     });
@@ -139,7 +139,7 @@ describe("bulkCancelListings", () => {
     });
 
     const allIds = [...active.map((l) => l.id), ...sold.map((l) => l.id)];
-    const result = await bulkCancelListings({ admin, listingIds: allIds });
+    const result = await bulkDeleteListings({ admin, listingIds: allIds });
 
     expect(result.cancelled).toBe(3);
     // Sold listings unchanged
@@ -151,7 +151,7 @@ describe("bulkCancelListings", () => {
     const { admin, findCalls } = createMockAdmin();
     const { listings } = await createTestListingsForBulk(10);
 
-    await bulkCancelListings({ admin, listingIds: listings.map((l) => l.id) });
+    await bulkDeleteListings({ admin, listingIds: listings.map((l) => l.id) });
 
     // Only 1 inventorySetQuantities call (all listings are on the same variant)
     const syncCalls = findCalls("inventorySetQuantities");
@@ -162,7 +162,7 @@ describe("bulkCancelListings", () => {
     const { admin } = createMockAdmin();
     const { listings } = await createTestListingsForBulk(3, { status: "sold" });
 
-    const result = await bulkCancelListings({
+    const result = await bulkDeleteListings({
       admin,
       listingIds: listings.map((l) => l.id),
     });
@@ -180,7 +180,7 @@ describe("bulkCancelListings", () => {
     const { listings: list2 } = await createTestListingsForBulk(2);
 
     const allIds = [...list1.map((l) => l.id), ...list2.map((l) => l.id)];
-    const result = await bulkCancelListings({ admin, listingIds: allIds });
+    const result = await bulkDeleteListings({ admin, listingIds: allIds });
 
     expect(result.cancelled).toBe(5);
     // 2 variants = 2 inventory sync calls
@@ -192,7 +192,7 @@ describe("bulkCancelListings", () => {
     const { admin } = createMockAdmin({ failOn: ["inventorySetQuantities"] });
     const { listings } = await createTestListingsForBulk(3);
 
-    const result = await bulkCancelListings({
+    const result = await bulkDeleteListings({
       admin,
       listingIds: listings.map((l) => l.id),
     });
