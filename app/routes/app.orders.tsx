@@ -282,7 +282,9 @@ export default function Orders() {
               : "No orders yet. Orders will appear here when created in Shopify."}
           </div>
         ) : (
-          <div className="admin-card">
+          <>
+          {/* Desktop table */}
+          <div className="admin-card hidden md:block">
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr className="border-b border-gray-200/60">
@@ -336,6 +338,42 @@ export default function Orders() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {orders.map((o) => {
+              const itemSummary = o.items.length === 1
+                ? `${o.items[0].listing.variant.product.title} · ${o.items[0].listing.variant.size}`
+                : `${o.items.length} items`;
+              const badge = getStatusBadge(o);
+
+              return (
+                <div
+                  key={o.id}
+                  onClick={() => navigate(`/app/orders/${o.id}`)}
+                  className="admin-card p-4 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[13px] font-semibold text-gray-900">
+                      {displayOrderName(o)}
+                    </span>
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide"
+                      style={{ background: badge.bg, color: badge.color }}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div className="text-[13px] text-gray-500 mb-1">{itemSummary}</div>
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-gray-400">{formatDate(o.createdAt as unknown as string)}</span>
+                    <span className="font-semibold tabular-nums text-gray-900">${fmt(o.total)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
         )}
       </div>
     </s-page>

@@ -62,10 +62,10 @@ export default function AdminFeedback() {
                       <Icon size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="text-sm font-semibold text-gray-900">{f.consignor.name}</span>
-                        <span className="text-xs text-gray-400">{f.consignor.email}</span>
-                        <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        <span className="text-xs text-gray-400 hidden md:inline">{f.consignor.email}</span>
+                        <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 ${
                           isOpen ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"
                         }`}>
                           {isOpen ? <Clock size={10} /> : <CheckCircle size={10} />}

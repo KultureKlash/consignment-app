@@ -134,14 +134,14 @@ export default function Payouts() {
           <h1 className="text-xl font-semibold tracking-tight text-gray-900 m-0">Payouts</h1>
           <p className="text-[13px] text-gray-500 mt-1">Manage consignor payouts and track payment status.</p>
         </header>
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard label="Outstanding" value={`$${fmt(filteredStats.totalOutstanding)}`} icon={DollarSign} accentColor="#059669" bgTint="#f0fdf4" />
           <StatCard label="Awaiting Invoice" value={`$${fmt(filteredStats.totalPending)}`} icon={Clock} accentColor="#d97706" bgTint="#fffbeb" />
           <StatCard label="Invoice Received" value={`$${fmt(filteredStats.totalInvoiced)}`} icon={FileText} accentColor="#2563eb" bgTint="#eff6ff" />
           <StatCard label="Paid Out" value={`$${fmt(filteredStats.totalPaid)}`} icon={CheckCircle2} accentColor="#059669" bgTint="#ecfdf5" />
         </div>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-[220px]">
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="w-full md:w-[220px]">
             <CustomSelect options={consignorOptions} value={filterConsignor} onChange={setFilterConsignor} placeholder="All Consignors" searchable />
           </div>
           <DateRangeFilter preset={datePreset} from={filterDateFrom} to={filterDateTo} onChange={({ dateRange, from, to }) => { setDatePreset(dateRange); setFilterDateFrom(from ?? ""); setFilterDateTo(to ?? ""); }} />

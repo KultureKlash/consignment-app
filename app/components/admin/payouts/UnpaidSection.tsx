@@ -63,9 +63,9 @@ export function UnpaidSection({
                 {/* Consignor row */}
                 <div
                   onClick={() => toggleConsignor(entry.consignor.id)}
-                  className="flex items-center px-5 py-3 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+                  className="flex flex-wrap items-center px-4 md:px-5 py-3 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
                 >
-                  {isOpen ? <ChevronDown size={16} className="text-[#6d7175]" /> : <ChevronRight size={16} className="text-[#6d7175]" />}
+                  {isOpen ? <ChevronDown size={16} className="text-[#6d7175] shrink-0" /> : <ChevronRight size={16} className="text-[#6d7175] shrink-0" />}
                   <span className="ml-2 text-[13px] font-semibold text-[#1a1a1a]">
                     {entry.consignor.name}
                   </span>
@@ -99,28 +99,9 @@ export function UnpaidSection({
                 {/* Expanded: transaction list */}
                 {isOpen && (
                   <div ref={scrollRef} className="bg-gray-50 border-t border-gray-200/30">
-                    {/* Column headers with select-all checkbox */}
-                    <div
-                      className="grid items-center px-5 pt-2 pb-1.5 pl-3 border-b border-gray-200/40 text-[10px] font-bold uppercase tracking-widest text-gray-400"
-                      style={{ gridTemplateColumns: gridCols }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.size === txIds.length && txIds.length > 0}
-                        onChange={() => selectAll(entry.consignor.id, txIds)}
-                        className="accent-gray-900"
-                      />
-                      <span>Order</span>
-                      <span>Product</span>
-                      <span className="text-right">Date Sold</span>
-                      <span className="text-right">Sale</span>
-                      <span className="text-right">Fee</span>
-                      <span className="text-right text-emerald-600">Payout</span>
-                    </div>
-
                     {/* Selection bar */}
                     {selected.size > 0 && (
-                      <div className="flex items-center px-5 py-2 pl-3 gap-3 border-b border-gray-200/30">
+                      <div className="flex flex-wrap items-center px-5 py-2 pl-3 gap-3 border-b border-gray-200/30">
                         <span className="text-xs text-gray-700 font-semibold">
                           {selected.size} selected · ${fmt(selectedAmount)}
                           {(() => {
@@ -138,7 +119,37 @@ export function UnpaidSection({
                       </div>
                     )}
 
-                    {/* Transaction rows */}
+                    {/* Desktop: Column headers with select-all checkbox */}
+                    <div
+                      className="hidden md:grid items-center px-5 pt-2 pb-1.5 pl-3 border-b border-gray-200/40 text-[10px] font-bold uppercase tracking-widest text-gray-400"
+                      style={{ gridTemplateColumns: gridCols }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.size === txIds.length && txIds.length > 0}
+                        onChange={() => selectAll(entry.consignor.id, txIds)}
+                        className="accent-gray-900"
+                      />
+                      <span>Order</span>
+                      <span>Product</span>
+                      <span className="text-right">Date Sold</span>
+                      <span className="text-right">Sale</span>
+                      <span className="text-right">Fee</span>
+                      <span className="text-right text-emerald-600">Payout</span>
+                    </div>
+
+                    {/* Mobile: select-all */}
+                    <div className="flex md:hidden items-center px-4 py-2 border-b border-gray-200/40">
+                      <input
+                        type="checkbox"
+                        checked={selected.size === txIds.length && txIds.length > 0}
+                        onChange={() => selectAll(entry.consignor.id, txIds)}
+                        className="accent-gray-900"
+                      />
+                      <span className="ml-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Select All</span>
+                    </div>
+
+                    {/* Desktop: Transaction rows */}
                     {entry.transactions.map((tx) => {
                       const item = tx.orderItem;
                       const order = item?.order;
@@ -147,38 +158,58 @@ export function UnpaidSection({
                       const soldDate = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "\u2014";
 
                       return (
-                        <div
-                          key={tx.id}
-                          className="grid items-center px-5 py-[7px] pl-3 border-t border-gray-200/15 text-[13px]"
-                          style={{ gridTemplateColumns: gridCols }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected.has(tx.id)}
-                            onChange={() => toggleTx(entry.consignor.id, tx.id)}
-                            className="accent-gray-900"
-                          />
-                          <span className="text-xs text-[#6d7175] tabular-nums">
-                            {order?.orderNumber ?? "\u2014"}
-                          </span>
-                          <div className="min-w-0">
-                            <span className="font-medium text-[#1a1a1a]">
-                              {product?.title ?? "Unknown"}
+                        <div key={tx.id}>
+                          {/* Desktop row */}
+                          <div
+                            className="hidden md:grid items-center px-5 py-[7px] pl-3 border-t border-gray-200/15 text-[13px]"
+                            style={{ gridTemplateColumns: gridCols }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected.has(tx.id)}
+                              onChange={() => toggleTx(entry.consignor.id, tx.id)}
+                              className="accent-gray-900"
+                            />
+                            <span className="text-xs text-[#6d7175] tabular-nums">
+                              {order?.orderNumber ?? "\u2014"}
                             </span>
-                            <span className="text-gray-400"> ({variant?.size ?? "?"})</span>
+                            <div className="min-w-0">
+                              <span className="font-medium text-[#1a1a1a]">
+                                {product?.title ?? "Unknown"}
+                              </span>
+                              <span className="text-gray-400"> ({variant?.size ?? "?"})</span>
+                            </div>
+                            <span className="text-xs text-[#6d7175] text-right tabular-nums">
+                              {soldDate}
+                            </span>
+                            <span className="text-xs text-[#6d7175] text-right tabular-nums">
+                              ${fmt(tx.grossAmount)}
+                            </span>
+                            <span className="text-xs font-medium text-[#1a1a1a] text-right tabular-nums">
+                              ${fmt(tx.feeAmount)}
+                            </span>
+                            <span className="text-[13px] font-semibold text-emerald-600 text-right tabular-nums">
+                              ${fmt(tx.consignorAmount)}
+                            </span>
                           </div>
-                          <span className="text-xs text-[#6d7175] text-right tabular-nums">
-                            {soldDate}
-                          </span>
-                          <span className="text-xs text-[#6d7175] text-right tabular-nums">
-                            ${fmt(tx.grossAmount)}
-                          </span>
-                          <span className="text-xs font-medium text-[#1a1a1a] text-right tabular-nums">
-                            ${fmt(tx.feeAmount)}
-                          </span>
-                          <span className="text-[13px] font-semibold text-emerald-600 text-right tabular-nums">
-                            ${fmt(tx.consignorAmount)}
-                          </span>
+                          {/* Mobile card */}
+                          <div className="md:hidden flex items-start gap-3 px-4 py-3 border-t border-gray-200/15 text-[13px]">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(tx.id)}
+                              onChange={() => toggleTx(entry.consignor.id, tx.id)}
+                              className="accent-gray-900 mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-[#1a1a1a] truncate">
+                                {product?.title ?? "Unknown"} <span className="text-gray-400">({variant?.size ?? "?"})</span>
+                              </div>
+                              <div className="flex items-center justify-between mt-1 text-xs text-[#6d7175]">
+                                <span>{order?.orderNumber ?? "\u2014"} · {soldDate}</span>
+                                <span className="font-semibold text-emerald-600 text-[13px]">${fmt(tx.consignorAmount)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}

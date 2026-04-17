@@ -24,7 +24,7 @@ export default function BulkActionBar({
   if (selectedIds.size === 0) return null;
 
   return (
-    <div className="flex items-center justify-between pl-4 pr-2 py-2 bg-white border border-gray-200/60 rounded-[10px] mb-3 shadow-sm">
+    <div className="flex flex-col md:flex-row items-start md:items-center justify-between pl-4 pr-2 py-2 bg-white border border-gray-200/60 rounded-[10px] mb-3 shadow-sm gap-2">
       <div className="flex items-center gap-4">
         <span className="text-[13px] font-semibold text-gray-900">
           {selectedIds.size} selected
@@ -36,7 +36,7 @@ export default function BulkActionBar({
           Clear
         </span>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
         {listings.some((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.SUBMITTED) && (
           <BulkActionButton
             label={approvalLoading ? "Approving..." : "Approve selected"}

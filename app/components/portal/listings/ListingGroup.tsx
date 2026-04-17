@@ -80,7 +80,7 @@ export function ListingGroup({
               </div>
               <div className="flex items-center justify-between mt-1.5">
                 <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {daysListedLabel(listing.createdAt, listing.status)}
+                  {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
                 </span>
                 <StatusBadge status={listing.status} />
               </div>
@@ -153,7 +153,7 @@ export function ListingGroup({
           </span>
           <div className="flex justify-center"><StatusBadge status={listing.status} /></div>
           <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
-            {daysListedLabel(listing.createdAt, listing.status)}
+            {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
           </span>
           <div className="w-14 flex justify-center gap-1">
             {listing.status === LISTING_STATUS.SUBMITTED && (

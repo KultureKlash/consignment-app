@@ -123,7 +123,9 @@ export default function Consignors() {
         {consignors.length === 0 ? (
           <s-paragraph>No consignors yet. Add one to get started.</s-paragraph>
         ) : (
-          <table className="w-full border-collapse text-[13px]">
+          <>
+          {/* Desktop table */}
+          <table className="w-full border-collapse text-[13px] hidden md:table">
             <thead>
               <tr className="border-b-2 border-gray-300 text-left">
                 <th className="admin-th">Name</th>
@@ -168,12 +170,51 @@ export default function Consignors() {
               ))}
             </tbody>
           </table>
+
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {consignors.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/app/consignors/${c.id}`)}
+                className="admin-card p-4 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[13px] font-medium text-gray-900 truncate">{c.name}</span>
+                    {c.storeOwned && (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full uppercase tracking-wide shrink-0">
+                        Store
+                      </span>
+                    )}
+                    {c.status === "suspended" && (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full uppercase tracking-wide shrink-0">
+                        Suspended
+                      </span>
+                    )}
+                  </div>
+                  <ChevronRight size={16} className="text-gray-400 shrink-0" />
+                </div>
+                <div className="text-[13px] text-gray-500 truncate mb-2">{c.email}</div>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-500">Fee: {(c.feeRate * 100).toFixed(0)}%</span>
+                  <span
+                    className="font-bold"
+                    style={{ color: (balances[c.id] ?? 0) > 0 ? "#1a7f37" : "#333" }}
+                  >
+                    ${fmt(balances[c.id] ?? 0)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </s-section>
 
       {showModal && (
         <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="admin-modal !max-w-[440px]" onClick={(e) => e.stopPropagation()}>
+          <div className="admin-modal !max-w-[440px] !mx-4 md:!mx-auto" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <h2 className="m-0 text-[15px] font-semibold text-gray-900">Add Consignor</h2>
               <button

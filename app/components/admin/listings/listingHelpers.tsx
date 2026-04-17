@@ -10,7 +10,7 @@ export const flatRowClass = "border-b border-gray-100 transition-colors duration
 
 // ── Grouped view classes ──
 
-export const groupHeaderClass = "cursor-pointer select-none border-b border-gray-200 bg-white transition-colors duration-150 hover:bg-gray-50";
+export const groupHeaderClass = "cursor-pointer border-b border-gray-200 bg-white transition-colors duration-150 hover:bg-gray-50";
 export const groupHeaderCellClass = "py-3 px-3 pl-2";
 export const chevronWrapClass = "inline-flex items-center justify-center w-6 h-6 mr-2.5 rounded-md transition-all duration-200 text-gray-500 shrink-0";
 export const qtyBadgeClass = "inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-gray-100 text-gray-500 tracking-tight";

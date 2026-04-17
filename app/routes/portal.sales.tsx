@@ -209,20 +209,8 @@ export default function PortalSales() {
           </div>
         </div>
 
-        {/* Filter bar */}
-        <div className="flex flex-col md:flex-row gap-3 animate-slide-up items-stretch md:items-center" style={{ animationDelay: "240ms" }}>
-          {/* Date range */}
-          <DateRangePicker
-            preset={datePreset}
-            from={filterDateFrom}
-            to={filterDateTo}
-            onChange={({ dateRange, from, to }) => {
-              setDatePreset(dateRange);
-              setFilterDateFrom(from ?? "");
-              setFilterDateTo(to ?? "");
-            }}
-          />
-          {/* Search */}
+        {/* Search + Date */}
+        <div className="flex gap-3 animate-slide-up items-center" style={{ animationDelay: "240ms" }}>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
@@ -233,15 +221,27 @@ export default function PortalSales() {
               className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm"
             />
           </div>
+          <DateRangePicker
+            preset={datePreset}
+            from={filterDateFrom}
+            to={filterDateTo}
+            onChange={({ dateRange, from, to }) => {
+              setDatePreset(dateRange);
+              setFilterDateFrom(from ?? "");
+              setFilterDateTo(to ?? "");
+            }}
+          />
+        </div>
 
-          {/* Status tabs */}
-          <div className="flex rounded-xl glass-panel p-1 shrink-0">
+        {/* Tabs + Download */}
+        <div className="flex items-center gap-2 animate-slide-up" style={{ animationDelay: "280ms" }}>
+          <div className="flex rounded-xl glass-panel p-1 flex-1">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => updateFilter({ status: tab.key })}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                   activeTab === tab.key
                     ? "bg-white/[0.1] text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
@@ -251,9 +251,8 @@ export default function PortalSales() {
               </button>
             ))}
           </div>
-
           {filteredSales.length > 0 && (
-            <button onClick={handleDownloadPdf} title="Download PDF" className="p-2 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer shrink-0">
+            <button onClick={handleDownloadPdf} title="Download PDF" className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0">
               <Download className="w-4 h-4" />
             </button>
           )}

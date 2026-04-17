@@ -31,7 +31,7 @@ export async function getConsignorPayouts(consignorId: string, opts: { storeOwne
 
   // Unbatched sale transactions (not in any payout yet)
   const unbatchedTxs = await prisma.transaction.findMany({
-    where: { consignorId, type: "sale", payoutItems: { none: {} } },
+    where: { consignorId, type: "sale", payoutItems: { none: {} }, orderItem: { status: "sold" } },
     orderBy: { createdAt: "desc" },
     include: {
       orderItem: {

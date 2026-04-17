@@ -91,7 +91,7 @@ export function GroupRows({
         let cmp = 0;
         if (localSortKey === "price") cmp = Number(a.price) - Number(b.price);
         else if (localSortKey === "status") cmp = a.status.localeCompare(b.status);
-        else if (localSortKey === "date") cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        else if (localSortKey === "date") cmp = new Date(a.listedAt ?? a.createdAt).getTime() - new Date(b.listedAt ?? b.createdAt).getTime();
         return localSortDir === "asc" ? cmp : -cmp;
       })
     : group.listings;
@@ -196,9 +196,9 @@ export function GroupRows({
         </td>
       </tr>
 
-      {/* Column headers — only when expanded */}
+      {/* Desktop: Column headers — only when expanded */}
       {isExpanded && (
-        <tr ref={scrollRef} className={childHeaderClass}>
+        <tr ref={scrollRef} className={`${childHeaderClass} hidden md:table-row`}>
           {hasSelection && (
             <td className={`${childThClass} w-9 pr-0`} onClick={(e) => e.stopPropagation()}>
               {groupSelectableIds.length > 0 && (
@@ -230,13 +230,13 @@ export function GroupRows({
         </tr>
       )}
 
-      {/* Child listing rows */}
+      {/* Desktop: Child listing rows */}
       {isExpanded && sortedListings.map((l, i) => {
         const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
         return (
           <tr
             key={l.id}
-            className={`${childRowClass} ${i === sortedListings.length - 1 ? "border-b-2 border-b-gray-200" : ""}`}
+            className={`${childRowClass} hidden md:table-row ${i === sortedListings.length - 1 ? "border-b-2 border-b-gray-200" : ""}`}
           >
             {hasSelection && (
               <td className={checkboxTdClass} onClick={(e) => e.stopPropagation()}>
@@ -269,7 +269,7 @@ export function GroupRows({
               <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
             </td>
             <td className={dateCellClass}>
-              {relativeTime(l.createdAt)}
+              {relativeTime(l.listedAt ?? l.createdAt)}
             </td>
             {(onCancel || onApprove) && (
               <td className="admin-td">
@@ -384,6 +384,103 @@ export function GroupRows({
           </tr>
         );
       })}
+
+      {/* Mobile: Card layout for child listings */}
+      {isExpanded && (
+        <tr className="md:hidden">
+          <td colSpan={colCount} className="p-0">
+            {/* Group checkbox for mobile */}
+            {hasSelection && groupSelectableIds.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100">
+                <input
+                  type="checkbox"
+                  checked={allGroupSelected}
+                  onChange={() => onToggleGroup(groupSelectableIds)}
+                  className={checkboxClass}
+                />
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Select all</span>
+              </div>
+            )}
+            <div className="flex flex-col">
+              {sortedListings.map((l, i) => {
+                const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
+                return (
+                  <div
+                    key={l.id}
+                    className={`px-3 py-3 bg-white ${i < sortedListings.length - 1 ? "border-b border-gray-100" : "border-b-2 border-gray-200"}`}
+                  >
+                    {/* Top: checkbox + size + price */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {hasSelection && (
+                          <span onClick={(e) => e.stopPropagation()}>
+                            {isSelectable ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds?.has(l.id) ?? false}
+                                onChange={() => onToggleId(l.id)}
+                                className={checkboxClass}
+                              />
+                            ) : (
+                              <span className="inline-block w-4" />
+                            )}
+                          </span>
+                        )}
+                        <span className="font-semibold text-sm text-gray-900">{l.variant.size}</span>
+                        {l.variant.gtin && (
+                          <span className="text-[11px] font-mono text-gray-400">{l.variant.gtin}</span>
+                        )}
+                      </div>
+                      <span className="font-bold text-sm tabular-nums text-gray-900">${fmt(Number(l.price))}</span>
+                    </div>
+                    {/* Middle: consignor + status */}
+                    <div className="flex items-center justify-between mt-1.5">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-gray-900 leading-tight truncate">{l.consignor.name}</div>
+                        <div className="text-[11px] text-gray-400 leading-tight truncate">{l.consignor.email}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
+                        <span className="text-[11px] text-gray-400 tabular-nums">{relativeTime(l.listedAt ?? l.createdAt)}</span>
+                      </div>
+                    </div>
+                    {/* Bottom: actions */}
+                    {(onCancel || onApprove) && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
+                          <>
+                            <ActionBtn label="Approve" icon={<Check size={13} />} color="#0d9488" bg="#f0fdfa" border="#99f0e4" onClick={() => onApprove(l.id)} disabled={isLoading} />
+                            {onEditApprove && <ActionBtn label="Edit" icon={<Pencil size={13} />} color="#7c3aed" bg="#f5f3ff" border="#c4b5fd" onClick={() => onEditApprove(l)} disabled={isLoading} />}
+                            {onReject && <ActionBtn label="Reject" icon={<X size={13} />} color="#dc2626" bg="#fef2f2" border="#fecaca" onClick={() => onReject(l.id)} disabled={isLoading} />}
+                          </>
+                        )}
+                        {l.status === LISTING_STATUS.APPROVED && onCheckin && (
+                          <ActionBtn label="Check in" icon={<Zap size={13} />} color="#2c6ecb" bg="#eff6ff" border="#bfdbfe" onClick={() => onCheckin(l.id)} disabled={isLoading} />
+                        )}
+                        {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                          <ActionBtn label="Edit" icon={<Pencil size={13} />} color="#7c3aed" bg="#f5f3ff" border="#c4b5fd" onClick={() => onAdminEdit(l)} disabled={isLoading} />
+                        )}
+                        {l.status === LISTING_STATUS.ACTIVE && onCancel && (
+                          <ActionBtn label="Delete" icon={<X size={13} />} color="#dc2626" bg="#fef2f2" border="#fecaca" onClick={() => onCancel(l.id)} disabled={isLoading} />
+                        )}
+                        {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
+                          <ActionBtn label="Approve Withdrawal" icon={<Check size={13} />} color="#ea580c" bg="#fff7ed" border="#fed7aa" onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} />
+                        )}
+                        {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
+                          <ActionBtn label="Picked Up" icon={<Check size={13} />} color="#0891b2" bg="#ecfeff" border="#a5f3fc" onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} />
+                        )}
+                        {l.status === LISTING_STATUS.CANCELLED && onRestore && (
+                          <ActionBtn label="Restore" icon={<Zap size={13} />} color="#059669" bg="#ecfdf5" border="#a7f3d0" onClick={() => onRestore(l.id)} disabled={isLoading} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </td>
+        </tr>
+      )}
     </>
   );
 }

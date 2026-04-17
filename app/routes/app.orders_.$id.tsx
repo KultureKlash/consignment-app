@@ -146,7 +146,7 @@ export default function OrderDetail() {
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total" value={`$${fmt(order.total)}`} icon={DollarSign} />
           <StatCard label="Items" value={String(summary.itemCount)} icon={ShoppingBag} />
           <StatCard label="Our Cut" value={`$${fmt(summary.totalFees)}`} icon={TrendingUp} accentColor="#059669" />
@@ -179,7 +179,8 @@ export default function OrderDetail() {
               {summary.refundedCount > 0 ? ` · ${summary.refundedCount} refunded` : ""}
             </span>
           </div>
-          <table className="w-full border-collapse text-[13px]">
+          {/* Desktop table */}
+          <table className="hidden md:table w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-gray-200/60">
                 <th className="admin-th !px-5">Product</th>
@@ -209,7 +210,15 @@ export default function OrderDetail() {
                   {/* Product info */}
                   <td className="admin-td !px-5 !py-3 align-top">
                     <div className="font-semibold text-[13px] text-gray-900 mb-0.5">
-                      {product.title}
+                      {product.shopifyProductId ? (
+                        <a
+                          href={`shopify://admin/products/${product.shopifyProductId.replace("gid://shopify/Product/", "")}`}
+                          target="_top"
+                          className="hover:underline"
+                        >
+                          {product.title}
+                        </a>
+                      ) : product.title}
                     </div>
                     <div className="text-xs text-gray-500">
                       Size {variant.size}
@@ -264,10 +273,85 @@ export default function OrderDetail() {
             })}
             </tbody>
           </table>
+
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-gray-200/40">
+            {order.items.map((item) => {
+              const product = item.listing.variant.product;
+              const variant = item.listing.variant;
+              const consignor = item.listing.consignor;
+              const saleTx = item.transactions.find((tx) => tx.type === "sale");
+              const isPending = order.paymentStatus === "pending" && item.status === LISTING_STATUS.SOLD;
+              const displayStatus = isPending ? "pending" : item.status;
+              const displayColors = isPending
+                ? { bg: "#fffbeb", color: "#d97706" }
+                : (statusColors[item.status] ?? { bg: "#f3f4f6", color: "#6d7175" });
+
+              return (
+                <div key={item.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[13px] text-gray-900 mb-0.5 truncate">
+                        {product.shopifyProductId ? (
+                          <a
+                            href={`shopify://admin/products/${product.shopifyProductId.replace("gid://shopify/Product/", "")}`}
+                            target="_top"
+                            className="hover:underline"
+                          >
+                            {product.title}
+                          </a>
+                        ) : product.title}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Size {variant.size}
+                        {product.sku && <span className="text-gray-400"> · {product.sku}</span>}
+                      </div>
+                    </div>
+                    <div className="font-bold text-sm text-gray-900 tabular-nums whitespace-nowrap">
+                      ${fmt(item.price)}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs text-gray-500">
+                      <Link to={`/app/consignors/${consignor.id}`} className="font-semibold text-gray-900 no-underline">
+                        {consignor.name}
+                      </Link>
+                      <span className="text-gray-400"> ({(consignor.feeRate * 100).toFixed(0)}%)</span>
+                    </div>
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize tracking-wide inline-block shrink-0"
+                      style={{ background: displayColors.bg, color: displayColors.color }}
+                    >
+                      {displayStatus.replace("_", " ")}
+                    </span>
+                  </div>
+                  {saleTx && (
+                    <div className="text-xs text-gray-500">
+                      Fee <span className="font-semibold text-emerald-600">${fmt(saleTx.feeAmount)}</span>
+                      <span className="text-gray-300"> · </span>
+                      Payout <span className="font-semibold text-gray-500">${fmt(saleTx.consignorAmount)}</span>
+                      {(() => {
+                        const tax = computeTax(saleTx.consignorAmount, consignor);
+                        if (!tax.isTaxable) return null;
+                        return (
+                          <div className="text-[11px] text-gray-400 mt-0.5">
+                            {tax.gst > 0 && `+GST $${fmt(tax.gst)} `}
+                            {tax.qst > 0 && `+QST $${fmt(tax.qst)} `}
+                            {tax.hst > 0 && `+${tax.taxLabel} $${fmt(tax.hst)} `}
+                            = <strong className="text-gray-500">${fmt(tax.total)}</strong> payable
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Two-column: Ledger + Timeline */}
-        <div className="grid gap-6" style={{ gridTemplateColumns: "3fr 2fr" }}>
+        <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6">
           {/* Financial Ledger */}
           <div className="admin-card">
             <div className="admin-card-header">
@@ -294,46 +378,80 @@ export default function OrderDetail() {
                 }
 
                 return (
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-gray-200/50">
-                        <th className="admin-th !px-5 !text-[10px] tracking-wider">Type</th>
-                        <th className="admin-th !px-3 !text-[10px] tracking-wider">Item</th>
-                        <th className="admin-th !px-3 !text-[10px] tracking-wider text-right">Gross</th>
-                        <th className="admin-th !px-3 !text-[10px] tracking-wider text-right">Fee</th>
-                        <th className="admin-th !px-5 !text-[10px] tracking-wider text-right">Payout</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <>
+                    {/* Desktop table */}
+                    <table className="hidden md:table w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-200/50">
+                          <th className="admin-th !px-5 !text-[10px] tracking-wider">Type</th>
+                          <th className="admin-th !px-3 !text-[10px] tracking-wider">Item</th>
+                          <th className="admin-th !px-3 !text-[10px] tracking-wider text-right">Gross</th>
+                          <th className="admin-th !px-3 !text-[10px] tracking-wider text-right">Fee</th>
+                          <th className="admin-th !px-5 !text-[10px] tracking-wider text-right">Payout</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allTxs.map((tx, i) => {
+                          const colors = txTypeColors[tx.type] ?? { bg: "#f3f4f6", color: "#6d7175" };
+                          return (
+                            <tr key={i} className="border-b border-gray-200/30">
+                              <td className="admin-td !px-5">
+                                <span
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide inline-block"
+                                  style={{ background: colors.bg, color: colors.color }}
+                                >
+                                  {tx.type.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="admin-td !px-3 text-gray-700">
+                                {tx.productTitle} · {tx.size}
+                              </td>
+                              <td className="admin-td !px-3 text-right tabular-nums font-medium" style={{ color: tx.grossAmount < 0 ? "#dc2626" : "#1a1a1a" }}>
+                                {tx.grossAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.grossAmount))}
+                              </td>
+                              <td className="admin-td !px-3 text-right tabular-nums font-semibold" style={{ color: tx.feeAmount < 0 ? "#dc2626" : "#059669" }}>
+                                {tx.feeAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.feeAmount))}
+                              </td>
+                              <td className="admin-td !px-5 text-right tabular-nums" style={{ color: tx.consignorAmount < 0 ? "#dc2626" : "#6d7175" }}>
+                                {tx.consignorAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.consignorAmount))}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile card view */}
+                    <div className="md:hidden divide-y divide-gray-200/30">
                       {allTxs.map((tx, i) => {
                         const colors = txTypeColors[tx.type] ?? { bg: "#f3f4f6", color: "#6d7175" };
                         return (
-                          <tr key={i} className="border-b border-gray-200/30">
-                            <td className="admin-td !px-5">
+                          <div key={i} className="px-4 py-3 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
                               <span
                                 className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide inline-block"
                                 style={{ background: colors.bg, color: colors.color }}
                               >
                                 {tx.type.toUpperCase()}
                               </span>
-                            </td>
-                            <td className="admin-td !px-3 text-gray-700">
-                              {tx.productTitle} · {tx.size}
-                            </td>
-                            <td className="admin-td !px-3 text-right tabular-nums font-medium" style={{ color: tx.grossAmount < 0 ? "#dc2626" : "#1a1a1a" }}>
-                              {tx.grossAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.grossAmount))}
-                            </td>
-                            <td className="admin-td !px-3 text-right tabular-nums font-semibold" style={{ color: tx.feeAmount < 0 ? "#dc2626" : "#059669" }}>
-                              {tx.feeAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.feeAmount))}
-                            </td>
-                            <td className="admin-td !px-5 text-right tabular-nums" style={{ color: tx.consignorAmount < 0 ? "#dc2626" : "#6d7175" }}>
-                              {tx.consignorAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.consignorAmount))}
-                            </td>
-                          </tr>
+                              <span className="text-xs text-gray-700 truncate">{tx.productTitle} · {tx.size}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs tabular-nums">
+                              <span className="font-medium" style={{ color: tx.grossAmount < 0 ? "#dc2626" : "#1a1a1a" }}>
+                                Gross: {tx.grossAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.grossAmount))}
+                              </span>
+                              <span className="font-semibold" style={{ color: tx.feeAmount < 0 ? "#dc2626" : "#059669" }}>
+                                Fee: {tx.feeAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.feeAmount))}
+                              </span>
+                              <span style={{ color: tx.consignorAmount < 0 ? "#dc2626" : "#6d7175" }}>
+                                Payout: {tx.consignorAmount < 0 ? "-" : ""}${fmt(Math.abs(tx.consignorAmount))}
+                              </span>
+                            </div>
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 );
               })()}
             </div>

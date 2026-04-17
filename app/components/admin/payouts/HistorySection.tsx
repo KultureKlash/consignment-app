@@ -48,7 +48,7 @@ export function HistorySection({
               <div key={payout.id} className="border-b border-gray-200/40">
                 <div
                   onClick={() => setExpandedPayout(isOpen ? null : payout.id)}
-                  className="flex items-center px-5 py-3 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+                  className="flex flex-wrap items-center px-4 md:px-5 py-3 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
                 >
                   {isOpen ? <ChevronDown size={16} className="text-[#6d7175]" /> : <ChevronRight size={16} className="text-[#6d7175]" />}
                   <span className="ml-2 text-[13px] font-semibold text-[#1a1a1a]">
@@ -72,8 +72,9 @@ export function HistorySection({
 
                 {isOpen && (
                   <div ref={scrollRef} className="bg-gray-50 border-t border-gray-200/30">
+                    {/* Desktop: column headers */}
                     <div
-                      className="grid items-center px-5 pt-2 pb-1.5 pl-3 border-b border-gray-200/30 text-[10px] font-bold uppercase tracking-widest text-gray-400"
+                      className="hidden md:grid items-center px-5 pt-2 pb-1.5 pl-3 border-b border-gray-200/30 text-[10px] font-bold uppercase tracking-widest text-gray-400"
                       style={{ gridTemplateColumns: gridCols }}
                     >
                       <span />
@@ -92,21 +93,33 @@ export function HistorySection({
                       const variant = item?.listing?.variant;
                       const soldDate = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "\u2014";
                       return (
-                        <div
-                          key={pi.id}
-                          className="grid items-center px-5 py-[7px] pl-3 border-t border-gray-200/15 text-[13px]"
-                          style={{ gridTemplateColumns: gridCols }}
-                        >
-                          <span />
-                          <span className="text-xs text-[#6d7175] tabular-nums">{order?.orderNumber ?? "\u2014"}</span>
-                          <div className="min-w-0">
-                            <span className="font-medium text-[#1a1a1a]">{product?.title ?? "Unknown"}</span>
-                            <span className="text-gray-400"> ({variant?.size ?? "?"})</span>
+                        <div key={pi.id}>
+                          {/* Desktop row */}
+                          <div
+                            className="hidden md:grid items-center px-5 py-[7px] pl-3 border-t border-gray-200/15 text-[13px]"
+                            style={{ gridTemplateColumns: gridCols }}
+                          >
+                            <span />
+                            <span className="text-xs text-[#6d7175] tabular-nums">{order?.orderNumber ?? "\u2014"}</span>
+                            <div className="min-w-0">
+                              <span className="font-medium text-[#1a1a1a]">{product?.title ?? "Unknown"}</span>
+                              <span className="text-gray-400"> ({variant?.size ?? "?"})</span>
+                            </div>
+                            <span className="text-xs text-[#6d7175] text-right tabular-nums">{soldDate}</span>
+                            <span className="text-xs text-[#6d7175] text-right tabular-nums">${fmt(tx.grossAmount)}</span>
+                            <span className="text-xs font-medium text-[#1a1a1a] text-right tabular-nums">${fmt(tx.feeAmount)}</span>
+                            <span className="text-[13px] font-semibold text-emerald-600 text-right tabular-nums">${fmt(tx.consignorAmount)}</span>
                           </div>
-                          <span className="text-xs text-[#6d7175] text-right tabular-nums">{soldDate}</span>
-                          <span className="text-xs text-[#6d7175] text-right tabular-nums">${fmt(tx.grossAmount)}</span>
-                          <span className="text-xs font-medium text-[#1a1a1a] text-right tabular-nums">${fmt(tx.feeAmount)}</span>
-                          <span className="text-[13px] font-semibold text-emerald-600 text-right tabular-nums">${fmt(tx.consignorAmount)}</span>
+                          {/* Mobile card */}
+                          <div className="md:hidden px-4 py-3 border-t border-gray-200/15 text-[13px]">
+                            <div className="font-medium text-[#1a1a1a] truncate">
+                              {product?.title ?? "Unknown"} <span className="text-gray-400">({variant?.size ?? "?"})</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-1 text-xs text-[#6d7175]">
+                              <span>{order?.orderNumber ?? "\u2014"} · {soldDate}</span>
+                              <span className="font-semibold text-emerald-600 text-[13px]">${fmt(tx.consignorAmount)}</span>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -115,7 +128,7 @@ export function HistorySection({
                       const tax = computeTax(payout.amount, payout.consignor);
                       if (!tax.isTaxable) return null;
                       return (
-                        <div className="flex justify-end gap-6 px-5 py-2.5 border-t border-gray-200/30 bg-yellow-50 text-xs tabular-nums">
+                        <div className="flex flex-wrap justify-end gap-3 md:gap-6 px-4 md:px-5 py-2.5 border-t border-gray-200/30 bg-yellow-50 text-xs tabular-nums">
                           <span className="text-[#6d7175]">Subtotal <strong>${fmt(tax.subtotal)}</strong></span>
                           {tax.gst > 0 && <span className="text-[#6d7175]">GST (5%) <strong>${fmt(tax.gst)}</strong></span>}
                           {tax.qst > 0 && <span className="text-[#6d7175]">QST (9.975%) <strong>${fmt(tax.qst)}</strong></span>}

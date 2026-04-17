@@ -8,7 +8,7 @@ const STORE_NAME = "Konsign";
 // ── Core send function ──
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  if (!RESEND_API_KEY || process.env.NODE_ENV === "test") {
+  if (!RESEND_API_KEY || process.env.NODE_ENV !== "production") {
     logger.info("[DEV] Email would send", { to, subject });
     return;
   }

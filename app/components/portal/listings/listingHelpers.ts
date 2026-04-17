@@ -60,6 +60,7 @@ export type ListingRow = {
   price: number;
   status: string;
   createdAt: string | Date;
+  listedAt?: string | Date | null;
   variantId: string;
   variant: {
     size: string;

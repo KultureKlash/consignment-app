@@ -27,7 +27,7 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
-  const { totalSales, totalOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
+  const { totalSales, totalOrders, allOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
   const [showAllActivity, setShowAllActivity] = useState(false);
   const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
@@ -36,7 +36,7 @@ export default function Dashboard() {
     // Col 1: Totals        | Col 2: Earnings breakdown | Col 3: Operations
     { label: "Total Revenue",    value: `$${fmt(Number(totalSales))}`,        icon: DollarSign,  color: "blue",   tip: "Total sale price of all sold items across all consignors." },
     { label: "Consignment Fees", value: `$${fmt(Number(consignmentFees))}`,   icon: TrendingUp,  color: "green",  tip: "Total fees earned from consignment sales (your commission)." },
-    { label: "Total Orders",     value: Number(totalOrders).toLocaleString("en-US"), icon: ShoppingBag, color: "purple", tip: "Total number of orders received from customers." },
+    { label: "Total Orders", value: Number(totalOrders).toLocaleString("en-US"), sub: Number(allOrders) > Number(totalOrders) ? `${allOrders} total` : undefined, icon: ShoppingBag, color: "purple", tip: "Orders where payment was captured. Grey number includes all orders." },
     { label: "Total Earnings",   value: `$${fmt(Number(totalEarnings))}`,     icon: TrendingUp,  color: "amber",  tip: "Consignment fees + store-owned profit combined." },
     { label: "Store Profit",     value: `$${fmt(Number(storeProfit))}`,       icon: ShoppingBag,  color: "green",  tip: "Profit from store-owned inventory (sale price minus cost)." },
     { label: "Inventory Value",  value: `$${fmt(Number(inventoryValue))}`,    icon: Package,     color: "purple", tip: "Total asking price of all active listings currently for sale." },
@@ -69,16 +69,16 @@ export default function Dashboard() {
 
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-7">
           {/* Stats Grid — 2 rows of 3 */}
-          <section className="grid grid-cols-3 gap-4">
-            {stats.map((s) => (
-              <motion.div key={s.label} variants={itemVariants}>
+          <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {stats.map((s, i) => (
+              <motion.div key={s.label} variants={itemVariants} className={i === stats.length - 1 ? "col-span-2 md:col-span-1" : ""}>
                 <StatsCard {...s} />
               </motion.div>
             ))}
           </section>
 
           {/* Bottom Two-Column Layout */}
-          <div className="grid gap-5" style={{ gridTemplateColumns: "5fr 7fr" }}>
+          <div className="grid grid-cols-1 md:grid-cols-[5fr_7fr] gap-5">
             {/* Action Required */}
             <motion.section variants={itemVariants}>
               <div className="admin-card">

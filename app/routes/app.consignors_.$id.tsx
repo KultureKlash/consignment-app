@@ -190,7 +190,7 @@ export default function ConsignorDetail() {
     <s-page>
       <div className="p-0">
         {/* Top bar: back + save */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
           <Link
             to="/app/consignors"
             className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 no-underline font-medium"
@@ -280,7 +280,7 @@ export default function ConsignorDetail() {
         )}
 
         {/* Two-column layout */}
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Details card */}
           <div className="admin-card">
             <div className="admin-card-header">
@@ -484,7 +484,7 @@ export default function ConsignorDetail() {
           onClick={() => setShowSuspendModal(false)}
         >
           <div
-            className="admin-modal !max-w-[440px]"
+            className="admin-modal !max-w-[440px] !mx-4 md:!mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="admin-modal-header">

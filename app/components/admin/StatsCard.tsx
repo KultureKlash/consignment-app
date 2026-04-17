@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 export interface StatsCardProps {
   label: string;
   value: string;
+  sub?: string;
   trend?: string;
   icon: LucideIcon;
   color?: string;
@@ -30,7 +31,7 @@ function getTheme(color?: string): ColorTheme {
   }
 }
 
-export default function StatsCard({ label, value, trend, icon: Icon, color, tip }: StatsCardProps) {
+export default function StatsCard({ label, value, sub, trend, icon: Icon, color, tip }: StatsCardProps) {
   const t = getTheme(color);
 
   return (
@@ -66,6 +67,11 @@ export default function StatsCard({ label, value, trend, icon: Icon, color, tip 
         {trend && (
           <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-[7px] py-0.5 rounded-md">
             {trend}
+          </span>
+        )}
+        {sub && (
+          <span className="text-[11px] text-gray-400 tabular-nums">
+            {sub}
           </span>
         )}
       </div>

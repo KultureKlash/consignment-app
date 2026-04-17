@@ -368,30 +368,26 @@ export default function PortalPayouts() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
-                        {/* Mark Invoice Sent for pending payouts — business consignors only */}
-                        {!isIndividual && payout.status === "pending" && !payout.invoiceSent && (
-                          <div className="px-6 md:px-10 py-3 border-b border-[rgba(255,255,255,0.06)]">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                fetcher.submit(
-                                  { intent: "mark-invoice-sent", payoutId: payout.id },
-                                  { method: "POST" },
-                                );
-                              }}
-                              disabled={isSubmitting}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              Mark Invoice Sent
-                            </button>
-                            <p className="text-[10px] text-muted-foreground mt-1.5">Let us know you've sent your invoice so we can process it faster.</p>
-                          </div>
-                        )}
-                        {!isIndividual && payout.status === "pending" && payout.invoiceSent && (
-                          <div className="px-6 md:px-10 py-3 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-xs text-primary font-medium">Invoice marked as sent</span>
+                        {!isIndividual && payout.status === "pending" && (
+                          <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
+                            {payout.invoiceSent ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                                <span className="text-xs text-primary font-medium">Invoice sent</span>
+                              </>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  fetcher.submit({ intent: "mark-invoice-sent", payoutId: payout.id }, { method: "POST" });
+                                }}
+                                disabled={isSubmitting}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.12] transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                <Send className="w-3 h-3" />
+                                Mark invoice sent
+                              </button>
+                            )}
                           </div>
                         )}
                         <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-10 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.04)]">

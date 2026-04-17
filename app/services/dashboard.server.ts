@@ -24,11 +24,12 @@ export async function getDashboardData() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [salesAgg, totalOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount] = await Promise.all([
-    prisma.transaction.aggregate({ where: { type: "sale" }, _sum: { grossAmount: true } }),
+  const [salesAgg, totalOrders, allOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount] = await Promise.all([
+    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" } }, _sum: { grossAmount: true } }),
+    prisma.order.count({ where: { paymentStatus: { in: ["paid", "refunded"] } } }),
     prisma.order.count(),
-    prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
-    prisma.transaction.aggregate({ where: { type: "sale", consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
+    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" }, consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" }, consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
     prisma.listing.aggregate({ where: { status: LISTING_STATUS.ACTIVE }, _sum: { price: true } }),
     prisma.listing.count({ where: { status: LISTING_STATUS.SUBMITTED } }),
     prisma.listing.count({ where: { status: LISTING_STATUS.APPROVED } }),
@@ -75,6 +76,7 @@ export async function getDashboardData() {
   return {
     totalSales,
     totalOrders,
+    allOrders,
     consignmentFees,
     storeProfit,
     totalEarnings,

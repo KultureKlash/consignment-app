@@ -38,17 +38,7 @@ export async function action({ request }: ActionFunctionArgs) {
     data: { consignorId: consignor.id, type, message },
   });
 
-  // Notify store via email
-  const subject = `[Konsign Feedback] ${type === "bug" ? "Bug report" : type === "suggestion" ? "Suggestion" : "Message"} from ${consignor.name}`;
-  sendEmail(
-    process.env.RESEND_FROM_EMAIL || "noreply@konsign.shopkultureklash.com",
-    subject,
-    `<div style="font-family:sans-serif;max-width:500px;padding:24px;">
-      <h2 style="margin:0 0 8px;font-size:18px;">${type === "bug" ? "🐛 Bug Report" : type === "suggestion" ? "💡 Suggestion" : "💬 Message"}</h2>
-      <p style="color:#6b7280;margin:0 0 16px;">From <strong>${consignor.name}</strong> (${consignor.email})</p>
-      <div style="background:#f3f4f6;padding:16px;border-radius:8px;white-space:pre-wrap;">${message}</div>
-    </div>`,
-  ).catch((err) => logger.error("Feedback email failed", { error: err instanceof Error ? err.message : String(err) }));
+  // Feedback shows in admin only — no email notification
 
   return { ok: true };
 }

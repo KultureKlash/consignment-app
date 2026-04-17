@@ -4,6 +4,7 @@ export type Listing = {
   cost?: number | null;
   status: string;
   createdAt: string | Date;
+  listedAt?: string | Date | null;
   consignor: { name: string; email: string; storeOwned?: boolean };
   variant: {
     size: string;
