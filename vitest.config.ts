@@ -10,6 +10,7 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       NODE_ENV: "test",
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/konsign_test",
     },
   },
 });
