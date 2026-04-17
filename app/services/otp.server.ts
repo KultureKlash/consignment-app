@@ -51,7 +51,10 @@ export async function requestOtp(email: string): Promise<{ success: boolean; err
   try {
     await sendOtpEmail(normalizedEmail, code);
   } catch {
-    return { error: "Failed to send verification code. Please try again." };
+    // In production, block login if email fails. In dev, let it through (code is in terminal logs).
+    if (process.env.NODE_ENV === "production") {
+      return { error: "Failed to send verification code. Please try again." };
+    }
   }
 
   // Opportunistically clean old OTPs

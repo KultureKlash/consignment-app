@@ -120,6 +120,60 @@ export async function sendWithdrawalApprovedEmail(
   `));
 }
 
+// ── Listing Approved ──
+
+export async function sendListingApprovedEmail(
+  consignor: { email: string; notificationPrefs?: string | null },
+  items: Array<{ product: string; size: string }>,
+): Promise<void> {
+  const count = items.length;
+  const subject = count === 1
+    ? `Listing approved — ready for drop-off`
+    : `${count} listings approved — ready for drop-off`;
+
+  const itemsHtml = items.map((item) => `
+    <div style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+      <span style="font-weight: 600; color: #111827;">${item.product}</span>
+      <span style="font-size: 13px; color: #6b7280;"> — Size ${item.size}</span>
+    </div>
+  `).join("");
+
+  await sendIfEnabled(consignor, subject, wrap(count === 1 ? "Listing Approved" : `${count} Listings Approved`, `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your ${count === 1 ? "listing has" : "listings have"} been approved.</p>
+    <div style="background: #e0f7f6; border: 1px solid #99f0e4; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
+      ${itemsHtml}
+    </div>
+    <p style="font-size: 14px; color: #111827; font-weight: 500; margin: 0;">Please bring your ${count === 1 ? "item" : "items"} to the store for drop-off.</p>
+  `));
+}
+
+// ── Listing Checked In (live on store) ──
+
+export async function sendListingLiveEmail(
+  consignor: { email: string; notificationPrefs?: string | null },
+  items: Array<{ product: string; size: string }>,
+): Promise<void> {
+  const count = items.length;
+  const subject = count === 1
+    ? `Drop-off confirmed — your item is live!`
+    : `Drop-off confirmed — ${count} items are live!`;
+
+  const itemsHtml = items.map((item) => `
+    <div style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+      <span style="font-weight: 600; color: #111827;">${item.product}</span>
+      <span style="font-size: 13px; color: #6b7280;"> — Size ${item.size}</span>
+    </div>
+  `).join("");
+
+  await sendIfEnabled(consignor, subject, wrap(count === 1 ? "Your Item is Live!" : `${count} Items Are Live!`, `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Drop-off confirmed. Your ${count === 1 ? "item is" : "items are"} now listed on the store.</p>
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
+      ${itemsHtml}
+    </div>
+    <p style="font-size: 13px; color: #6b7280; margin: 0;">You'll be notified when ${count === 1 ? "it sells" : "they sell"}.</p>
+  `));
+}
+
 // ── Submission Confirmed ──
 
 export async function sendSubmissionConfirmedEmail(

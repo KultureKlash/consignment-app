@@ -1,6 +1,6 @@
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { sendListingRejectedEmail } from "~/services/email.server";
+import { sendListingApprovedEmail, sendListingRejectedEmail } from "~/services/email.server";
 
 // ── Admin: Approve a submitted listing ──
 
@@ -11,7 +11,7 @@ export async function approveListing({ listingId }: { listingId: string }) {
     throw new Error(`Cannot approve listing with status "${listing.status}"`);
   }
 
-  return prisma.listing.update({
+  const updated = await prisma.listing.update({
     where: { id: listingId },
     data: {
       status: LISTING_STATUS.APPROVED,
@@ -19,6 +19,13 @@ export async function approveListing({ listingId }: { listingId: string }) {
     },
     include: { consignor: true, variant: { include: { product: true } } },
   });
+
+  sendListingApprovedEmail(updated.consignor, [{
+    product: updated.variant.product.title,
+    size: updated.variant.size,
+  }]).catch(() => {});
+
+  return updated;
 }
 
 // ── Admin: Reject a submitted listing ──
@@ -92,7 +99,7 @@ export async function adminEditAndApprove({
     await prisma.variant.update({ where: { id: listing.variantId }, data: variantUpdate });
   }
 
-  return prisma.listing.update({
+  const approved = await prisma.listing.update({
     where: { id: listingId },
     data: {
       ...(price !== undefined ? { price } : {}),
@@ -101,4 +108,11 @@ export async function adminEditAndApprove({
     },
     include: { consignor: true, variant: { include: { product: true } } },
   });
+
+  sendListingApprovedEmail(approved.consignor, [{
+    product: approved.variant.product.title,
+    size: approved.variant.size,
+  }]).catch(() => {});
+
+  return approved;
 }

@@ -274,8 +274,8 @@ async function setProductMetafields(
     {
       variables: {
         metafields: [
-          { ownerId: shopifyProductId, namespace: "custom", key: "age_group", type: "single_line_text_field", value: ageGroup },
-          { ownerId: shopifyProductId, namespace: "custom", key: "target_gender", type: "single_line_text_field", value: targetGender },
+          { ownerId: shopifyProductId, namespace: "shopify", key: "age-group", type: "list.metaobject_reference", value: JSON.stringify([ageGroup]) },
+          { ownerId: shopifyProductId, namespace: "shopify", key: "target-gender", type: "list.metaobject_reference", value: JSON.stringify([targetGender]) },
         ],
       },
     },

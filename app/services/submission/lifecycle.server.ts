@@ -5,7 +5,7 @@ import { safeSyncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ensureVariantBarcode } from "~/services/catalog.server";
 import { logger } from "~/lib/logger.server";
-import { sendWithdrawalApprovedEmail } from "~/services/email.server";
+import { sendWithdrawalApprovedEmail, sendListingLiveEmail } from "~/services/email.server";
 
 // ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──
 
@@ -52,6 +52,11 @@ export async function checkinListing({
   } catch (err) {
     logger.error("Shopify sync failed during activation", { error: err instanceof Error ? err.message : String(err) });
   }
+
+  sendListingLiveEmail(updated.consignor, [{
+    product: updated.variant.product.title,
+    size: updated.variant.size,
+  }]).catch(() => {});
 
   return updated;
 }
