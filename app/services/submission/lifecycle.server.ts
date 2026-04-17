@@ -96,6 +96,35 @@ export async function approveWithdrawal({
   return updated;
 }
 
+// ── Admin: Deny a withdrawal request → back to active ──
+
+export async function denyWithdrawal({
+  admin,
+  listingId,
+}: {
+  admin: AdminApiContext;
+  listingId: string;
+}) {
+  const listing = await prisma.listing.findUniqueOrThrow({
+    where: { id: listingId },
+    include: { variant: true },
+  });
+
+  if (listing.status !== LISTING_STATUS.WITHDRAWAL_REQUESTED) {
+    throw new Error(`Cannot deny withdrawal for listing with status "${listing.status}"`);
+  }
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: LISTING_STATUS.ACTIVE },
+    include: { consignor: true, variant: { include: { product: true } } },
+  });
+
+  await safeSyncInventory({ admin, variant: listing.variant, context: "withdrawal denied" });
+
+  return updated;
+}
+
 // ── Admin: Complete withdrawal (consignor picked up item) ──
 
 export async function completeWithdrawal({

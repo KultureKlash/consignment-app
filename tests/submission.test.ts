@@ -13,6 +13,7 @@ import {
   updateActiveListingPrice,
   requestWithdrawal,
   approveWithdrawal,
+  denyWithdrawal,
   completeWithdrawal,
   adminEditAndApprove,
 } from "~/services/submission.server";
@@ -505,6 +506,34 @@ describe("submission pipeline", () => {
       await expect(
         approveWithdrawal({ admin, listingId: listing.id }),
       ).rejects.toThrow('Cannot approve withdrawal for listing with status "active"');
+    });
+  });
+
+  // ── Deny Withdrawal ──
+
+  describe("denyWithdrawal", () => {
+    it("returns withdrawal_requested listing back to active", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const listing = await submitListing({ consignorId: consignor.id, title: "Deny Test", size: "11", price: 350 });
+      await approveListing({ listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
+      await requestWithdrawal({ listingId: listing.id, consignorId: consignor.id });
+
+      const updated = await denyWithdrawal({ admin, listingId: listing.id });
+      expect(updated.status).toBe("active");
+    });
+
+    it("rejects denial on non-withdrawal_requested listing", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const listing = await submitListing({ consignorId: consignor.id, title: "Deny Reject", size: "10", price: 300 });
+      await approveListing({ listingId: listing.id });
+      await checkinListing({ admin, listingId: listing.id });
+
+      await expect(
+        denyWithdrawal({ admin, listingId: listing.id }),
+      ).rejects.toThrow('Cannot deny withdrawal for listing with status "active"');
     });
   });
 

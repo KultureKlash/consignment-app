@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Package, ChevronRight, Plus, Check, X, Zap, Pencil } from "lucide-react";
+import { Package, ChevronRight, Plus, Check, X, Zap, Pencil, RefreshCw } from "lucide-react";
 import { statusBadgeClass, relativeTime, statusLabel } from "./listing-ui";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
@@ -36,7 +36,10 @@ export function GroupRows({
   onReject,
   onCheckin,
   onApproveWithdrawal,
+  onDenyWithdrawal,
   onCompleteWithdrawal,
+  onRetrySync,
+  syncingListingId,
   onEditApprove,
   onAdminEdit,
   onEditProduct,
@@ -60,7 +63,10 @@ export function GroupRows({
   onReject?: (id: string) => void;
   onCheckin?: (id: string) => void;
   onApproveWithdrawal?: (id: string) => void;
+  onDenyWithdrawal?: (id: string) => void;
   onCompleteWithdrawal?: (id: string) => void;
+  onRetrySync?: (listingId: string) => void;
+  syncingListingId?: string;
   onEditApprove?: (listing: Listing) => void;
   onAdminEdit?: (listing: Listing) => void;
   onEditProduct?: (group: ProductGroup) => void;
@@ -161,7 +167,7 @@ export function GroupRows({
                     {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                       <button type="button" onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50 font-[inherit]">Check in</button>
                     )}
-                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                       <button type="button" onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50 font-[inherit]">Edit</button>
                     )}
                     {l.status === LISTING_STATUS.ACTIVE && onCancel && (
@@ -170,11 +176,19 @@ export function GroupRows({
                     {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
                       <button type="button" onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-orange-50 text-orange-600 border border-orange-200 cursor-pointer disabled:opacity-50 font-[inherit]">Approve</button>
                     )}
+                    {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onDenyWithdrawal && (
+                      <button type="button" onClick={() => onDenyWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50 font-[inherit]">Deny</button>
+                    )}
                     {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
                       <button type="button" onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-cyan-50 text-cyan-600 border border-cyan-200 cursor-pointer disabled:opacity-50 font-[inherit]">Done</button>
                     )}
                     {l.status === LISTING_STATUS.CANCELLED && onRestore && (
                       <button type="button" onClick={() => onRestore(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-pointer disabled:opacity-50 font-[inherit]">Restore</button>
+                    )}
+                    {!l.variant.shopifyVariantId && l.status === LISTING_STATUS.ACTIVE && onRetrySync && (
+                      <button type="button" onClick={() => onRetrySync(l.id)} disabled={syncingListingId === l.id} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-500 border border-blue-200 cursor-pointer disabled:opacity-50 font-[inherit]">
+                        <span className="inline-flex items-center gap-1"><RefreshCw size={10} className={syncingListingId === l.id ? "animate-spin" : ""} /> {syncingListingId === l.id ? "Syncing..." : "Retry Sync"}</span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -349,6 +363,11 @@ export function GroupRows({
             </td>
             <td className="admin-td">
               <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
+              {!l.variant.shopifyVariantId && l.status === LISTING_STATUS.ACTIVE && (
+                <span className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-px text-[10px] font-medium rounded bg-amber-50 text-amber-600">
+                  Not live on Shopify
+                </span>
+              )}
             </td>
             <td className={dateCellClass}>
               {relativeTime(l.listedAt ?? l.createdAt)}
@@ -402,7 +421,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                     <ActionBtn
                       label="Edit"
                       icon={<Pencil size={13} />}
@@ -435,6 +454,17 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
+                  {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onDenyWithdrawal && (
+                    <ActionBtn
+                      label="Deny Withdrawal"
+                      icon={<X size={13} />}
+                      color="#dc2626"
+                      bg="#fef2f2"
+                      border="#fecaca"
+                      onClick={() => onDenyWithdrawal(l.id)}
+                      disabled={isLoading}
+                    />
+                  )}
                   {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
                     <ActionBtn
                       label="Picked Up"
@@ -455,6 +485,17 @@ export function GroupRows({
                       border="#a7f3d0"
                       onClick={() => onRestore(l.id)}
                       disabled={isLoading}
+                    />
+                  )}
+                  {!l.variant.shopifyVariantId && l.status === LISTING_STATUS.ACTIVE && onRetrySync && (
+                    <ActionBtn
+                      label={syncingListingId === l.id ? "Syncing..." : "Retry Sync"}
+                      icon={<RefreshCw size={13} className={syncingListingId === l.id ? "animate-spin" : ""} />}
+                      color="#3b82f6"
+                      bg="#eff6ff"
+                      border="#bfdbfe"
+                      onClick={() => onRetrySync(l.id)}
+                      disabled={syncingListingId === l.id}
                     />
                   )}
                   {![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP, LISTING_STATUS.CANCELLED].includes(l.status) && (
@@ -516,7 +557,7 @@ export function GroupRows({
                       {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                         <button onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50">Check in</button>
                       )}
-                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                         <button onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50">Edit</button>
                       )}
                       {l.status === LISTING_STATUS.ACTIVE && onCancel && (
@@ -525,11 +566,19 @@ export function GroupRows({
                       {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
                         <button onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-orange-50 text-orange-600 border border-orange-200 cursor-pointer disabled:opacity-50">Approve</button>
                       )}
+                      {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onDenyWithdrawal && (
+                        <button onClick={() => onDenyWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50">Deny</button>
+                      )}
                       {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
                         <button onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-cyan-50 text-cyan-600 border border-cyan-200 cursor-pointer disabled:opacity-50">Done</button>
                       )}
                       {l.status === LISTING_STATUS.CANCELLED && onRestore && (
                         <button onClick={() => onRestore(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-pointer disabled:opacity-50">Restore</button>
+                      )}
+                      {!l.variant.shopifyVariantId && l.status === LISTING_STATUS.ACTIVE && onRetrySync && (
+                        <button onClick={() => onRetrySync(l.id)} disabled={syncingListingId === l.id} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-500 border border-blue-200 cursor-pointer disabled:opacity-50">
+                          <span className="inline-flex items-center gap-1"><RefreshCw size={10} className={syncingListingId === l.id ? "animate-spin" : ""} /> {syncingListingId === l.id ? "Syncing..." : "Retry"}</span>
+                        </button>
                       )}
                     </div>
                   </div>

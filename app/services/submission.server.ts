@@ -21,6 +21,7 @@ export {
 export {
   checkinListing,
   approveWithdrawal,
+  denyWithdrawal,
   completeWithdrawal,
 } from "./submission/lifecycle.server";
 

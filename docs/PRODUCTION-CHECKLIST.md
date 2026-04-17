@@ -6,7 +6,7 @@ Everything that needs to be done before going live. Items marked CRITICAL can co
 
 ## 1. Environment Variables (CRITICAL)
 
-Set these on your hosting platform (Fly.io, Railway, Vercel, etc.) — never commit them to git.
+Set these on Fly.io — never commit them to git.
 
 | Variable | Example | Why |
 |----------|---------|-----|

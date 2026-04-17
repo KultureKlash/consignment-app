@@ -1,9 +1,16 @@
+import { captureException, captureMessage } from "./sentry.server";
+
 type LogLevel = "info" | "warn" | "error";
 
 function log(level: LogLevel, message: string, meta?: Record<string, unknown>) {
   const entry = { level, message, ts: new Date().toISOString(), ...meta };
-  if (level === "error") console.error(JSON.stringify(entry));
-  else console.log(JSON.stringify(entry));
+  if (level === "error") {
+    console.error(JSON.stringify(entry));
+    // Send errors to Sentry so they're visible in the dashboard
+    captureMessage(message, meta);
+  } else {
+    console.log(JSON.stringify(entry));
+  }
 }
 
 export const logger = {

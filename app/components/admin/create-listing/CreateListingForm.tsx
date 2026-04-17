@@ -1,4 +1,4 @@
-import { User, Package, Tag } from "lucide-react";
+import { User, Package, Tag, RefreshCw } from "lucide-react";
 import type { Props } from "./types";
 import SectionHeader from "./SectionHeader";
 import { CreateListingProvider, useCreateListing } from "./CreateListingContext";
@@ -41,7 +41,7 @@ function CreateListingFormInner() {
         disabled={ctx.isLoading}
         className="admin-btn-submit mb-6 tracking-[0.01em]"
       >
-        {ctx.isLoading ? "Creating..." : "Create Listing"}
+        {ctx.isLoading ? <span className="inline-flex items-center gap-2"><RefreshCw size={14} className="animate-spin" /> Creating...</span> : "Create Listing"}
       </button>
     </div>
   );

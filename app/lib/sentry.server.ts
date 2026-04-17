@@ -20,7 +20,13 @@ export async function captureException(error: unknown): Promise<void> {
   if (Sentry) Sentry.captureException(error);
 }
 
-export async function captureMessage(message: string): Promise<void> {
+export async function captureMessage(message: string, extra?: Record<string, unknown>): Promise<void> {
   const Sentry = await ensureInit();
-  if (Sentry) Sentry.captureMessage(message);
+  if (Sentry) {
+    Sentry.withScope((scope) => {
+      if (extra) scope.setExtras(extra);
+      scope.setLevel("error");
+      Sentry.captureMessage(message);
+    });
+  }
 }

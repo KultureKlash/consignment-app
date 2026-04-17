@@ -65,6 +65,7 @@ export default function Listings() {
   const addFetcher = useFetcher();
   const approvalFetcher = useFetcher();
   const sectionFetcher = useFetcher();
+  const syncFetcher = useFetcher();
   const shopify = useAppBridge();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [quickAdd, setQuickAdd] = useState<{ productId: string; anchorEl: HTMLElement } | null>(null);
@@ -148,7 +149,10 @@ export default function Listings() {
           onReject={(id, reason) => submitApproval("reject", { listingId: id, reason })}
           onCheckin={(id) => submitApproval("checkin", { listingId: id })}
           onApproveWithdrawal={(id) => submitApproval("approve-withdrawal", { listingId: id })}
+          onDenyWithdrawal={(id) => submitApproval("deny-withdrawal", { listingId: id })}
           onCompleteWithdrawal={(id) => submitApproval("complete-withdrawal", { listingId: id })}
+          onRetrySync={(id) => syncFetcher.submit({ intent: "retry-sync", listingId: id }, { method: "POST" })}
+          syncingListingId={syncFetcher.state !== "idle" ? (syncFetcher.formData?.get("listingId") as string) : undefined}
           onEditApprove={(id, fields: EditApproveFields) => submitApproval("admin-edit-approve", { listingId: id, ...fields })}
           onAdminEdit={(id, fields: EditApproveFields) => {
             const d: Record<string, string> = { listingId: id, ...fields };

@@ -10,9 +10,12 @@ import {
   bulkApproveListing,
   bulkCheckinListing,
   approveWithdrawal,
+  denyWithdrawal,
   completeWithdrawal,
 } from "~/services/submission.server";
 import prisma from "~/db.server";
+import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
+import { syncInventory } from "~/services/inventory.server";
 
 export async function handleListingAction(admin: AdminApiContext, formData: FormData) {
   const intent = formData.get("intent") as string;
@@ -128,6 +131,12 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
     return { intent };
   }
 
+  if (intent === "deny-withdrawal") {
+    const listingId = formData.get("listingId") as string;
+    await denyWithdrawal({ admin, listingId });
+    return { intent };
+  }
+
   if (intent === "complete-withdrawal") {
     const listingId = formData.get("listingId") as string;
     await completeWithdrawal({ listingId });
@@ -143,6 +152,18 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "restore") {
     await restoreListing({ admin, listingId: formData.get("listingId") as string });
+    return { intent };
+  }
+
+  if (intent === "retry-sync") {
+    const listingId = formData.get("listingId") as string;
+    const listing = await prisma.listing.findUniqueOrThrow({
+      where: { id: listingId },
+      include: { variant: { include: { product: true } } },
+    });
+    await ensureShopifyProductAndVariant({ admin, product: listing.variant.product, variant: listing.variant });
+    const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: listing.variant.id } });
+    await syncInventory({ admin, variant: syncedVariant });
     return { intent };
   }
 
