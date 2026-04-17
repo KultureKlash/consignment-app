@@ -29,6 +29,7 @@ export default function App() {
         <s-link href="/app/orders">Orders</s-link>
         <s-link href="/app/payouts">Payouts</s-link>
         <s-link href="/app/consignors">Consignors</s-link>
+        <s-link href="/app/feedback">Feedback</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>

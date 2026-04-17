@@ -5,6 +5,7 @@ import {
   ShoppingBag,
   DollarSign,
   User,
+  MessageSquare,
   LogOut,
 } from "lucide-react";
 
@@ -13,6 +14,7 @@ const navItems = [
   { to: "/portal/listings", icon: Package, label: "Listings" },
   { to: "/portal/sales", icon: ShoppingBag, label: "Sales" },
   { to: "/portal/payouts", icon: DollarSign, label: "Payouts" },
+  { to: "/portal/feedback", icon: MessageSquare, label: "Feedback" },
   { to: "/portal/profile", icon: User, label: "Settings" },
 ];
 
