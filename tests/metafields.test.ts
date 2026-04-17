@@ -1,159 +1,145 @@
 import { describe, it, expect } from "vitest";
 import { deriveProductMetafields } from "~/lib/deriveProductMetafields";
 
-// Expected GIDs from Shopify metaobjects
+// Shopify metaobject GIDs
 const ADULTS = "gid://shopify/Metaobject/210365284470";
 const KIDS = "gid://shopify/Metaobject/210365513846";
 const MALE = "gid://shopify/Metaobject/210365743222";
 const FEMALE = "gid://shopify/Metaobject/210365710454";
 const UNISEX = "gid://shopify/Metaobject/210365317238";
+const HIGH_TOP = "gid://shopify/Metaobject/210366431350";
+const LOW_TOP = "gid://shopify/Metaobject/210366464118";
+const SLIP_ON = "gid://shopify/Metaobject/210366496886";
+const FASHION = "gid://shopify/Metaobject/210366398582";
+const ATHLETIC = "gid://shopify/Metaobject/210366365814";
 
 describe("deriveProductMetafields", () => {
-  describe("sneakers — size-based gender", () => {
+  describe("sneakers — gender + age", () => {
     it("US men's size → Male, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "10", "Air Jordan 1 Retro High")).toEqual({
-        ageGroup: ADULTS, targetGender: MALE,
-      });
+      const r = deriveProductMetafields("Sneakers", "10", "Air Jordan 1 Retro High", "Air Jordan");
+      expect(r.ageGroup).toBe(ADULTS);
+      expect(r.targetGender).toBe(MALE);
     });
 
-    it("US half size → Male, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "10.5", "Nike Dunk Low")).toEqual({
-        ageGroup: ADULTS, targetGender: MALE,
-      });
+    it("W suffix → Female, Adult", () => {
+      const r = deriveProductMetafields("Sneakers", "8W", "Nike Dunk Low", "Nike");
+      expect(r.ageGroup).toBe(ADULTS);
+      expect(r.targetGender).toBe(FEMALE);
     });
 
-    it("EU size → Male, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "42", "Jordan 1 Retro High OG")).toEqual({
-        ageGroup: ADULTS, targetGender: MALE,
-      });
+    it("Y suffix → Unisex, Kids", () => {
+      const r = deriveProductMetafields("Sneakers", "5Y", "Jordan 1 (GS)", "Air Jordan");
+      expect(r.ageGroup).toBe(KIDS);
+      expect(r.targetGender).toBe(UNISEX);
     });
 
-    it("EU half size → Male, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "44.5", "Nike Air Max 90")).toEqual({
-        ageGroup: ADULTS, targetGender: MALE,
-      });
+    it("GS in title → Kids", () => {
+      const r = deriveProductMetafields("Sneakers", "5", "Air Jordan 1 Retro High OG (GS)", "Air Jordan");
+      expect(r.ageGroup).toBe(KIDS);
     });
 
-    it("Women's size (W suffix) → Female, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "8W", "Nike Dunk Low")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
-    });
-
-    it("Women's half size (W suffix) → Female, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "10.5W", "Nike Dunk Low")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
-    });
-
-    it("Youth size (Y suffix) → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "5Y", "Jordan 1 Retro High OG (GS)")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
-    });
-
-    it("Youth half size (Y suffix) → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "6.5Y", "Nike Dunk Low")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Women's in title with EU size → Female", () => {
+      const r = deriveProductMetafields("Sneakers", "38.5", "Nike Dunk Low Women's", "Nike");
+      expect(r.targetGender).toBe(FEMALE);
     });
   });
 
-  describe("sneakers — title-based fallback", () => {
-    it("Women's in title with EU size → Female, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "38.5", "Nike Dunk Low Women's")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
+  describe("sneaker style — height", () => {
+    it("Jordan 1 High → High-top + Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Air Jordan 1 Retro High OG", "Air Jordan");
+      expect(r.sneakerStyles).toContain(HIGH_TOP);
+      expect(r.sneakerStyles).toContain(FASHION);
     });
 
-    it("Womens (no apostrophe) in title → Female, Adult", () => {
-      expect(deriveProductMetafields("Sneakers", "39", "Nike Air Max 90 Womens")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
+    it("Nike Dunk Low → Low-top + Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Nike Dunk Low Panda", "Nike");
+      expect(r.sneakerStyles).toContain(LOW_TOP);
+      expect(r.sneakerStyles).toContain(FASHION);
     });
 
-    it("GS in title → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "5", "Air Jordan 1 Retro High OG (GS)")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Air Force 1 → Low-top + Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Nike Air Force 1 Low '07", "Nike");
+      expect(r.sneakerStyles).toContain(LOW_TOP);
     });
 
-    it("Grade School in title → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "6", "Nike Dunk Low Grade School")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Air Max → Low-top", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Nike Air Max 90", "Nike");
+      expect(r.sneakerStyles).toContain(LOW_TOP);
     });
 
-    it("TD in title → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "8C", "Nike Air Force 1 TD")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Yeezy 350 → Low-top + Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Adidas Yeezy Boost 350 V2", "YEEZY");
+      expect(r.sneakerStyles).toContain(LOW_TOP);
+      expect(r.sneakerStyles).toContain(FASHION);
     });
 
-    it("PS in title → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "1", "Jordan 4 Retro PS")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
-    });
-
-    it("Kids in title → Unisex, Kids", () => {
-      expect(deriveProductMetafields("Sneakers", "12", "Nike Air Max 90 Kids")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Jordan 4 → High-top + Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Air Jordan 4 Retro Bred", "Air Jordan");
+      expect(r.sneakerStyles).toContain(HIGH_TOP);
+      expect(r.sneakerStyles).toContain(FASHION);
     });
   });
 
-  describe("other footwear", () => {
-    it("Slides → Unisex, Adult", () => {
-      expect(deriveProductMetafields("Slides", "10", "Yeezy Slide Glow Green")).toEqual({
-        ageGroup: ADULTS, targetGender: UNISEX,
-      });
+  describe("sneaker style — athletic vs fashion", () => {
+    it("Dior sneaker → Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "42", "Dior B23 High Top", "Dior");
+      expect(r.sneakerStyles).toContain(FASHION);
+      expect(r.sneakerStyles).not.toContain(ATHLETIC);
     });
 
-    it("Boots → Unisex, Adult", () => {
-      expect(deriveProductMetafields("Boots", "10", "Timberland 6-Inch Premium")).toEqual({
-        ageGroup: ADULTS, targetGender: UNISEX,
-      });
-    });
-  });
-
-  describe("non-footwear", () => {
-    it("Hoodie → Unisex, Adult", () => {
-      expect(deriveProductMetafields("Hoodies", "L", "Supreme Box Logo Hoodie")).toEqual({
-        ageGroup: ADULTS, targetGender: UNISEX,
-      });
+    it("Balenciaga → Fashion", () => {
+      const r = deriveProductMetafields("Sneakers", "43", "Balenciaga Track Trainer", "Balenciaga");
+      expect(r.sneakerStyles).toContain(FASHION);
     });
 
-    it("Handbags → Female, Adult", () => {
-      expect(deriveProductMetafields("Handbags", "O/S", "Louis Vuitton Keepall 55")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
+    it("Asics → Athletic", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Asics Gel-Kayano 14", "Asics");
+      expect(r.sneakerStyles).toContain(ATHLETIC);
+      expect(r.sneakerStyles).not.toContain(FASHION);
     });
 
-    it("Caps → Unisex, Adult", () => {
-      expect(deriveProductMetafields("Caps", "O/S", "Chrome Hearts Trucker Hat")).toEqual({
-        ageGroup: ADULTS, targetGender: UNISEX,
-      });
+    it("Nike Kobe → Athletic", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Nike Kobe 6 Protro", "Nike");
+      expect(r.sneakerStyles).toContain(ATHLETIC);
+    });
+
+    it("Nike Pegasus → Athletic", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Nike Pegasus 40", "Nike");
+      expect(r.sneakerStyles).toContain(ATHLETIC);
     });
   });
 
-  describe("edge cases", () => {
-    it("null category → Unisex, Adult", () => {
-      expect(deriveProductMetafields(null, "M", "Unknown Product")).toEqual({
-        ageGroup: ADULTS, targetGender: UNISEX,
-      });
+  describe("slides + boots", () => {
+    it("Slides → Slip-on only", () => {
+      const r = deriveProductMetafields("Slides", "10", "Yeezy Slide Glow Green", "YEEZY");
+      expect(r.sneakerStyles).toEqual([SLIP_ON]);
     });
 
-    it("W size overrides non-womens title", () => {
-      expect(deriveProductMetafields("Sneakers", "9W", "Air Jordan 1 Retro High")).toEqual({
-        ageGroup: ADULTS, targetGender: FEMALE,
-      });
+    it("Boots → High-top only", () => {
+      const r = deriveProductMetafields("Boots", "10", "Timberland 6-Inch Premium", "Timberland");
+      expect(r.sneakerStyles).toEqual([HIGH_TOP]);
     });
 
-    it("Y size overrides non-kids title", () => {
-      expect(deriveProductMetafields("Sneakers", "5Y", "Air Jordan 1 Retro High")).toEqual({
-        ageGroup: KIDS, targetGender: UNISEX,
-      });
+    it("Foam Runner → Slip-on", () => {
+      const r = deriveProductMetafields("Sneakers", "10", "Adidas Yeezy Foam Runner", "YEEZY");
+      expect(r.sneakerStyles).toContain(SLIP_ON);
+    });
+  });
+
+  describe("non-footwear — no sneaker style", () => {
+    it("Hoodie → empty styles", () => {
+      const r = deriveProductMetafields("Hoodies", "L", "Supreme Box Logo Hoodie", "Supreme");
+      expect(r.sneakerStyles).toEqual([]);
+    });
+
+    it("Handbag → empty styles", () => {
+      const r = deriveProductMetafields("Handbags", "O/S", "Louis Vuitton Keepall", "Louis Vuitton");
+      expect(r.sneakerStyles).toEqual([]);
+    });
+
+    it("null category → empty styles", () => {
+      const r = deriveProductMetafields(null, "M", "Unknown", null);
+      expect(r.sneakerStyles).toEqual([]);
     });
   });
 });

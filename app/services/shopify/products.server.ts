@@ -261,7 +261,18 @@ async function setProductMetafields(
   product: Product,
   variant: Variant,
 ): Promise<void> {
-  const { ageGroup, targetGender } = deriveProductMetafields(product.category, variant.size, product.title);
+  const { ageGroup, targetGender, sneakerStyles } = deriveProductMetafields(product.category, variant.size, product.title, product.brand);
+
+  const metafields = [
+    { ownerId: shopifyProductId, namespace: "shopify", key: "age-group", type: "list.metaobject_reference", value: JSON.stringify([ageGroup]) },
+    { ownerId: shopifyProductId, namespace: "shopify", key: "target-gender", type: "list.metaobject_reference", value: JSON.stringify([targetGender]) },
+  ];
+
+  if (sneakerStyles.length > 0) {
+    metafields.push({
+      ownerId: shopifyProductId, namespace: "shopify", key: "sneaker-style", type: "list.metaobject_reference", value: JSON.stringify(sneakerStyles),
+    });
+  }
 
   const response = await admin.graphql(
     `#graphql
@@ -271,14 +282,7 @@ async function setProductMetafields(
         userErrors { field message }
       }
     }`,
-    {
-      variables: {
-        metafields: [
-          { ownerId: shopifyProductId, namespace: "shopify", key: "age-group", type: "list.metaobject_reference", value: JSON.stringify([ageGroup]) },
-          { ownerId: shopifyProductId, namespace: "shopify", key: "target-gender", type: "list.metaobject_reference", value: JSON.stringify([targetGender]) },
-        ],
-      },
-    },
+    { variables: { metafields } },
   );
 
   const { data } = await response.json();
