@@ -85,8 +85,7 @@ export default async function handleRequest(
           responseStatusCode = 500;
           captureException(error);
           if (typeof error === "object" && error !== null && "message" in error) {
-            const { logger } = require("./lib/logger.server");
-            logger.error("React render error", { error: (error as Error).message });
+            console.error(JSON.stringify({ level: "error", message: "React render error", error: (error as Error).message }));
           }
         },
       }

@@ -49,6 +49,7 @@ export function GroupRows({
   onToggleGroup,
   sections,
   onSectionChange,
+  renderMode,
 }: {
   group: ProductGroup;
   isExpanded: boolean;
@@ -72,6 +73,7 @@ export function GroupRows({
   onToggleGroup: (ids: string[]) => void;
   sections?: SectionOption[];
   onSectionChange?: (productId: string, sectionId: string | null) => void;
+  renderMode?: "desktop" | "mobile";
 }) {
   const [localSortKey, setLocalSortKey] = useState<SortKey | null>(null);
   const [localSortDir, setLocalSortDir] = useState<"asc" | "desc">("asc");
@@ -105,6 +107,86 @@ export function GroupRows({
     }
   }, []);
 
+  // ── Mobile render: pure divs, zero event delegation ──
+  if (renderMode === "mobile") {
+    return (
+      <div className="border-b-2 border-gray-200">
+        {/* Product header — tap anywhere to toggle */}
+        <button type="button" onClick={onToggle} className="w-full flex items-center gap-3 px-3 py-2.5 bg-white cursor-pointer border-0 text-left font-[inherit]">
+          <span className={`transition-transform duration-200 shrink-0 ${isExpanded ? "rotate-90" : ""}`}>
+            <ChevronRight size={14} className="text-gray-400" />
+          </span>
+          {group.imageUrl ? (
+            <img src={group.imageUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-200 shrink-0" />
+          ) : (
+            <span className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+              <Package size={16} className="text-gray-400" />
+            </span>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm text-gray-900 truncate">{group.title}</div>
+            <div className="text-[11px] text-gray-500">{group.brand}{group.brand ? " · " : ""}<span className="text-emerald-600 font-semibold">{group.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).length} active</span></div>
+          </div>
+        </button>
+        {/* Expanded listings — NO parent click handlers */}
+        {isExpanded && (
+          <div>
+            {hasSelection && groupSelectableIds.length > 0 && (
+              <label className="flex items-center gap-2 px-3 py-1.5 border-t border-gray-100 bg-gray-50 cursor-pointer">
+                <input type="checkbox" checked={allGroupSelected} onChange={() => onToggleGroup(groupSelectableIds)} className={checkboxClass} />
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Select all</span>
+              </label>
+            )}
+            {sortedListings.map((l, i) => {
+              const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
+              return (
+                <div key={l.id} className={`px-3 py-1.5 flex items-center gap-1.5 bg-white ${i < sortedListings.length - 1 ? "border-t border-gray-100" : ""}`}>
+                  {hasSelection && (
+                    isSelectable ? (
+                      <input type="checkbox" checked={selectedIds?.has(l.id) ?? false} onChange={() => onToggleId(l.id)} className={`${checkboxClass} shrink-0`} />
+                    ) : <span className="inline-block w-4 shrink-0" />
+                  )}
+                  <span className="font-semibold text-[13px] text-gray-900 w-7 shrink-0 text-center">{l.variant.size}</span>
+                  <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">${fmt(Number(l.price))}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-gray-700 truncate">{l.consignor.name}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
+                      <>
+                        <button type="button" onClick={() => onApprove(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-bold rounded-md bg-teal-50 text-teal-600 border border-teal-200 cursor-pointer disabled:opacity-50 font-[inherit]">✓</button>
+                        {onReject && <button type="button" onClick={() => onReject(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-bold rounded-md bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50 font-[inherit]">✕</button>}
+                      </>
+                    )}
+                    {l.status === LISTING_STATUS.APPROVED && onCheckin && (
+                      <button type="button" onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50 font-[inherit]">Check in</button>
+                    )}
+                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                      <button type="button" onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50 font-[inherit]">Edit</button>
+                    )}
+                    {l.status === LISTING_STATUS.ACTIVE && onCancel && (
+                      <button type="button" onClick={() => onCancel(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50 font-[inherit]">Del</button>
+                    )}
+                    {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
+                      <button type="button" onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-orange-50 text-orange-600 border border-orange-200 cursor-pointer disabled:opacity-50 font-[inherit]">Approve</button>
+                    )}
+                    {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
+                      <button type="button" onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-cyan-50 text-cyan-600 border border-cyan-200 cursor-pointer disabled:opacity-50 font-[inherit]">Done</button>
+                    )}
+                    {l.status === LISTING_STATUS.CANCELLED && onRestore && (
+                      <button type="button" onClick={() => onRestore(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-pointer disabled:opacity-50 font-[inherit]">Restore</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Desktop render: table rows ──
   return (
     <>
       {/* Product header row */}
@@ -407,73 +489,49 @@ export function GroupRows({
                 return (
                   <div
                     key={l.id}
-                    className={`px-3 py-3 bg-white ${i < sortedListings.length - 1 ? "border-b border-gray-100" : "border-b-2 border-gray-200"}`}
+                    className={`px-2 py-1.5 bg-white flex items-center gap-1.5 ${i < sortedListings.length - 1 ? "border-b border-gray-100" : "border-b-2 border-gray-200"}`}
                   >
-                    {/* Top: checkbox + size + price */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {hasSelection && (
-                          <span onClick={(e) => e.stopPropagation()}>
-                            {isSelectable ? (
-                              <input
-                                type="checkbox"
-                                checked={selectedIds?.has(l.id) ?? false}
-                                onChange={() => onToggleId(l.id)}
-                                className={checkboxClass}
-                              />
-                            ) : (
-                              <span className="inline-block w-4" />
-                            )}
-                          </span>
+                    {hasSelection && (
+                      <span onClick={(e) => e.stopPropagation()} className="shrink-0">
+                        {isSelectable ? (
+                          <input type="checkbox" checked={selectedIds?.has(l.id) ?? false} onChange={() => onToggleId(l.id)} className={checkboxClass} />
+                        ) : (
+                          <span className="inline-block w-4" />
                         )}
-                        <span className="font-semibold text-sm text-gray-900">{l.variant.size}</span>
-                        {l.variant.gtin && (
-                          <span className="text-[11px] font-mono text-gray-400">{l.variant.gtin}</span>
-                        )}
-                      </div>
-                      <span className="font-bold text-sm tabular-nums text-gray-900">${fmt(Number(l.price))}</span>
-                    </div>
-                    {/* Middle: consignor + status */}
-                    <div className="flex items-center justify-between mt-1.5">
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-medium text-gray-900 leading-tight truncate">{l.consignor.name}</div>
-                        <div className="text-[11px] text-gray-400 leading-tight truncate">{l.consignor.email}</div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={statusBadgeClass(l.status)}>{statusLabel(l.status)}</span>
-                        <span className="text-[11px] text-gray-400 tabular-nums">{relativeTime(l.listedAt ?? l.createdAt)}</span>
-                      </div>
-                    </div>
-                    {/* Bottom: actions */}
-                    {(onCancel || onApprove) && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
-                          <>
-                            <ActionBtn label="Approve" icon={<Check size={13} />} color="#0d9488" bg="#f0fdfa" border="#99f0e4" onClick={() => onApprove(l.id)} disabled={isLoading} />
-                            {onEditApprove && <ActionBtn label="Edit" icon={<Pencil size={13} />} color="#7c3aed" bg="#f5f3ff" border="#c4b5fd" onClick={() => onEditApprove(l)} disabled={isLoading} />}
-                            {onReject && <ActionBtn label="Reject" icon={<X size={13} />} color="#dc2626" bg="#fef2f2" border="#fecaca" onClick={() => onReject(l.id)} disabled={isLoading} />}
-                          </>
-                        )}
-                        {l.status === LISTING_STATUS.APPROVED && onCheckin && (
-                          <ActionBtn label="Check in" icon={<Zap size={13} />} color="#2c6ecb" bg="#eff6ff" border="#bfdbfe" onClick={() => onCheckin(l.id)} disabled={isLoading} />
-                        )}
-                        {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
-                          <ActionBtn label="Edit" icon={<Pencil size={13} />} color="#7c3aed" bg="#f5f3ff" border="#c4b5fd" onClick={() => onAdminEdit(l)} disabled={isLoading} />
-                        )}
-                        {l.status === LISTING_STATUS.ACTIVE && onCancel && (
-                          <ActionBtn label="Delete" icon={<X size={13} />} color="#dc2626" bg="#fef2f2" border="#fecaca" onClick={() => onCancel(l.id)} disabled={isLoading} />
-                        )}
-                        {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
-                          <ActionBtn label="Approve Withdrawal" icon={<Check size={13} />} color="#ea580c" bg="#fff7ed" border="#fed7aa" onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} />
-                        )}
-                        {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
-                          <ActionBtn label="Picked Up" icon={<Check size={13} />} color="#0891b2" bg="#ecfeff" border="#a5f3fc" onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} />
-                        )}
-                        {l.status === LISTING_STATUS.CANCELLED && onRestore && (
-                          <ActionBtn label="Restore" icon={<Zap size={13} />} color="#059669" bg="#ecfdf5" border="#a7f3d0" onClick={() => onRestore(l.id)} disabled={isLoading} />
-                        )}
-                      </div>
+                      </span>
                     )}
+                    <span className="font-semibold text-[13px] text-gray-900 w-7 shrink-0 text-center">{l.variant.size}</span>
+                    <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">${fmt(Number(l.price))}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] text-gray-700 truncate leading-tight">{l.consignor.name}</div>
+                      {l.variant.gtin && <div className="text-[9px] font-mono text-gray-400 truncate leading-tight">{l.variant.gtin}</div>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {l.status === LISTING_STATUS.SUBMITTED && onApprove && (
+                        <>
+                          <button onClick={() => onApprove(l.id)} disabled={isLoading} className="px-2 py-0.5 text-[10px] font-semibold rounded bg-teal-50 text-teal-600 border border-teal-200 cursor-pointer disabled:opacity-50">✓</button>
+                          {onReject && <button onClick={() => onReject(l.id)} disabled={isLoading} className="px-2 py-0.5 text-[10px] font-semibold rounded bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50">✕</button>}
+                        </>
+                      )}
+                      {l.status === LISTING_STATUS.APPROVED && onCheckin && (
+                        <button onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50">Check in</button>
+                      )}
+                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN].includes(l.status) && (
+                        <button onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50">Edit</button>
+                      )}
+                      {l.status === LISTING_STATUS.ACTIVE && onCancel && (
+                        <button onClick={() => onCancel(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-red-50 text-red-600 border border-red-200 cursor-pointer disabled:opacity-50">Del</button>
+                      )}
+                      {l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED && onApproveWithdrawal && (
+                        <button onClick={() => onApproveWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-orange-50 text-orange-600 border border-orange-200 cursor-pointer disabled:opacity-50">Approve</button>
+                      )}
+                      {l.status === LISTING_STATUS.PENDING_PICKUP && onCompleteWithdrawal && (
+                        <button onClick={() => onCompleteWithdrawal(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-cyan-50 text-cyan-600 border border-cyan-200 cursor-pointer disabled:opacity-50">Done</button>
+                      )}
+                      {l.status === LISTING_STATUS.CANCELLED && onRestore && (
+                        <button onClick={() => onRestore(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-pointer disabled:opacity-50">Restore</button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

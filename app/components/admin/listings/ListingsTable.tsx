@@ -120,43 +120,50 @@ export default function ListingsTable({
   if (grouped) {
     const groups = groupByProduct(listings);
 
+    const groupProps = (group: ProductGroup, isExpanded: boolean) => ({
+      group,
+      isExpanded,
+      onToggle: () => toggleGroup(group.productId),
+      onCancel,
+      onRestore,
+      onApprove,
+      onReject: onReject ? (id: string) => { setRejectModal(id); setRejectReason(""); } : undefined,
+      onActivate,
+      onApproveWithdrawal,
+      onCompleteWithdrawal,
+      onEditApprove: onEditApprove ? (listing: Listing) => setEditModal(listing) : undefined,
+      onAdminEdit: onAdminEdit ? (listing: Listing) => setEditModal(listing) : undefined,
+      onQuickAdd,
+      isLoading,
+      colCount,
+      hasSelection,
+      selectedIds,
+      onToggleId: toggleId,
+      onToggleGroup: toggleGroupSelection,
+      sections,
+      onSectionChange,
+      onEditProduct: onEditProduct ? (g: ProductGroup) => setEditProductModal(g) : undefined,
+    });
+
     return (
       <>
-        <div className={`overflow-x-auto transition-opacity duration-150 ${isNavigating ? "opacity-50 pointer-events-none" : ""}`}>
-          <table className={tableClass}>
-            <tbody>
-              {groups.map((group) => {
-                const isExpanded = expandedGroups.has(group.productId);
-                return (
-                  <GroupRows
-                    key={group.productId}
-                    group={group}
-                    isExpanded={isExpanded}
-                    onToggle={() => toggleGroup(group.productId)}
-                    onCancel={onCancel}
-                    onRestore={onRestore}
-                    onApprove={onApprove}
-                    onReject={onReject ? (id: string) => { setRejectModal(id); setRejectReason(""); } : undefined}
-                    onActivate={onActivate}
-                    onApproveWithdrawal={onApproveWithdrawal}
-                    onCompleteWithdrawal={onCompleteWithdrawal}
-                    onEditApprove={onEditApprove ? (listing: Listing) => setEditModal(listing) : undefined}
-                    onAdminEdit={onAdminEdit ? (listing: Listing) => setEditModal(listing) : undefined}
-                    onQuickAdd={onQuickAdd}
-                    isLoading={isLoading}
-                    colCount={colCount}
-                    hasSelection={hasSelection}
-                    selectedIds={selectedIds}
-                    onToggleId={toggleId}
-                    onToggleGroup={toggleGroupSelection}
-                    sections={sections}
-                    onSectionChange={onSectionChange}
-                    onEditProduct={onEditProduct ? (g: ProductGroup) => setEditProductModal(g) : undefined}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
+        <div className={`transition-opacity duration-150 ${isNavigating ? "opacity-50 pointer-events-none" : ""}`}>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className={tableClass}>
+              <tbody>
+                {groups.map((group) => (
+                  <GroupRows key={group.productId} {...groupProps(group, expandedGroups.has(group.productId))} renderMode="desktop" />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile: cards — outside table element */}
+          <div className="md:hidden">
+            {groups.map((group) => (
+              <GroupRows key={group.productId} {...groupProps(group, expandedGroups.has(group.productId))} renderMode="mobile" />
+            ))}
+          </div>
         </div>
         {rejectModal && <RejectModal onConfirm={handleRejectConfirm} onCancel={() => setRejectModal(null)} reason={rejectReason} setReason={setRejectReason} />}
         {editModal && (onEditApprove || onAdminEdit) && (
