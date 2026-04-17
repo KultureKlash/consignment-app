@@ -70,19 +70,14 @@ export function PendingSection({
                   </span>
                   <div className="ml-auto flex items-center gap-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
-                      payout.status === "invoiced"
+                      payout.status === "invoiced" || (payout.status === "pending" && payout.invoiceSent)
                         ? "bg-blue-50 text-blue-600"
                         : "bg-amber-50 text-amber-600"
                     }`}>
                       {payout.status === "pending"
-                        ? (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment")
+                        ? (payout.invoiceSent ? "Invoice Sent" : (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment"))
                         : "Invoice Received"}
                     </span>
-                    {payout.status === "pending" && payout.invoiceSent && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap bg-blue-50 text-blue-600">
-                        Invoice Sent
-                      </span>
-                    )}
                     <span className="text-sm font-bold text-[#1a1a1a] tabular-nums w-[90px] text-right">
                       ${fmt(payout.amount)}
                     </span>

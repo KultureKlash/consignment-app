@@ -341,13 +341,10 @@ export default function PortalPayouts() {
                       {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                       <div className="flex-1 flex items-center justify-between min-w-0">
                         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                          <StatusBadge status={payout.status} isIndividual={isIndividual} />
-                          {payout.status === "pending" && payout.invoiceSent && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary">
-                              <Send className="w-2.5 h-2.5" />
-                              Sent
-                            </span>
-                          )}
+                          {payout.status === "pending" && payout.invoiceSent
+                            ? <StatusBadge status="invoiced" />
+                            : <StatusBadge status={payout.status} isIndividual={isIndividual} />
+                          }
                           <span className="text-xs text-muted-foreground hidden md:inline">
                             {payout.items.length} item{payout.items.length !== 1 ? "s" : ""}
                           </span>
@@ -368,26 +365,19 @@ export default function PortalPayouts() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
-                        {!isIndividual && payout.status === "pending" && (
+                        {!isIndividual && payout.status === "pending" && !payout.invoiceSent && (
                           <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
-                            {payout.invoiceSent ? (
-                              <>
-                                <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                                <span className="text-xs text-primary font-medium">Invoice sent</span>
-                              </>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  fetcher.submit({ intent: "mark-invoice-sent", payoutId: payout.id }, { method: "POST" });
-                                }}
-                                disabled={isSubmitting}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.12] transition-colors cursor-pointer disabled:opacity-50"
-                              >
-                                <Send className="w-3 h-3" />
-                                Mark invoice sent
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                fetcher.submit({ intent: "mark-invoice-sent", payoutId: payout.id }, { method: "POST" });
+                              }}
+                              disabled={isSubmitting}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.12] transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <Send className="w-3 h-3 text-blue-400" />
+                              Mark invoice sent
+                            </button>
                           </div>
                         )}
                         <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-10 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.04)]">

@@ -3,8 +3,8 @@ import prisma from "~/db.server";
 
 const COOKIE_NAME = "__portal_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 7;    // 7-day sliding window
-const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;   // 24h without activity → force re-login
-const ABSOLUTE_MAX_MS = 30 * 24 * 60 * 60 * 1000; // 30-day hard cap
+/** @internal */ export const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;   // 24h without activity → force re-login
+/** @internal */ export const ABSOLUTE_MAX_MS = 30 * 24 * 60 * 60 * 1000; // 30-day hard cap
 
 const COOKIE_SECRET = process.env.COOKIE_SECRET || "dev-cookie-secret-change-in-prod";
 if (process.env.NODE_ENV === "production" && !process.env.COOKIE_SECRET) {
@@ -15,7 +15,8 @@ const isProd = process.env.NODE_ENV === "production";
 
 // ── Cookie signing ──
 
-function sign(value: string): string {
+/** @internal Exported for testing only */
+export function sign(value: string): string {
   const signature = createHmac("sha256", COOKIE_SECRET).update(value).digest("base64url");
   return `${value}.${signature}`;
 }

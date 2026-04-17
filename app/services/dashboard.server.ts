@@ -2,8 +2,13 @@ import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 
-type FeedEvent = {
-  event: string;
+export type FeedEvent = {
+  product: string;
+  detail: string;
+  size: string;
+  price?: string;
+  actor?: string;
+  qty?: number;
   time: string;
   type: "sale" | "listing" | "request" | "approval";
 };
@@ -43,34 +48,6 @@ export async function getDashboardData() {
   const totalEarnings = consignmentFees + storeProfit;
   const inventoryValue = inventoryAgg._sum.price ?? 0;
 
-  // Activity feed: recent events from listings + refund transactions
-  const [recentListings, refundTxs] = await Promise.all([
-    prisma.listing.findMany({
-      take: 30,
-      orderBy: { createdAt: "desc" },
-      include: {
-        consignor: true,
-        variant: { include: { product: true } },
-      },
-    }),
-    prisma.transaction.findMany({
-      where: { type: "refund" },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: {
-        orderItem: {
-          include: {
-            listing: {
-              include: {
-                variant: { include: { product: true } },
-              },
-            },
-          },
-        },
-      },
-    }),
-  ]);
-
   const activityFeed = await getActivityFeed(15);
 
   return {
@@ -96,14 +73,19 @@ export async function getDashboardData() {
  */
 export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
   const take = limit === 0 ? 500 : limit * 3;
-  const [recentListings, refundTxs] = await Promise.all([
+  const listingInclude = { consignor: true, variant: { include: { product: true } } } as const;
+  const [recentlyCreated, recentlySold, refundTxs] = await Promise.all([
     prisma.listing.findMany({
       take,
       orderBy: { createdAt: "desc" },
-      include: {
-        consignor: true,
-        variant: { include: { product: true } },
-      },
+      include: listingInclude,
+    }),
+    // Separate query for sales — sold items may have been created long ago
+    prisma.listing.findMany({
+      take,
+      where: { soldAt: { not: null } },
+      orderBy: { soldAt: "desc" },
+      include: listingInclude,
     }),
     prisma.transaction.findMany({
       where: { type: "refund" },
@@ -112,19 +94,23 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
       include: {
         orderItem: {
           include: {
-            listing: {
-              include: {
-                variant: { include: { product: true } },
-              },
-            },
+            listing: { include: listingInclude },
           },
         },
       },
     }),
   ]);
 
+  // Deduplicate: a listing can appear in both queries
+  const seen = new Set<string>();
+  const recentListings = [...recentlySold, ...recentlyCreated].filter((l) => {
+    if (seen.has(l.id)) return false;
+    seen.add(l.id);
+    return true;
+  });
+
   const now = new Date();
-  type SortableFeedEvent = FeedEvent & { sortTime: number };
+  type SortableFeedEvent = FeedEvent & { sortTime: number; _groupKey?: string };
   const events: SortableFeedEvent[] = [];
 
   for (const listing of recentListings) {
@@ -133,28 +119,34 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
 
     if (listing.status === LISTING_STATUS.SOLD && listing.soldAt) {
       events.push({
-        event: `${product} (${size}) sold for $${fmt(listing.price)}`,
-        time: relativeTime(now, listing.soldAt),
-        type: "sale",
+        product, size, detail: "sold for", price: `$${fmt(listing.price)}`,
+        time: relativeTime(now, listing.soldAt), type: "sale",
         sortTime: listing.soldAt.getTime(),
       });
     }
 
     if (listing.status === LISTING_STATUS.PENDING_SALE && listing.soldAt) {
       events.push({
-        event: `${product} (${size}) ordered, awaiting payment`,
-        time: relativeTime(now, listing.soldAt),
-        type: "request",
+        product, size, detail: "ordered, awaiting payment",
+        time: relativeTime(now, listing.soldAt), type: "request",
         sortTime: listing.soldAt.getTime(),
       });
     }
 
-    events.push({
-      event: `${listing.consignor.name} listed ${product} (${size}) at $${fmt(listing.price)}`,
-      time: relativeTime(now, listing.createdAt),
-      type: "listing",
-      sortTime: listing.createdAt.getTime(),
-    });
+    // Group listings created at the same time (batch creation with qty > 1)
+    const listingKey = `${listing.consignor.id}:${product}:${size}:${listing.createdAt.getTime()}`;
+    const existing = events.find((e) => e.type === "listing" && e._groupKey === listingKey);
+    if (existing) {
+      existing.qty = (existing.qty ?? 1) + 1;
+    } else {
+      events.push({
+        product, size, detail: "listed at", price: `$${fmt(listing.price)}`,
+        actor: listing.consignor.name,
+        time: relativeTime(now, listing.createdAt), type: "listing",
+        sortTime: listing.createdAt.getTime(),
+        _groupKey: listingKey, qty: 1,
+      });
+    }
   }
 
   for (const tx of refundTxs) {
@@ -163,14 +155,14 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     const product = listing.variant.product.title;
     const size = listing.variant.size;
     events.push({
-      event: `${product} (${size}) refunded $${fmt(Math.abs(tx.grossAmount))}`,
-      time: relativeTime(now, tx.createdAt),
-      type: "request",
+      product, size, detail: "refunded", price: `$${fmt(Math.abs(tx.grossAmount))}`,
+      time: relativeTime(now, tx.createdAt), type: "request",
       sortTime: tx.createdAt.getTime(),
     });
   }
 
   events.sort((a, b) => b.sortTime - a.sortTime);
-  if (limit === 0) return events.map(({ event, time, type }) => ({ event, time, type }));
-  return events.slice(0, limit).map(({ event, time, type }) => ({ event, time, type }));
+  const strip = ({ sortTime, _groupKey, ...rest }: SortableFeedEvent): FeedEvent => rest;
+  if (limit === 0) return events.map(strip);
+  return events.slice(0, limit).map(strip);
 }

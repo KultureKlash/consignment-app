@@ -47,25 +47,40 @@ export async function createListing({
   // Re-fetch: ensureVariantBarcode may have written a new gtin
   const freshVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
 
-  const listings = [];
-  for (let i = 0; i < count; i++) {
-    const listing = await prisma.listing.create({
-      data: { consignorId, variantId: variant.id, price, cost: cost ?? null, listedAt: new Date() },
-      include: { consignor: true },
-    });
-    listings.push(listing);
-  }
+  const now = new Date();
+  await prisma.listing.createMany({
+    data: Array.from({ length: count }, () => ({
+      consignorId, variantId: variant.id, price, cost: cost ?? null, listedAt: now,
+    })),
+  });
+  const listings = await prisma.listing.findMany({
+    where: { consignorId, variantId: variant.id, listedAt: now },
+    include: { consignor: true },
+  });
 
-  // Best-effort Shopify sync — listing is already saved locally
-  try {
+  // Background Shopify sync with retry — don't block the response
+  const backgroundSync = async () => {
     const needsImage = !product.shopifyProductId && imageData;
-    await ensureShopifyProductAndVariant({ admin, product, variant: freshVariant, taxonomyId, imageData: needsImage ? imageData : undefined });
-    // Re-fetch: ensureShopify may have set shopifyVariantId/inventoryItemId
-    const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
-    await syncInventory({ admin, variant: syncedVariant });
-  } catch (err) {
-    logger.error("Shopify sync failed (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
-  }
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await ensureShopifyProductAndVariant({ admin, product, variant: freshVariant, taxonomyId, imageData: needsImage ? imageData : undefined });
+        const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
+        await syncInventory({ admin, variant: syncedVariant });
+        return;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt < 3) {
+          logger.warn("Shopify sync attempt failed, retrying", { attempt, error: msg });
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+        } else {
+          logger.error("Shopify sync failed after 3 attempts (will retry on next operation)", { error: msg });
+        }
+      }
+    }
+  };
+  backgroundSync().catch((err) => {
+    logger.error("Background sync crashed unexpectedly", { error: err instanceof Error ? err.message : String(err) });
+  });
 
   return listings[0];
 }

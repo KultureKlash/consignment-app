@@ -189,8 +189,8 @@ export default function ConsignorDetail() {
   return (
     <s-page>
       <div className="p-0">
-        {/* Top bar: back + save */}
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+        {/* Top bar: back + view portal */}
+        <div className="flex justify-between items-center gap-3 mb-6">
           <Link
             to="/app/consignors"
             className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 no-underline font-medium"
@@ -198,15 +198,6 @@ export default function ConsignorDetail() {
             <ArrowLeft size={16} />
             Back to Consignors
           </Link>
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting || !hasChanges}
-            className={`admin-btn-primary !px-6 !py-2.5 !text-[13px] tracking-wide ${
-              !hasChanges ? "!bg-gray-400 !cursor-default !shadow-none hover:!bg-gray-400 hover:!shadow-none hover:!translate-y-0" : "!shadow-md"
-            } ${isSubmitting ? "opacity-70" : ""}`}
-          >
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
           <button
             onClick={() => {
               fetch("/app/api/impersonate", {
@@ -401,6 +392,19 @@ export default function ConsignorDetail() {
                   </p>
                 </>
               )}
+
+              {/* Save */}
+              <div className="border-t border-gray-200/40 pt-4">
+                <button
+                  onClick={handleSave}
+                  disabled={isSubmitting || !hasChanges}
+                  className={`admin-btn-primary w-full !py-2.5 !text-[13px] tracking-wide ${
+                    !hasChanges ? "!bg-gray-400 !cursor-default !shadow-none hover:!bg-gray-400 hover:!shadow-none hover:!translate-y-0" : ""
+                  } ${isSubmitting ? "opacity-70" : ""}`}
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             </div>
           </div>
 

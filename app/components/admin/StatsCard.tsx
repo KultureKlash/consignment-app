@@ -13,21 +13,20 @@ export interface StatsCardProps {
 type ColorTheme = {
   iconBg: string;
   iconColor: string;
-  accentLine: string;
 };
 
 function getTheme(color?: string): ColorTheme {
   switch (color) {
     case "green":
-      return { iconBg: "bg-emerald-50", iconColor: "#059669", accentLine: "bg-emerald-600" };
+      return { iconBg: "bg-emerald-100/70", iconColor: "#059669" };
     case "blue":
-      return { iconBg: "bg-blue-50", iconColor: "#2563eb", accentLine: "bg-blue-600" };
+      return { iconBg: "bg-blue-100/70", iconColor: "#2563eb" };
     case "purple":
-      return { iconBg: "bg-violet-50", iconColor: "#7c3aed", accentLine: "bg-violet-600" };
+      return { iconBg: "bg-violet-100/70", iconColor: "#7c3aed" };
     case "amber":
-      return { iconBg: "bg-amber-50", iconColor: "#d97706", accentLine: "bg-amber-600" };
+      return { iconBg: "bg-amber-100/70", iconColor: "#d97706" };
     default:
-      return { iconBg: "bg-slate-50", iconColor: "#64748b", accentLine: "bg-slate-500" };
+      return { iconBg: "bg-slate-100/70", iconColor: "#64748b" };
   }
 }
 
@@ -36,14 +35,12 @@ export default function StatsCard({ label, value, sub, trend, icon: Icon, color,
 
   return (
     <div
-      className="relative bg-white rounded-2xl px-[22px] py-5 border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-default overflow-hidden group"
+      className="bg-white rounded-2xl px-6 py-6 border border-gray-100 cursor-default overflow-hidden hover:-translate-y-0.5 transition-all duration-200"
+      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)" }}
     >
-      {/* Accent line — top */}
-      <div className={`absolute top-0 left-5 right-5 h-0.5 ${t.accentLine} opacity-20 group-hover:opacity-60 transition-opacity duration-300 ease-in-out rounded-b-sm`} />
-
       {/* Top row: label + icon */}
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-xs font-semibold text-slate-400 tracking-tight m-0 flex items-center gap-[5px]">
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[11px] font-semibold text-gray-400 tracking-tight m-0 flex items-center gap-[5px]">
           {label}
           {tip && (
             <span title={tip} className="cursor-help inline-flex opacity-50">
@@ -54,14 +51,14 @@ export default function StatsCard({ label, value, sub, trend, icon: Icon, color,
             </span>
           )}
         </p>
-        <div className={`w-9 h-9 rounded-[10px] ${t.iconBg} flex items-center justify-center transition-transform duration-300 ease-in-out group-hover:scale-105`}>
+        <div className={`w-9 h-9 rounded-[10px] ${t.iconBg} flex items-center justify-center`}>
           <Icon size={17} color={t.iconColor} strokeWidth={2} />
         </div>
       </div>
 
       {/* Value */}
       <div className="flex items-baseline gap-2">
-        <span className="text-[26px] font-bold tracking-tight text-gray-900 tabular-nums leading-none">
+        <span className="text-[32px] font-bold tracking-tight text-gray-900 tabular-nums leading-none">
           {value}
         </span>
         {trend && (

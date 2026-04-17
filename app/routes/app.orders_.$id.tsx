@@ -149,7 +149,13 @@ export default function OrderDetail() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total" value={`$${fmt(order.total)}`} icon={DollarSign} />
           <StatCard label="Items" value={String(summary.itemCount)} icon={ShoppingBag} />
-          <StatCard label="Our Cut" value={`$${fmt(summary.totalFees)}`} icon={TrendingUp} accentColor="#059669" />
+          <StatCard
+            label="Our Cut"
+            value={`$${fmt(summary.ourCut)}`}
+            icon={TrendingUp}
+            accentColor="#059669"
+            subtitle={summary.storeOwnedProfit > 0 ? `$${fmt(summary.totalFees)} fees + $${fmt(summary.storeOwnedProfit)} store profit` : undefined}
+          />
           <StatCard
             label="Consignor Payouts"
             value={`$${fmt(summary.totalConsignorPayout)}`}

@@ -371,7 +371,7 @@ export function GroupRows({
                         <ActionBtn
                           label="Edit"
                           icon={<Pencil size={13} />}
-                          color="#7c3aed"
+                          color="#2563eb"
                           bg="#f5f3ff"
                           border="#c4b5fd"
                           onClick={() => onEditApprove(l)}
@@ -406,7 +406,7 @@ export function GroupRows({
                     <ActionBtn
                       label="Edit"
                       icon={<Pencil size={13} />}
-                      color="#7c3aed"
+                      color="#2563eb"
                       bg="#f5f3ff"
                       border="#c4b5fd"
                       onClick={() => onAdminEdit(l)}

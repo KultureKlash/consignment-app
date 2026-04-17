@@ -4,21 +4,20 @@ interface ActionItemProps {
   label: string;
   count: number;
   color: string;
+  bgTint?: string;
   subtitle?: string;
 }
 
-export default function ActionItem({ label, count, color, subtitle = "Requires review" }: ActionItemProps) {
+export default function ActionItem({ label, count, color, bgTint, subtitle = "Requires review" }: ActionItemProps) {
   return (
     <button
-      className="w-full flex items-center justify-between py-3.5 px-4 rounded-xl border-none bg-transparent hover:bg-black/[0.03] cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)] font-[inherit] group"
+      className={`w-full flex items-center justify-between py-3.5 px-4 rounded-xl border-none cursor-pointer transition-colors duration-150 font-[inherit] group ${bgTint ?? "bg-transparent"} hover:brightness-[0.97]`}
     >
       <div className="flex items-center gap-3.5">
-        {/* Glowing line */}
         <div
-          className="w-1 h-7 rounded-full shrink-0 transition-all duration-300 ease-in-out"
+          className="w-1.5 h-7 rounded-full shrink-0"
           style={{
             backgroundColor: color,
-            boxShadow: count > 0 ? `0 0 8px ${color}80, 0 0 16px ${color}40` : "none",
             opacity: count > 0 ? 1 : 0.3,
           }}
         />
@@ -30,17 +29,11 @@ export default function ActionItem({ label, count, color, subtitle = "Requires r
       <div className="flex items-center gap-2.5">
         <span
           className="text-base font-bold tabular-nums min-w-[20px] text-right"
-          style={{
-            color: count > 0 ? color : "#d1d5db",
-            textShadow: count > 0 ? `0 0 12px ${color}30` : "none",
-          }}
+          style={{ color: count > 0 ? color : "#d1d5db" }}
         >
           {count}
         </span>
-        <ArrowRight
-          size={14}
-          className="text-gray-300 group-hover:translate-x-[3px] transition-all duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
-        />
+        <ArrowRight size={14} className="text-gray-300 transition-colors duration-150 group-hover:text-gray-400" />
       </div>
     </button>
   );

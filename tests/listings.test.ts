@@ -363,6 +363,9 @@ describe("listings.server", () => {
         consignorId: consignor.id,
       });
 
+      // Background sync runs asynchronously — wait for it to complete
+      await new Promise((r) => setTimeout(r, 200));
+
       const product = await prisma.product.findFirst();
       const variant = await prisma.variant.findFirst();
 

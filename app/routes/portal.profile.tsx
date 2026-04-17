@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useRouteLoaderData, useFetcher, redirect } from "react-router";
-import { Settings, User, Mail, Phone, Percent, Save, Check, Palette, Bell, Building2, UserRound, MapPin, FileText } from "lucide-react";
+import { useLoaderData, useRouteLoaderData, useFetcher, redirect, Link } from "react-router";
+import { Settings, User, Mail, Phone, Percent, Save, Check, Palette, Bell, Building2, UserRound, MapPin, FileText, MessageSquare } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { authenticatePortal } from "~/services/portal/auth.server";
@@ -532,6 +532,13 @@ export default function PortalProfile() {
           <div className="text-xs text-muted-foreground leading-relaxed">
             For account changes, payouts, or any questions, reach out to the store team.
           </div>
+          <Link
+            to="/portal/feedback"
+            className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/[0.06] border border-[rgba(255,255,255,0.08)] text-xs font-medium text-muted-foreground no-underline hover:bg-white/[0.1] hover:text-foreground transition-colors"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Send Feedback
+          </Link>
         </div>
       </div>
     </div>

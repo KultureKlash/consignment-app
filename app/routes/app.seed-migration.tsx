@@ -14,7 +14,9 @@ const EMAIL_OVERRIDES: Record<string, string> = {
   "47": "laceup@placeholder.com",
   "50": "mike15@placeholder.com",
 };
-const BUSINESS_CONSIGNORS = new Set(["11", "13", "15", "16", "18", "23", "25", "30", "35", "46", "47", "50"]);
+const BUSINESS_CONSIGNORS = new Set(["13", "15", "16", "18", "23", "25", "30", "35", "46", "47", "50"]);
+// Kevin Kalra (25) is Ontario; all other business consignors are Quebec
+const ONTARIO_CONSIGNORS = new Set(["25"]);
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await authenticate.admin(request);
@@ -106,11 +108,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const feeRate = isNaN(commission) ? 0.15 : commission / 100;
     const storeOwned = STORE_OWNED_IDS.has(r.id);
     const taxStatus = BUSINESS_CONSIGNORS.has(r.id) ? "business" : "individual";
+    const province = BUSINESS_CONSIGNORS.has(r.id) ? (ONTARIO_CONSIGNORS.has(r.id) ? "ON" : "QC") : null;
 
     const consignor = await prisma.consignor.upsert({
       where: { email },
-      update: { name, feeRate, storeOwned, taxStatus },
-      create: { name, email, feeRate, storeOwned, taxStatus },
+      update: { name, feeRate, storeOwned, taxStatus, province },
+      create: { name, email, feeRate, storeOwned, taxStatus, province },
     });
     consignorMap.set(r.id, consignor.id);
     addLog(`Consignor: ${name} (${email}) ${storeOwned ? "[STORE]" : ""} ${taxStatus}`);
@@ -154,10 +157,21 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
     const gtin = shopifyVariant?.barcode || csvBarcodes.get(`${title.toLowerCase()}|${size}`) || null;
 
-    let cost: number | undefined;
-    if (STORE_OWNED_IDS.has(listing.retailer_id) && listing.buy_price) {
+    // Parse per-item costs from buy_price_all JSON (e.g. {"100_1":"250","100_2":"310"})
+    const itemCosts: number[] = [];
+    if (STORE_OWNED_IDS.has(listing.retailer_id) && listing.buy_price_all) {
+      try {
+        const raw = JSON.parse(listing.buy_price_all.replace(/\\\"/g, '"'));
+        for (const val of Object.values(raw)) {
+          const parsed = parseFloat(val as string);
+          if (!isNaN(parsed) && parsed > 0) itemCosts.push(parsed);
+        }
+      } catch { /* malformed JSON — skip */ }
+    }
+    // Fallback to buy_price if buy_price_all is empty
+    if (itemCosts.length === 0 && STORE_OWNED_IDS.has(listing.retailer_id) && listing.buy_price) {
       const parsed = parseFloat(listing.buy_price);
-      if (!isNaN(parsed) && parsed > 0) cost = parsed;
+      if (!isNaN(parsed) && parsed > 0) itemCosts.push(parsed);
     }
 
     try {
@@ -206,8 +220,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
       if (shopifyProd) matched++; else unmatched++;
 
       for (let i = 0; i < qty; i++) {
+        const cost = itemCosts[i] ?? itemCosts[0] ?? null;
         await prisma.listing.create({
-          data: { consignorId, variantId: dbVariant.id, price, cost: cost ?? null, status: "active", listedAt: listing.created_at ? new Date(listing.created_at) : new Date() },
+          data: { consignorId, variantId: dbVariant.id, price, cost, status: "active", listedAt: listing.created_at ? new Date(listing.created_at) : new Date() },
         });
       }
       created += qty;

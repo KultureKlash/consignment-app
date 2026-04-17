@@ -22,8 +22,8 @@ const containerVariants = {
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
 export default function Dashboard() {
@@ -48,26 +48,29 @@ export default function Dashboard() {
     <s-page>
       <div className="p-0">
         {/* Header */}
-        <header className="mb-7 flex items-end justify-between">
-          <div>
-            <h1 className="text-[22px] font-bold tracking-tight text-gray-900 m-0">
-              Operations
-            </h1>
-            <p className="text-[13px] text-slate-400 mt-1 font-normal">
-              Overview of your consignment ecosystem.
-            </p>
+        <header className="mb-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <h1 className="text-[22px] font-bold tracking-tight text-gray-900 m-0">
+                Operations
+              </h1>
+              <p className="text-[13px] text-slate-400 mt-1 font-normal">
+                Overview of your consignment ecosystem.
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
+                Last Updated
+              </p>
+              <p className="text-sm font-semibold text-slate-700 tabular-nums m-0">
+                {updatedAt}
+              </p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
-              Last Updated
-            </p>
-            <p className="text-sm font-semibold text-slate-700 tabular-nums m-0">
-              {updatedAt}
-            </p>
-          </div>
+          <div className="mt-4 h-px" style={{ background: "linear-gradient(to right, #2563EB, transparent)" }} />
         </header>
 
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-7">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-8">
           {/* Stats Grid — 2 rows of 3 */}
           <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {stats.map((s, i) => (
@@ -96,16 +99,16 @@ export default function Dashboard() {
                 </div>
                 <div className="px-2 py-1.5 flex flex-col gap-0.5">
                   <Link to="/app/listings?status=submitted" className="no-underline">
-                    <ActionItem label="Awaiting Approval" count={submittedCount} color="#059669" subtitle="Submitted by consignors" />
+                    <ActionItem label="Awaiting Approval" count={submittedCount} color="#059669" bgTint="bg-emerald-50/50" subtitle="Submitted by consignors" />
                   </Link>
                   <Link to="/app/listings?status=approved_awaiting_dropoff" className="no-underline">
-                    <ActionItem label="Awaiting Drop-off" count={awaitingDropoffCount} color="#d97706" subtitle="Approved, pending item arrival" />
+                    <ActionItem label="Awaiting Drop-off" count={awaitingDropoffCount} color="#d97706" bgTint="bg-amber-50/50" subtitle="Approved, pending item arrival" />
                   </Link>
                   <Link to="/app/listings?status=withdrawal_requested" className="no-underline">
-                    <ActionItem label="Withdrawal Requests" count={withdrawalRequestCount} color="#ea580c" subtitle="Requires review" />
+                    <ActionItem label="Withdrawal Requests" count={withdrawalRequestCount} color="#ea580c" bgTint="bg-orange-50/50" subtitle="Requires review" />
                   </Link>
                   <Link to="/app/listings?status=pending_pickup" className="no-underline">
-                    <ActionItem label="Awaiting Pickup" count={pendingPickupCount} color="#0891b2" subtitle="Ready for consignor collection" />
+                    <ActionItem label="Awaiting Pickup" count={pendingPickupCount} color="#0891b2" bgTint="bg-cyan-50/50" subtitle="Ready for consignor collection" />
                   </Link>
                 </div>
               </div>
@@ -127,7 +130,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     visibleFeed.map((item, i) => (
-                      <ActivityItem key={i} event={item.event} time={item.time} type={item.type} />
+                      <ActivityItem key={i} {...item} />
                     ))
                   )}
                   {activityFeed.length > 5 && (

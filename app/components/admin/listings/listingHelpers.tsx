@@ -129,13 +129,12 @@ export function ActionBtn({ label, icon, color, bg, border, onClick, disabled }:
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       disabled={disabled}
       title={label}
-      style={{ color, background: bg, borderColor: border }}
-      className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer font-[inherit] transition-all duration-150 ${
-        disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"
+      style={{ color }}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer transition-all duration-150 border-0 bg-transparent ${
+        disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-100"
       }`}
     >
       {icon}
-      {label}
     </button>
   );
 }

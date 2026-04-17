@@ -22,6 +22,7 @@ export async function getOrderDetail(id: string) {
 
   // Compute financial summary from transactions
   let totalFees = 0;
+  let storeOwnedProfit = 0;
   let totalConsignorPayout = 0;
   const refundedCount = order.items.filter((i) => i.status === "refunded").length;
 
@@ -29,6 +30,10 @@ export async function getOrderDetail(id: string) {
     for (const tx of item.transactions) {
       totalFees += tx.feeAmount;
       totalConsignorPayout += tx.consignorAmount;
+      // Store-owned items: profit = sale price - cost (fee is 0)
+      if (item.listing.consignor.storeOwned && tx.type === "sale") {
+        storeOwnedProfit += tx.grossAmount - tx.cost;
+      }
     }
   }
 
@@ -85,6 +90,8 @@ export async function getOrderDetail(id: string) {
     order,
     summary: {
       totalFees,
+      storeOwnedProfit,
+      ourCut: totalFees + storeOwnedProfit,
       totalConsignorPayout,
       itemCount: order.items.length,
       refundedCount,

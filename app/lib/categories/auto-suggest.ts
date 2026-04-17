@@ -7,7 +7,7 @@ const KEYWORD_RULES: Array<{
   sub?: string;
 }> = [
   // ── Nike / Jordan (top brand — 40% of inventory) ──
-  { keywords: ["air jordan", "jordan 1", "jordan 4", "jordan 5", "jordan 11", "aj1", "aj4"],
+  { keywords: ["air jordan", "jordan 1", "jordan 3", "jordan 4", "jordan 5", "jordan 6", "jordan 9", "jordan 11", "jordan jumpman", "aj1", "aj4"],
     brand: "Air Jordan", main: "Footwear", sub: "Sneakers" },
   { keywords: ["jordan retro"],
     brand: "Air Jordan", main: "Footwear", sub: "Sneakers" },

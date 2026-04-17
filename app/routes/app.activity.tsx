@@ -47,7 +47,7 @@ export default function Activity() {
               </div>
             ) : (
               feed.map((item, i) => (
-                <ActivityItem key={i} event={item.event} time={item.time} type={item.type} />
+                <ActivityItem key={i} {...item} />
               ))
             )}
           </div>
