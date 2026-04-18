@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import { getConsignorBalance } from "~/services/orders.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
 import { sendAccountSuspendedEmail } from "~/services/email.server";
 
 /**
@@ -116,14 +117,14 @@ export async function updateConsignor(
  * Suspend a consignor account. Blocks portal access and new submissions.
  * If pauseListings is true, all active listings are paused and Shopify inventory is synced to 0.
  */
-export async function suspendConsignor(id: string, reason?: string, pauseListings = false) {
+export async function suspendConsignor(id: string, reason?: string, opts: { pauseListings?: boolean } = {}) {
   const consignor = await prisma.consignor.findUnique({ where: { id } });
   if (!consignor) throw new Error("Consignor not found");
-  if (consignor.status === "suspended") throw new Error("Consignor is already suspended");
+  if (consignor.status === CONSIGNOR_STATUS.SUSPENDED) throw new Error("Consignor is already suspended");
 
   // Pause active listings if requested
   let pausedCount = 0;
-  if (pauseListings) {
+  if (opts.pauseListings) {
     const result = await prisma.listing.updateMany({
       where: { consignorId: id, status: LISTING_STATUS.ACTIVE },
       data: { status: LISTING_STATUS.PAUSED },
@@ -134,7 +135,7 @@ export async function suspendConsignor(id: string, reason?: string, pauseListing
   const updated = await prisma.consignor.update({
     where: { id },
     data: {
-      status: "suspended",
+      status: CONSIGNOR_STATUS.SUSPENDED,
       suspensionReason: reason || null,
       suspendedAt: new Date(),
     },
@@ -164,7 +165,7 @@ export async function getConsignorVariantIds(consignorId: string, listingStatus:
 export async function unsuspendConsignor(id: string) {
   const consignor = await prisma.consignor.findUnique({ where: { id } });
   if (!consignor) throw new Error("Consignor not found");
-  if (consignor.status !== "suspended") throw new Error("Consignor is not suspended");
+  if (consignor.status !== CONSIGNOR_STATUS.SUSPENDED) throw new Error("Consignor is not suspended");
 
   // Reactivate paused listings
   const result = await prisma.listing.updateMany({
@@ -175,7 +176,7 @@ export async function unsuspendConsignor(id: string) {
   const updated = await prisma.consignor.update({
     where: { id },
     data: {
-      status: "active",
+      status: CONSIGNOR_STATUS.ACTIVE,
       suspensionReason: null,
       suspendedAt: null,
     },

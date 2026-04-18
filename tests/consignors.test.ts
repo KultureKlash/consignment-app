@@ -212,7 +212,7 @@ describe("consignors.server — suspendConsignor / unsuspendConsignor", () => {
       ],
     });
 
-    const { pausedCount } = await suspendConsignor(consignor.id, "Test", true);
+    const { pausedCount } = await suspendConsignor(consignor.id, "Test", { pauseListings: true });
 
     expect(pausedCount).toBe(2); // only active listings paused
 
@@ -235,7 +235,7 @@ describe("consignors.server — suspendConsignor / unsuspendConsignor", () => {
       data: { consignorId: consignor.id, variantId: variant.id, price: 100, status: "active" },
     });
 
-    const { pausedCount } = await suspendConsignor(consignor.id, "Test", false);
+    const { pausedCount } = await suspendConsignor(consignor.id, "Test", { pauseListings: false });
     expect(pausedCount).toBe(0);
 
     const listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
@@ -255,7 +255,7 @@ describe("consignors.server — suspendConsignor / unsuspendConsignor", () => {
     });
 
     // Suspend with pause
-    await suspendConsignor(consignor.id, "Test", true);
+    await suspendConsignor(consignor.id, "Test", { pauseListings: true });
 
     // Verify paused
     let listings = await prisma.listing.findMany({ where: { consignorId: consignor.id } });

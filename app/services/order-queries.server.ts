@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { ORDER_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 
 export async function getOrderDetail(id: string) {
   const order = await prisma.order.findUnique({
@@ -31,7 +32,7 @@ export async function getOrderDetail(id: string) {
       totalFees += tx.feeAmount;
       totalConsignorPayout += tx.consignorAmount;
       // Store-owned items: profit = sale price - cost (fee is 0)
-      if (item.listing.consignor.storeOwned && tx.type === "sale") {
+      if (item.listing.consignor.storeOwned && tx.type === TRANSACTION_TYPE.SALE) {
         storeOwnedProfit += tx.grossAmount - tx.cost;
       }
     }
@@ -50,7 +51,7 @@ export async function getOrderDetail(id: string) {
   // Find first sale transaction = payment received
   const firstSale = order.items
     .flatMap((i) => i.transactions)
-    .filter((tx) => tx.type === "sale")
+    .filter((tx) => tx.type === TRANSACTION_TYPE.SALE)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
 
   if (firstSale) {
@@ -64,19 +65,19 @@ export async function getOrderDetail(id: string) {
   // Refund/void transactions
   const refundTxs = order.items
     .flatMap((i) => i.transactions.map((tx) => ({ ...tx, item: i })))
-    .filter((tx) => tx.type === "refund" || tx.type === "void")
+    .filter((tx) => tx.type === TRANSACTION_TYPE.REFUND || tx.type === "void")
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   for (const tx of refundTxs) {
     const desc = `${tx.item.listing.variant.product.title} Size ${tx.item.listing.variant.size}`;
     timeline.push({
-      label: tx.type === "refund" ? `Refund processed — ${desc}` : `Void — ${desc}`,
+      label: tx.type === TRANSACTION_TYPE.REFUND ? `Refund processed — ${desc}` : `Void — ${desc}`,
       date: tx.createdAt.toISOString(),
       type: tx.type as "refund" | "void",
     });
   }
 
-  if (order.status === "cancelled") {
+  if (order.status === ORDER_STATUS.CANCELLED) {
     timeline.push({
       label: "Order cancelled",
       date: refundTxs.length > 0 ? refundTxs[refundTxs.length - 1].createdAt.toISOString() : order.createdAt.toISOString(),

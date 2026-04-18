@@ -37,8 +37,8 @@ async function sendIfEnabled(
 
   try {
     await sendEmail(consignor.email, subject, html);
-  } catch {
-    // Best-effort — don't break business flow for email failures
+  } catch (err) {
+    logger.error("Email delivery failed", { to: consignor.email, subject, error: err instanceof Error ? err.message : String(err) });
   }
 }
 
@@ -220,7 +220,7 @@ export async function sendAccountSuspendedEmail(
       ${reason ? `<p style="font-size: 13px; color: #dc2626; margin: 0 0 16px;"><strong>Reason:</strong> ${reason}</p>` : ""}
       <p style="font-size: 13px; color: #6b7280; margin: 0;">Please contact the store for more information.</p>
     `));
-  } catch {
-    // Best-effort
+  } catch (err) {
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Account suspended", error: err instanceof Error ? err.message : String(err) });
   }
 }

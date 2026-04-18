@@ -1,6 +1,7 @@
 import type React from "react";
 import { fmt } from "~/lib/currency";
 import { generateCsv, downloadCsv } from "~/lib/csv";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 
 // ── Shared types ──
 
@@ -99,7 +100,7 @@ export function downloadPayoutsCsv(payoutList: PayoutRef[], label: string, today
   const rows = payoutList.flatMap((p: any) =>
     p.items.map((pi: any) => {
       const tx = pi.transaction;
-      const statusLabel = p.status === "paid" ? "Paid" : p.status === "invoiced" ? "Invoice Received" : "Awaiting Invoice";
+      const statusLabel = p.status === PAYOUT_STATUS.PAID ? "Paid" : p.status === PAYOUT_STATUS.INVOICED ? "Invoice Received" : "Awaiting Invoice";
       return [
         p.consignor.name, p.consignor.email, tx.orderItem?.order?.orderNumber ?? "", tx.orderItem?.listing?.variant?.product?.title ?? "", tx.orderItem?.listing?.variant?.size ?? "",
         tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "", tx.grossAmount.toFixed(2), tx.feeAmount.toFixed(2), tx.consignorAmount.toFixed(2), statusLabel, new Date(p.createdAt).toLocaleDateString(),

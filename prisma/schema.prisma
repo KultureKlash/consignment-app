@@ -131,6 +131,7 @@ model Listing {
 
   @@index([variantId, status, price, createdAt])
   @@index([consignorId, status, createdAt])
+  @@index([soldAt])
 }
 
 model Order {
@@ -188,6 +189,7 @@ model Transaction {
   createdAt        DateTime @default(now())
 
   @@index([consignorId, type, createdAt])
+  @@index([orderItemId, type])
 }
 
 model WebhookEvent {

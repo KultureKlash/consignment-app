@@ -2,13 +2,14 @@ import prisma from "~/db.server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
 import { syncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
 import { logger } from "~/lib/logger.server";
 import { sendSubmissionConfirmedEmail } from "~/services/email.server";
 
 /** Throws if the consignor account is suspended. Used by all portal-facing functions. */
 async function requireActiveConsignor(consignorId: string) {
   const consignor = await prisma.consignor.findUniqueOrThrow({ where: { id: consignorId } });
-  if (consignor.status === "suspended") {
+  if (consignor.status === CONSIGNOR_STATUS.SUSPENDED) {
     throw new Error("Your account has been suspended. You cannot perform this action.");
   }
   return consignor;

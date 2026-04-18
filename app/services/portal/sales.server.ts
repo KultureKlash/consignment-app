@@ -1,4 +1,6 @@
 import prisma from "~/db.server";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
+import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 
 export async function getConsignorSales(
   consignorId: string,
@@ -7,7 +9,7 @@ export async function getConsignorSales(
 ) {
   const storeOwned = opts.storeOwned ?? false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { consignorId, type: "sale" };
+  const where: Record<string, any> = { consignorId, type: TRANSACTION_TYPE.SALE };
 
   // Status filter: "refunded" means the orderItem was refunded
   if (filters.status === "refunded") {
@@ -47,11 +49,11 @@ export async function getConsignorSales(
       include: txInclude,
     }),
     prisma.transaction.aggregate({
-      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
       _sum: { consignorAmount: true, salePrice: true, cost: true },
     }),
     prisma.transaction.count({
-      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
     }),
   ]);
 
@@ -66,7 +68,7 @@ export async function getConsignorSales(
     const payoutItem = tx.payoutItems[0];
     let payoutStatus: "unbatched" | "pending" | "paid" = "unbatched";
     if (payoutItem) {
-      payoutStatus = payoutItem.payout.status === "paid" ? "paid" : "pending";
+      payoutStatus = payoutItem.payout.status === PAYOUT_STATUS.PAID ? "paid" : "pending";
     }
 
     return {

@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { TRANSACTION_TYPE, ORDER_PAYMENT_STATUS } from "~/lib/order-statuses";
 
 export type FeedEvent = {
   product: string;
@@ -30,11 +31,11 @@ export async function getDashboardData() {
   startOfToday.setHours(0, 0, 0, 0);
 
   const [salesAgg, totalOrders, allOrders, consignFeesAgg, storeAgg, inventoryAgg, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount] = await Promise.all([
-    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" } }, _sum: { grossAmount: true } }),
-    prisma.order.count({ where: { paymentStatus: { in: ["paid", "refunded"] } } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } }, _sum: { grossAmount: true } }),
+    prisma.order.count({ where: { paymentStatus: { in: [ORDER_PAYMENT_STATUS.PAID, "refunded"] } } }),
     prisma.order.count(),
-    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" }, consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
-    prisma.transaction.aggregate({ where: { type: "sale", orderItem: { status: "sold" }, consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" }, consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" }, consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
     prisma.listing.aggregate({ where: { status: LISTING_STATUS.ACTIVE }, _sum: { price: true } }),
     prisma.listing.count({ where: { status: LISTING_STATUS.SUBMITTED } }),
     prisma.listing.count({ where: { status: LISTING_STATUS.APPROVED } }),
@@ -88,7 +89,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
       include: listingInclude,
     }),
     prisma.transaction.findMany({
-      where: { type: "refund" },
+      where: { type: TRANSACTION_TYPE.REFUND },
       take: Math.max(Math.floor(take / 3), 10),
       orderBy: { createdAt: "desc" },
       include: {

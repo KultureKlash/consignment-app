@@ -1,6 +1,8 @@
 import prisma from "~/db.server";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
+import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 
 export interface PortalNotification {
   id: string;
@@ -35,10 +37,10 @@ export function buildNotifications(
     notifications.push({
       id: `payout-${payout.id}`,
       type: "payout",
-      title: payout.status === "paid" ? "Payout Received" : "Payout Pending",
-      description: `$${fmt(payout.amount)} ${payout.status === "paid" ? "paid out" : "pending"}`,
+      title: payout.status === PAYOUT_STATUS.PAID ? "Payout Received" : "Payout Pending",
+      description: `$${fmt(payout.amount)} ${payout.status === PAYOUT_STATUS.PAID ? "paid out" : "pending"}`,
       time: payout.createdAt,
-      color: payout.status === "paid" ? "text-primary" : "text-[hsl(var(--warning))]",
+      color: payout.status === PAYOUT_STATUS.PAID ? "text-primary" : "text-[hsl(var(--warning))]",
     });
   }
 
@@ -118,7 +120,7 @@ export async function getConsignorNotifications(
 }> {
   const [recentSales, recentPayouts, recentRejections, recentApprovals, withdrawalListings] = await Promise.all([
     prisma.transaction.findMany({
-      where: { consignorId, type: "sale" },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: {

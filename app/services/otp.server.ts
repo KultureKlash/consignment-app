@@ -1,6 +1,7 @@
 import { randomInt, timingSafeEqual } from "crypto";
 import prisma from "~/db.server";
 import { sendOtpEmail } from "~/services/email.server";
+import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
 
 // ── OTP Logic ──
 
@@ -25,7 +26,7 @@ export async function requestOtp(email: string): Promise<{ success: boolean; err
     return { success: true };
   }
 
-  if (consignor.status === "suspended") {
+  if (consignor.status === CONSIGNOR_STATUS.SUSPENDED) {
     return { error: "Your account has been suspended. Please contact the store for more information." };
   }
 
@@ -120,7 +121,7 @@ export async function verifyOtp(email: string, code: string) {
     return { error: "Invalid code or email. Please try again." };
   }
 
-  if (consignor.status === "suspended") {
+  if (consignor.status === CONSIGNOR_STATUS.SUSPENDED) {
     return { error: "Your account has been suspended. Please contact the store for more information." };
   }
 

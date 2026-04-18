@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "~/db.server";
+import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
 
 const COOKIE_NAME = "__portal_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 7;    // 7-day sliding window
@@ -71,7 +72,7 @@ export async function authenticatePortal(request: Request): Promise<
   if (now - session.lastActiveAt > IDLE_TIMEOUT_MS) return null;
 
   const consignor = await prisma.consignor.findUnique({ where: { id: session.consignorId } });
-  if (!consignor || consignor.status === "suspended") return null;
+  if (!consignor || consignor.status === CONSIGNOR_STATUS.SUSPENDED) return null;
 
   // Sliding window: refresh cookie if >1 hour since last active
   let refreshCookie: string | undefined;

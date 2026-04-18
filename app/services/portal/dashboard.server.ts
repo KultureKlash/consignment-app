@@ -2,6 +2,8 @@ import prisma from "~/db.server";
 import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders.server";
 import { buildNotifications } from "./notifications.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
+import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 
 interface MonthlyEarning {
   month: string;
@@ -112,7 +114,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     storeOwned
       ? Promise.resolve({ _sum: { amount: null } })
       : prisma.payout.aggregate({
-          where: { consignorId, status: "pending" },
+          where: { consignorId, status: PAYOUT_STATUS.PENDING },
           _sum: { amount: true },
         }),
 
@@ -120,7 +122,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     storeOwned
       ? Promise.resolve({ _sum: { amount: null } })
       : prisma.payout.aggregate({
-          where: { consignorId, status: "invoiced" },
+          where: { consignorId, status: PAYOUT_STATUS.INVOICED },
           _sum: { amount: true },
         }),
 
@@ -128,13 +130,13 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     storeOwned
       ? Promise.resolve({ _sum: { consignorAmount: null } })
       : prisma.transaction.aggregate({
-          where: { consignorId, type: "sale", payoutItems: { none: {} } },
+          where: { consignorId, type: TRANSACTION_TYPE.SALE, payoutItems: { none: {} } },
           _sum: { consignorAmount: true },
         }),
 
     // Recent sales: only show non-refunded items
     prisma.transaction.findMany({
-      where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: {
@@ -151,7 +153,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
 
     // Performance chart: include sale + refund/void txs so refunds offset sales
     prisma.transaction.findMany({
-      where: { consignorId, type: { in: ["sale", "refund", "void"] }, createdAt: { gte: sixMonthsAgo } },
+      where: { consignorId, type: { in: [TRANSACTION_TYPE.SALE, TRANSACTION_TYPE.REFUND, "void"] }, createdAt: { gte: sixMonthsAgo } },
       select: { createdAt: true, consignorAmount: true, grossAmount: true, salePrice: true, cost: true },
     }),
 
@@ -173,7 +175,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     // Store-owned: sum of (salePrice - cost) for sold items = total profit
     storeOwned
       ? prisma.transaction.aggregate({
-          where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
           _sum: { salePrice: true, cost: true },
         })
       : Promise.resolve({ _sum: { salePrice: null, cost: null } }),
@@ -188,11 +190,43 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     storeOwned
       ? Promise.resolve({ _sum: { salePrice: null } })
       : prisma.transaction.aggregate({
-          where: { consignorId, type: "sale", orderItem: { status: "sold" } },
+          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
           _sum: { salePrice: true },
         }),
   ]);
 
+  return buildDashboardResponse({
+    storeOwned, paidTotal, activeCount, soldCount, pendingPayouts,
+    awaitingInvoiceAgg, invoiceSentAgg, unbatchedAgg,
+    recentSales, earningsTransactions, listingsByStatus, recentPayouts,
+    storeOwnedProfitAgg, inventoryValueAgg, totalSalesRevenueAgg,
+  });
+}
+
+// ── Transform raw query results into dashboard response ──
+
+function buildDashboardResponse({
+  storeOwned, paidTotal, activeCount, soldCount, pendingPayouts,
+  awaitingInvoiceAgg, invoiceSentAgg, unbatchedAgg,
+  recentSales, earningsTransactions, listingsByStatus, recentPayouts,
+  storeOwnedProfitAgg, inventoryValueAgg, totalSalesRevenueAgg,
+}: {
+  storeOwned: boolean;
+  paidTotal: number;
+  activeCount: number;
+  soldCount: number;
+  pendingPayouts: number;
+  awaitingInvoiceAgg: { _sum: { amount: number | null } };
+  invoiceSentAgg: { _sum: { amount: number | null } };
+  unbatchedAgg: { _sum: { consignorAmount: number | null } };
+  recentSales: Array<{ id: string; createdAt: Date; consignorAmount: number; salePrice: number; cost: number; feeAmount: number; orderItem: { listing: { variant: { size: string; product: { title: string } } }; order: { orderNumber: string | null } } | null }>;
+  earningsTransactions: Array<{ createdAt: Date; consignorAmount: number; grossAmount: number; salePrice: number; cost: number }>;
+  listingsByStatus: Array<{ status: string; _count: number }>;
+  recentPayouts: Array<{ id: string; createdAt: Date; amount: number; status: string }>;
+  storeOwnedProfitAgg: { _sum: { salePrice: number | null; cost: number | null } };
+  inventoryValueAgg: { _sum: { price: number | null } };
+  totalSalesRevenueAgg: { _sum: { salePrice: number | null } };
+}) {
   const monthlyEarnings = getMonthlyEarnings(earningsTransactions, storeOwned);
   const currentMonthEarnings = monthlyEarnings[monthlyEarnings.length - 1]?.value ?? 0;
 
@@ -234,7 +268,6 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
       pendingPayouts: storeOwned ? null : pendingPayouts,
       inventoryValue,
       totalSalesRevenue,
-      // Extra stats for store-owned
       totalRevenue,
       totalCost,
     },

@@ -1,5 +1,7 @@
 import prisma from "~/db.server";
 import { sendPayoutReadyEmail } from "~/services/email.server";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
+import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 
 /**
  * Get all data needed for the payouts admin page:
@@ -11,7 +13,7 @@ export async function getPayoutsPageData() {
   // Unpaid sale transactions: type=sale, not linked to any PayoutItem
   const unpaidTxs = await prisma.transaction.findMany({
     where: {
-      type: "sale",
+      type: TRANSACTION_TYPE.SALE,
       payoutItems: { none: {} },
       consignor: { storeOwned: false },
     },
@@ -83,9 +85,9 @@ export async function getPayoutsPageData() {
   const totalOutstanding = unpaidByConsignor.reduce((sum, c) => sum + c.total, 0);
 
   const [pendingAgg, invoicedAgg, paidAgg] = await Promise.all([
-    prisma.payout.aggregate({ where: { status: "pending" }, _sum: { amount: true } }),
-    prisma.payout.aggregate({ where: { status: "invoiced" }, _sum: { amount: true } }),
-    prisma.payout.aggregate({ where: { status: "paid" }, _sum: { amount: true } }),
+    prisma.payout.aggregate({ where: { status: PAYOUT_STATUS.PENDING }, _sum: { amount: true } }),
+    prisma.payout.aggregate({ where: { status: PAYOUT_STATUS.INVOICED }, _sum: { amount: true } }),
+    prisma.payout.aggregate({ where: { status: PAYOUT_STATUS.PAID }, _sum: { amount: true } }),
   ]);
 
   return {
@@ -156,7 +158,7 @@ export async function createPayout({
       data: {
         consignorId,
         amount,
-        status: "pending",
+        status: PAYOUT_STATUS.PENDING,
         items: {
           create: transactionIds.map((transactionId) => ({ transactionId })),
         },
@@ -201,13 +203,13 @@ export async function markInvoiced(payoutId: string) {
     where: { id: payoutId },
   });
 
-  if (payout.status !== "pending") {
-    throw new Error(`Cannot mark as invoiced: payout is "${payout.status}" (must be "pending")`);
+  if (payout.status !== PAYOUT_STATUS.PENDING) {
+    throw new Error(`Cannot mark as invoiced: payout is "${payout.status}" (must be "${PAYOUT_STATUS.PENDING}")`);
   }
 
   return prisma.payout.update({
     where: { id: payoutId },
-    data: { status: "invoiced" },
+    data: { status: PAYOUT_STATUS.INVOICED },
     include: { consignor: true },
   });
 }
@@ -224,16 +226,16 @@ export async function markPaid(payoutId: string) {
   });
 
   const isIndividual = payout.consignor.taxStatus !== "business";
-  const allowedStatuses = isIndividual ? ["pending", "invoiced"] : ["invoiced"];
+  const allowedStatuses = isIndividual ? [PAYOUT_STATUS.PENDING, PAYOUT_STATUS.INVOICED] : [PAYOUT_STATUS.INVOICED];
 
   if (!allowedStatuses.includes(payout.status)) {
-    const expected = isIndividual ? '"pending" or "invoiced"' : '"invoiced"';
+    const expected = isIndividual ? `"${PAYOUT_STATUS.PENDING}" or "${PAYOUT_STATUS.INVOICED}"` : `"${PAYOUT_STATUS.INVOICED}"`;
     throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be ${expected})`);
   }
 
   return prisma.payout.update({
     where: { id: payoutId },
-    data: { status: "paid" },
+    data: { status: PAYOUT_STATUS.PAID },
     include: { consignor: true },
   });
 }
@@ -247,7 +249,7 @@ export async function cancelPayout(payoutId: string) {
     where: { id: payoutId },
   });
 
-  if (payout.status === "paid") {
+  if (payout.status === PAYOUT_STATUS.PAID) {
     throw new Error("Cannot cancel a paid payout");
   }
 

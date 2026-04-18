@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Clock, Download, FileText, CheckCircle2 } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import type { PayoutRef } from "./payoutHelpers";
 import { sectionCardClass, sectionHeaderClass, sectionTitleClass, gridCols, relativeDate } from "./payoutHelpers";
 
@@ -27,7 +28,7 @@ export function PendingSection({
   scrollRef,
   onDownload,
 }: PendingSectionProps) {
-  const pendingPayouts = payouts.filter((p) => p.status !== "paid");
+  const pendingPayouts = payouts.filter((p) => p.status !== PAYOUT_STATUS.PAID);
 
   return (
     <div className={`${sectionCardClass} mb-6`}>
@@ -70,11 +71,11 @@ export function PendingSection({
                   </span>
                   <div className="ml-auto flex items-center gap-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
-                      payout.status === "invoiced" || (payout.status === "pending" && payout.invoiceSent)
+                      payout.status === PAYOUT_STATUS.INVOICED || (payout.status === PAYOUT_STATUS.PENDING && payout.invoiceSent)
                         ? "bg-blue-50 text-blue-600"
                         : "bg-amber-50 text-amber-600"
                     }`}>
-                      {payout.status === "pending"
+                      {payout.status === PAYOUT_STATUS.PENDING
                         ? (payout.invoiceSent ? "Invoice Sent" : (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment"))
                         : "Invoice Received"}
                     </span>
@@ -152,7 +153,7 @@ export function PendingSection({
                       );
                     })()}
                     <div className="flex flex-wrap gap-2 px-4 md:px-5 py-3 md:pl-12 border-t border-gray-200/30">
-                      {payout.status === "pending" && payout.consignor.taxStatus === "business" && (
+                      {payout.status === PAYOUT_STATUS.PENDING && payout.consignor.taxStatus === "business" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMarkInvoiced(payout.id); }}
                           disabled={isSubmitting}
@@ -162,7 +163,7 @@ export function PendingSection({
                           Mark Invoiced
                         </button>
                       )}
-                      {(payout.status === "invoiced" || (payout.status === "pending" && payout.consignor.taxStatus !== "business")) && (
+                      {(payout.status === PAYOUT_STATUS.INVOICED || (payout.status === PAYOUT_STATUS.PENDING && payout.consignor.taxStatus !== "business")) && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMarkPaid(payout.id); }}
                           disabled={isSubmitting}
@@ -172,7 +173,7 @@ export function PendingSection({
                           Mark Paid
                         </button>
                       )}
-                      {payout.status === "pending" && (
+                      {payout.status === PAYOUT_STATUS.PENDING && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCancel(payout.id); }}
                           disabled={isSubmitting}

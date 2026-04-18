@@ -30,6 +30,7 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "bulk-delete") {
     const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
     const result = await bulkDeleteListings({ admin, listingIds: ids });
     return { cancelled: result.cancelled, syncErrors: result.errors, intent };
   }
@@ -115,12 +116,14 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "bulk-approve") {
     const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
     const result = await bulkApproveListing({ listingIds: ids });
     return { approved: result.approved, intent };
   }
 
   if (intent === "bulk-checkin") {
     const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
     const result = await bulkCheckinListing({ admin, listingIds: ids });
     return { activated: result.activated, syncErrors: result.errors, intent };
   }

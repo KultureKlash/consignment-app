@@ -6,6 +6,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/payouts.server";
 import { fmt } from "~/lib/currency";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import { DollarSign, Clock, CheckCircle2, FileText, X } from "lucide-react";
 import CustomSelect from "~/components/admin/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
@@ -96,9 +97,9 @@ export default function Payouts() {
 
   const filteredStats = {
     totalOutstanding: filteredUnpaid.reduce((sum, e) => sum + e.total, 0),
-    totalPending: filteredPayouts.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0),
-    totalInvoiced: filteredPayouts.filter((p) => p.status === "invoiced").reduce((sum, p) => sum + p.amount, 0),
-    totalPaid: filteredPayouts.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0),
+    totalPending: filteredPayouts.filter((p) => p.status === PAYOUT_STATUS.PENDING).reduce((sum, p) => sum + p.amount, 0),
+    totalInvoiced: filteredPayouts.filter((p) => p.status === PAYOUT_STATUS.INVOICED).reduce((sum, p) => sum + p.amount, 0),
+    totalPaid: filteredPayouts.filter((p) => p.status === PAYOUT_STATUS.PAID).reduce((sum, p) => sum + p.amount, 0),
   };
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
 

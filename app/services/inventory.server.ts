@@ -107,7 +107,7 @@ export async function syncInventory({
 
     if (siblingCount > 1) {
       // Safe to delete — other variants still exist on the product
-      await admin.graphql(
+      const deleteRes = await admin.graphql(
         `#graphql
         mutation productVariantsBulkDelete($productId: ID!, $variantsIds: [ID!]!) {
           productVariantsBulkDelete(productId: $productId, variantsIds: $variantsIds) {
@@ -121,6 +121,10 @@ export async function syncInventory({
           },
         }
       );
+      const deleteData = await deleteRes.json();
+      if (deleteData.data.productVariantsBulkDelete.userErrors.length > 0) {
+        logger.error("Shopify variant delete failed", { variantId: variant.id, errors: deleteData.data.productVariantsBulkDelete.userErrors });
+      }
 
       // Clear Shopify IDs — variant row stays for future re-creation
       await prisma.variant.update({

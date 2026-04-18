@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, CheckCircle2, Download } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
+import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import type { PayoutRef } from "./payoutHelpers";
 import { sectionCardClass, sectionHeaderClass, sectionTitleClass, gridCols, relativeDate } from "./payoutHelpers";
 
@@ -19,7 +20,7 @@ export function HistorySection({
   scrollRef,
   onDownload,
 }: HistorySectionProps) {
-  const paidPayouts = payouts.filter((p) => p.status === "paid");
+  const paidPayouts = payouts.filter((p) => p.status === PAYOUT_STATUS.PAID);
 
   return (
     <div className={sectionCardClass}>

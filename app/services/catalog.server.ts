@@ -47,7 +47,14 @@ export async function findOrCreateProduct({
   if (sku) {
     const existing = await findProductBySku(sku);
     if (existing) return existing;
-    return createProduct({ sku, title, brand, category });
+    try {
+      return await createProduct({ sku, title, brand, category });
+    } catch {
+      // Race condition: another request created it — re-fetch
+      const retry = await findProductBySku(sku);
+      if (retry) return retry;
+      throw new Error(`Product creation failed for SKU "${sku}"`);
+    }
   }
 
   // Non-footwear path: lookup by title + brand
