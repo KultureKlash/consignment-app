@@ -18,6 +18,8 @@ import { GroupRows } from "./GroupRows";
 import { RejectModal } from "./RejectModal";
 import { EditListingModal } from "./EditListingModal";
 import { EditProductModal } from "./EditProductModal";
+import { ListingActionsProvider } from "./ListingActionsContext";
+import type { ListingActions } from "./ListingActionsContext";
 
 export default function ListingsTable({
   listings,
@@ -34,6 +36,7 @@ export default function ListingsTable({
   syncingListingId,
   onEditApprove,
   onAdminEdit,
+  onUpdateCost,
   onEditProduct,
   onQuickAdd,
   isLoading,
@@ -123,15 +126,12 @@ export default function ListingsTable({
   if (grouped) {
     const groups = groupByProduct(listings);
 
-    const groupProps = (group: ProductGroup, isExpanded: boolean) => ({
-      group,
-      isExpanded,
-      onToggle: () => toggleGroup(group.productId),
+    const actionsValue: ListingActions = {
       onCancel,
       onRestore,
       onApprove,
       onReject: onReject ? (id: string) => { setRejectModal(id); setRejectReason(""); } : undefined,
-      onActivate,
+      onCheckin: onActivate,
       onApproveWithdrawal,
       onDenyWithdrawal,
       onCompleteWithdrawal,
@@ -141,25 +141,31 @@ export default function ListingsTable({
       onAdminEdit: onAdminEdit ? (listing: Listing) => setEditModal(listing) : undefined,
       onQuickAdd,
       isLoading,
-      colCount,
-      hasSelection,
       selectedIds,
       onToggleId: toggleId,
       onToggleGroup: toggleGroupSelection,
       sections,
       onSectionChange,
       onEditProduct: onEditProduct ? (g: ProductGroup) => setEditProductModal(g) : undefined,
-    });
+    };
 
     return (
-      <>
+      <ListingActionsProvider value={actionsValue}>
         <div className={`transition-opacity duration-150 ${isNavigating ? "opacity-50 pointer-events-none" : ""}`}>
           {/* Desktop: table */}
           <div className="hidden md:block overflow-x-auto">
             <table className={tableClass}>
               <tbody>
                 {groups.map((group) => (
-                  <GroupRows key={group.productId} {...groupProps(group, expandedGroups.has(group.productId))} renderMode="desktop" />
+                  <GroupRows
+                    key={group.productId}
+                    group={group}
+                    isExpanded={expandedGroups.has(group.productId)}
+                    onToggle={() => toggleGroup(group.productId)}
+                    colCount={colCount}
+                    hasSelection={hasSelection}
+                    renderMode="desktop"
+                  />
                 ))}
               </tbody>
             </table>
@@ -167,7 +173,15 @@ export default function ListingsTable({
           {/* Mobile: cards — outside table element */}
           <div className="md:hidden">
             {groups.map((group) => (
-              <GroupRows key={group.productId} {...groupProps(group, expandedGroups.has(group.productId))} renderMode="mobile" />
+              <GroupRows
+                key={group.productId}
+                group={group}
+                isExpanded={expandedGroups.has(group.productId)}
+                onToggle={() => toggleGroup(group.productId)}
+                colCount={colCount}
+                hasSelection={hasSelection}
+                renderMode="mobile"
+              />
             ))}
           </div>
         </div>
@@ -175,7 +189,11 @@ export default function ListingsTable({
         {editModal && (onEditApprove || onAdminEdit) && (
           <EditListingModal
             listing={editModal}
-            mode={editModal.status === LISTING_STATUS.SUBMITTED && onEditApprove ? "edit-approve" : "edit"}
+            mode={
+              editModal.status === LISTING_STATUS.SOLD ? "cost-only"
+              : editModal.status === LISTING_STATUS.SUBMITTED && onEditApprove ? "edit-approve"
+              : "edit"
+            }
             onConfirm={(fields) => {
               if (editModal.status === LISTING_STATUS.SUBMITTED && onEditApprove) {
                 onEditApprove(editModal.id, fields);
@@ -184,6 +202,10 @@ export default function ListingsTable({
               }
               setEditModal(null);
             }}
+            onUpdateCost={onUpdateCost ? (listingId, cost) => {
+              onUpdateCost(listingId, cost);
+              setEditModal(null);
+            } : undefined}
             onCancel={() => setEditModal(null)}
           />
         )}
@@ -197,7 +219,7 @@ export default function ListingsTable({
             onCancel={() => setEditProductModal(null)}
           />
         )}
-      </>
+      </ListingActionsProvider>
     );
   }
 

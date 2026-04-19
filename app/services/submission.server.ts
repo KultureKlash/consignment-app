@@ -16,6 +16,7 @@ export {
 export {
   adminEditProduct,
   adminEditListing,
+  updateListingCost,
 } from "./submission/edit.server";
 
 export {

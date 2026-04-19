@@ -12,6 +12,7 @@ import {
   approveWithdrawal,
   denyWithdrawal,
   completeWithdrawal,
+  updateListingCost,
 } from "~/services/submission.server";
 import prisma from "~/db.server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
@@ -155,6 +156,14 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "restore") {
     await restoreListing({ admin, listingId: formData.get("listingId") as string });
+    return { intent };
+  }
+
+  if (intent === "update-cost") {
+    const listingId = formData.get("listingId") as string;
+    const cost = parseFloat(formData.get("cost") as string);
+    if (isNaN(cost) || cost < 0) throw new Error("Invalid cost value");
+    await updateListingCost({ listingId, cost });
     return { intent };
   }
 

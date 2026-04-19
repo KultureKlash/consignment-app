@@ -3,6 +3,7 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory.server";
 import { LISTING_STATUS, TERMINAL_STATUSES } from "~/lib/listing-statuses";
+import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { logger } from "~/lib/logger.server";
 
 // ── Admin: Edit product-level fields (title, brand, category, image) ──
@@ -54,6 +55,34 @@ export async function adminEditProduct({
   }
 
   return updated;
+}
+
+// ── Admin: Update cost on any listing (including sold) ──
+
+export async function updateListingCost({
+  listingId,
+  cost,
+}: {
+  listingId: string;
+  cost: number;
+}) {
+  // Update the listing cost
+  const listing = await prisma.listing.update({
+    where: { id: listingId },
+    data: { cost },
+    include: { consignor: true, variant: { include: { product: true } } },
+  });
+
+  // Also update transaction cost snapshots so order detail / dashboard recalculates
+  await prisma.transaction.updateMany({
+    where: {
+      orderItem: { listingId },
+      type: TRANSACTION_TYPE.SALE,
+    },
+    data: { cost },
+  });
+
+  return listing;
 }
 
 // ── Admin: Edit listing (variant-level fields) without changing status ──

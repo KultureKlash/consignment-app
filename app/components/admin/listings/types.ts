@@ -58,11 +58,16 @@ export type Props = {
   onRestore?: (listingId: string) => void;
   onApprove?: (listingId: string) => void;
   onReject?: (listingId: string, reason: string) => void;
+  onActivate?: (listingId: string) => void;
   onCheckin?: (listingId: string) => void;
   onApproveWithdrawal?: (listingId: string) => void;
+  onDenyWithdrawal?: (listingId: string) => void;
   onCompleteWithdrawal?: (listingId: string) => void;
+  onRetrySync?: (listingId: string) => void;
+  syncingListingId?: string;
   onEditApprove?: (listingId: string, fields: EditApproveFields) => void;
   onAdminEdit?: (listingId: string, fields: EditApproveFields) => void;
+  onUpdateCost?: (listingId: string, cost: string) => void;
   onEditProduct?: (productId: string, fields: EditProductFields) => void;
   onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
   isLoading?: boolean;

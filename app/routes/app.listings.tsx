@@ -159,6 +159,9 @@ export default function Listings() {
             if (!fields.cost) delete d.cost;
             submitApproval("admin-edit", d);
           }}
+          onUpdateCost={(listingId, cost) => {
+            sectionFetcher.submit({ intent: "update-cost", listingId, cost }, { method: "POST" });
+          }}
           onEditProduct={(productId, fields: EditProductFields) => {
             const d: Record<string, string> = { productId, ...fields };
             if (!fields.imageData) delete d.imageData;

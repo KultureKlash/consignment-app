@@ -3,7 +3,7 @@ import { Package, ChevronRight, Plus, Check, X, Zap, Pencil, RefreshCw } from "l
 import { statusBadgeClass, relativeTime, statusLabel } from "./listing-ui";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import type { Listing, ProductGroup, SectionOption, SortKey } from "./types";
+import type { ProductGroup, SortKey } from "./types";
 import {
   groupHeaderClass,
   groupHeaderCellClass,
@@ -25,62 +25,45 @@ import {
   ActionBtn,
 } from "./listingHelpers";
 import { SectionPicker } from "./SectionPicker";
+import { useListingActions } from "./ListingActionsContext";
 
 export function GroupRows({
   group,
   isExpanded,
   onToggle,
-  onCancel,
-  onRestore,
-  onApprove,
-  onReject,
-  onCheckin,
-  onApproveWithdrawal,
-  onDenyWithdrawal,
-  onCompleteWithdrawal,
-  onRetrySync,
-  syncingListingId,
-  onEditApprove,
-  onAdminEdit,
-  onEditProduct,
-  onQuickAdd,
-  isLoading,
   colCount,
   hasSelection,
-  selectedIds,
-  onToggleId,
-  onToggleGroup,
-  sections,
-  onSectionChange,
   renderMode,
 }: {
   group: ProductGroup;
   isExpanded: boolean;
   onToggle: () => void;
-  onCancel?: (id: string) => void;
-  onRestore?: (id: string) => void;
-  onApprove?: (id: string) => void;
-  onReject?: (id: string) => void;
-  onCheckin?: (id: string) => void;
-  onApproveWithdrawal?: (id: string) => void;
-  onDenyWithdrawal?: (id: string) => void;
-  onCompleteWithdrawal?: (id: string) => void;
-  onRetrySync?: (listingId: string) => void;
-  syncingListingId?: string;
-  onEditApprove?: (listing: Listing) => void;
-  onAdminEdit?: (listing: Listing) => void;
-  onEditProduct?: (group: ProductGroup) => void;
-  onQuickAdd?: (productId: string, anchorEl: HTMLElement) => void;
-  isLoading?: boolean;
   colCount: number;
   hasSelection: boolean;
-  selectedIds?: Set<string>;
-  onToggleId: (id: string) => void;
-  onToggleGroup: (ids: string[]) => void;
-  sections?: SectionOption[];
-  onSectionChange?: (productId: string, sectionId: string | null) => void;
   renderMode?: "desktop" | "mobile";
 }) {
+  const {
+    onCancel,
+    onRestore,
+    onApprove,
+    onReject,
+    onCheckin,
+    onApproveWithdrawal,
+    onDenyWithdrawal,
+    onCompleteWithdrawal,
+    onRetrySync,
+    syncingListingId,
+    onEditApprove,
+    onAdminEdit,
+    onEditProduct,
+    onQuickAdd,
+    isLoading,
+    selectedIds,
+    onToggleId,
+    onToggleGroup,
+    sections,
+    onSectionChange,
+  } = useListingActions();
   const [localSortKey, setLocalSortKey] = useState<SortKey | null>(null);
   const [localSortDir, setLocalSortDir] = useState<"asc" | "desc">("asc");
   const [localSectionId, setLocalSectionId] = useState<string>(group.sectionId ?? "");
@@ -167,7 +150,7 @@ export function GroupRows({
                     {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                       <button type="button" onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50 font-[inherit]">Check in</button>
                     )}
-                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                       <button type="button" onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50 font-[inherit]">Edit</button>
                     )}
                     {l.status === LISTING_STATUS.ACTIVE && onCancel && (
@@ -220,10 +203,10 @@ export function GroupRows({
               <img
                 src={group.imageUrl}
                 alt={group.title}
-                className="w-12 h-12 object-cover rounded-md border border-gray-200 shrink-0"
+                className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0"
               />
             ) : (
-              <span className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+              <span className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                 <Package size={20} className="text-gray-400" />
               </span>
             )}
@@ -428,7 +411,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                     <ActionBtn
                       label="Edit"
                       icon={<Pencil size={13} />}
@@ -564,7 +547,7 @@ export function GroupRows({
                       {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                         <button onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50">Check in</button>
                       )}
-                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
                         <button onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50">Edit</button>
                       )}
                       {l.status === LISTING_STATUS.ACTIVE && onCancel && (
