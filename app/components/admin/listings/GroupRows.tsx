@@ -350,6 +350,13 @@ export function GroupRows({
             )}
             <td className={childIndentTdClass}>
               <span className="font-semibold">{l.variant.size}</span>
+              {(() => {
+                const sizeCount = group.listings.filter((li) => li.variant.size === l.variant.size).length;
+                const isFirst = sortedListings.findIndex((li) => li.variant.size === l.variant.size) === i;
+                return isFirst && sizeCount > 1 ? (
+                  <span className="ml-1.5 text-[10px] font-semibold text-gray-400 tabular-nums">×{sizeCount}</span>
+                ) : null;
+              })()}
             </td>
             <td className="admin-td text-[11px] font-mono text-gray-400 tracking-wide">
               {l.variant.gtin || "\u2014"}

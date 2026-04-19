@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search, Package } from "lucide-react";
 import { parseCategory } from "~/lib/categories";
 import Dropdown from "~/components/admin/Dropdown";
 import { useCreateListing } from "./CreateListingContext";
@@ -31,8 +31,15 @@ export default function ProductSearch() {
   // State A: Product selected — show chip
   if (selectedProductId && selectedProduct) {
     return (
-      <div className="admin-chip">
-        <span className="flex-1">
+      <div className="admin-chip flex items-center gap-2.5">
+        {selectedProduct.imageUrl ? (
+          <img src={selectedProduct.imageUrl} alt="" className="w-8 h-8 rounded-md object-cover shrink-0 border border-gray-200" />
+        ) : (
+          <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+            <Package size={14} className="text-gray-400" />
+          </div>
+        )}
+        <span className="flex-1 min-w-0">
           <span className="font-medium">{selectedProduct.title}</span>
           <span className="text-gray-500">
             {selectedProduct.sku ? ` (${selectedProduct.sku})` : ""}
@@ -110,15 +117,24 @@ export default function ProductSearch() {
                     setCategoryManual(false);
                   }
                 }}
-                className="admin-dropdown-item"
+                className="admin-dropdown-item flex items-center gap-3"
               >
-                <div className="font-semibold text-gray-900 text-sm">
-                  {p.title}
-                </div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {p.sku ?? p.brand ?? "No SKU"}
-                  {p.sku && p.brand ? ` — ${p.brand}` : ""} · {p.variants.length} size
-                  {p.variants.length !== 1 ? "s" : ""}
+                {p.imageUrl ? (
+                  <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-200" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                    <Package size={16} className="text-gray-400" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="font-semibold text-gray-900 text-sm truncate">
+                    {p.title}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {p.sku ?? p.brand ?? "No SKU"}
+                    {p.sku && p.brand ? ` — ${p.brand}` : ""} · {p.variants.length} size
+                    {p.variants.length !== 1 ? "s" : ""}
+                  </div>
                 </div>
               </div>
             ))}
