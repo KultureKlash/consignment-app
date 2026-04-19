@@ -43,9 +43,9 @@ export function ListingGroup({
               : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             }
             {group.imageUrl ? (
-              <img src={group.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover border border-[rgba(255,255,255,0.08)] shrink-0" />
+              <img src={group.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover border border-[rgba(255,255,255,0.08)] shrink-0" />
             ) : (
-              <span className="w-11 h-11 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
+              <span className="w-16 h-16 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
                 <Package className="w-4 h-4 text-muted-foreground" />
               </span>
             )}
@@ -105,9 +105,9 @@ export function ListingGroup({
             : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           }
           {group.imageUrl ? (
-            <img src={group.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover border border-[rgba(255,255,255,0.08)] shrink-0" />
+            <img src={group.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border border-[rgba(255,255,255,0.08)] shrink-0" />
           ) : (
-            <span className="w-9 h-9 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
+            <span className="w-14 h-14 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
               <Package className="w-4 h-4 text-muted-foreground" />
             </span>
           )}

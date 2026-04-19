@@ -1,4 +1,5 @@
 import { LISTING_STATUS } from "~/lib/listing-statuses";
+import { compareSizes } from "~/lib/size-order";
 export { LISTING_STATUS };
 
 export const ACTIVE_STATUSES = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE];
@@ -94,9 +95,11 @@ export function groupByProduct(listings: ListingRow[]): ProductGroup[] {
     }
     group.listings.push(l);
   }
-  // Sort within each group: by status priority, then newest first
+  // Sort within each group: by size, then status priority, then newest first
   for (const group of map.values()) {
     group.listings.sort((a, b) => {
+      const sizeCmp = compareSizes(a.variant.size, b.variant.size);
+      if (sizeCmp !== 0) return sizeCmp;
       const pa = STATUS_PRIORITY[a.status] ?? 99;
       const pb = STATUS_PRIORITY[b.status] ?? 99;
       if (pa !== pb) return pa - pb;
