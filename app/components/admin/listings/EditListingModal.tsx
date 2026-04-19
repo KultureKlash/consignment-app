@@ -36,7 +36,7 @@ export function EditListingModal({ listing, mode, onConfirm, onCancel, onUpdateC
           <div className="font-semibold text-gray-900">{listing.variant.product.title}</div>
           <div className="text-gray-500 mt-0.5">
             {listing.consignor.name}
-            {isStoreOwned && <span className="ml-1.5 px-1.5 py-px rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">Store</span>}
+            {listing.consignor.storeOwned && <span className="ml-1.5 px-1.5 py-px rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">Store</span>}
           </div>
         </div>
 
