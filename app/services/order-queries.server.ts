@@ -30,10 +30,13 @@ export async function getOrderDetail(id: string) {
   for (const item of order.items) {
     for (const tx of item.transactions) {
       totalFees += tx.feeAmount;
-      totalConsignorPayout += tx.consignorAmount;
-      // Store-owned items: profit = sale price - cost (fee is 0)
-      if (item.listing.consignor.storeOwned && tx.type === TRANSACTION_TYPE.SALE) {
-        storeOwnedProfit += tx.grossAmount - tx.cost;
+      if (item.listing.consignor.storeOwned) {
+        // Store-owned: profit = sale price - cost (no payout to self)
+        if (tx.type === TRANSACTION_TYPE.SALE) {
+          storeOwnedProfit += tx.grossAmount - tx.cost;
+        }
+      } else {
+        totalConsignorPayout += tx.consignorAmount;
       }
     }
   }

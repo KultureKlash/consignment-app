@@ -159,6 +159,7 @@ export function OrderDetailPage({ order, summary, timeline }: OrderDetailPagePro
               let totalWithTax = 0;
               let hasBusiness = false;
               for (const item of order.items) {
+                if (item.listing.consignor.storeOwned) continue;
                 const saleTx = item.transactions.find((tx: any) => tx.type === TRANSACTION_TYPE.SALE);
                 if (!saleTx) continue;
                 const tax = computeTax(saleTx.consignorAmount, item.listing.consignor);
@@ -237,11 +238,22 @@ export function OrderDetailPage({ order, summary, timeline }: OrderDetailPagePro
                     {saleTx && (
                       <>
                         <div className="text-xs text-gray-500">
-                          Fee <span className="font-semibold text-emerald-600">${fmt(saleTx.feeAmount)}</span>
-                          <span className="text-gray-300"> · </span>
-                          Payout <span className="font-semibold text-gray-500">${fmt(saleTx.consignorAmount)}</span>
+                          {consignor.storeOwned ? (
+                            <>
+                              Cost <span className="font-semibold text-gray-500">${fmt(saleTx.cost)}</span>
+                              <span className="text-gray-300"> · </span>
+                              Profit <span className="font-semibold text-emerald-600">${fmt(saleTx.grossAmount - saleTx.cost)}</span>
+                            </>
+                          ) : (
+                            <>
+                              Fee <span className="font-semibold text-emerald-600">${fmt(saleTx.feeAmount)}</span>
+                              <span className="text-gray-300"> · </span>
+                              Payout <span className="font-semibold text-gray-500">${fmt(saleTx.consignorAmount)}</span>
+                            </>
+                          )}
                         </div>
                         {(() => {
+                          if (consignor.storeOwned) return null;
                           const tax = computeTax(saleTx.consignorAmount, consignor);
                           if (!tax.isTaxable) return null;
                           return (
@@ -328,21 +340,31 @@ export function OrderDetailPage({ order, summary, timeline }: OrderDetailPagePro
                   </div>
                   {saleTx && (
                     <div className="text-xs text-gray-500">
-                      Fee <span className="font-semibold text-emerald-600">${fmt(saleTx.feeAmount)}</span>
-                      <span className="text-gray-300"> · </span>
-                      Payout <span className="font-semibold text-gray-500">${fmt(saleTx.consignorAmount)}</span>
-                      {(() => {
-                        const tax = computeTax(saleTx.consignorAmount, consignor);
-                        if (!tax.isTaxable) return null;
-                        return (
-                          <div className="text-[11px] text-gray-400 mt-0.5">
-                            {tax.gst > 0 && `+GST $${fmt(tax.gst)} `}
-                            {tax.qst > 0 && `+QST $${fmt(tax.qst)} `}
-                            {tax.hst > 0 && `+${tax.taxLabel} $${fmt(tax.hst)} `}
-                            = <strong className="text-gray-500">${fmt(tax.total)}</strong> payable
-                          </div>
-                        );
-                      })()}
+                      {consignor.storeOwned ? (
+                        <>
+                          Cost <span className="font-semibold text-gray-500">${fmt(saleTx.cost)}</span>
+                          <span className="text-gray-300"> · </span>
+                          Profit <span className="font-semibold text-emerald-600">${fmt(saleTx.grossAmount - saleTx.cost)}</span>
+                        </>
+                      ) : (
+                        <>
+                          Fee <span className="font-semibold text-emerald-600">${fmt(saleTx.feeAmount)}</span>
+                          <span className="text-gray-300"> · </span>
+                          Payout <span className="font-semibold text-gray-500">${fmt(saleTx.consignorAmount)}</span>
+                          {(() => {
+                            const tax = computeTax(saleTx.consignorAmount, consignor);
+                            if (!tax.isTaxable) return null;
+                            return (
+                              <div className="text-[11px] text-gray-400 mt-0.5">
+                                {tax.gst > 0 && `+GST $${fmt(tax.gst)} `}
+                                {tax.qst > 0 && `+QST $${fmt(tax.qst)} `}
+                                {tax.hst > 0 && `+${tax.taxLabel} $${fmt(tax.hst)} `}
+                                = <strong className="text-gray-500">${fmt(tax.total)}</strong> payable
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
