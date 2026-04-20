@@ -111,10 +111,10 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
 
   const handleDownloadPdf = () => {
     const headers = storeOwned
-      ? ["Product", "Size", "Order #", "Date", "Sale", "Cost", "Profit"]
-      : ["Product", "Size", "Order #", "Date", "Sale", "Fee", "My Payout"];
+      ? ["Product", "Size", "Date", "Sale", "Cost", "Profit"]
+      : ["Product", "Size", "Date", "Sale", "Fee", "My Payout"];
     const rows = filteredSales.map((s: any) => [
-      s.product, s.size, s.orderNumber || "—",
+      s.product, s.size,
       formatDate(s.date),
       `$${fmt(s.salePrice)}`,
       storeOwned ? `$${fmt(s.cost)}` : `$${fmt(s.fee)}`,
@@ -269,7 +269,6 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
                   <tr className="border-b border-white/[0.06]">
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "left" }}>Product</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>Size</th>
-                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "left" }}>Order</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>Sale</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>{storeOwned ? "Cost" : "Fee"}</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>{storeOwned ? "Profit" : "Payout"}</th>
@@ -282,7 +281,6 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
                     <tr key={sale.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                       <td className="text-sm font-medium px-4 py-3.5 text-left">{sale.product}</td>
                       <td className="text-sm text-muted-foreground px-4 py-3.5 text-center whitespace-nowrap">{sale.size}</td>
-                      <td className="text-sm text-muted-foreground px-4 py-3.5 text-left whitespace-nowrap">{sale.orderNumber || "—"}</td>
                       <td className="text-sm tabular-nums text-right px-4 py-3.5 whitespace-nowrap">${fmt(sale.salePrice)}</td>
                       <td className="text-sm tabular-nums text-right text-muted-foreground px-4 py-3.5 whitespace-nowrap">
                         {storeOwned ? `$${fmt(sale.cost)}` : `-$${fmt(sale.fee)}`}
@@ -312,7 +310,7 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{sale.product}</p>
                       <p className="text-xs text-muted-foreground">
-                        Size {sale.size}{sale.orderNumber ? ` · ${sale.orderNumber}` : ""}
+                        Size {sale.size}
                       </p>
                     </div>
                     <StatusBadge status={sale.status} />

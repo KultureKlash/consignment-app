@@ -57,7 +57,7 @@ export default function StatsCard({ label, value, sub, trend, icon: Icon, color,
       </div>
 
       {/* Value */}
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-baseline gap-2 flex-wrap">
         <span className="text-[32px] font-bold tracking-tight text-gray-900 tabular-nums leading-none">
           {value}
         </span>

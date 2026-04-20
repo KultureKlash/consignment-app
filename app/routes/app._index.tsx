@@ -1,11 +1,11 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getDashboardData } from "~/services/dashboard.server";
 import { motion } from "framer-motion";
-import { Package, ShoppingBag, TrendingUp, DollarSign, History, ChevronDown, ChevronUp } from "lucide-react";
+import { Package, ShoppingBag, TrendingUp, DollarSign, History, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import StatsCard from "~/components/admin/StatsCard";
 import ActionItem from "~/components/admin/ActionItem";
@@ -27,19 +27,24 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
-  const { totalSales, totalOrders, allOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
+  const { totalSales, totalOrders, consignmentFees, storeProfit, totalEarnings, inventoryValue, activeListingCount, activeProductCount, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount, updatedAt, activityFeed } =
     useLoaderData<typeof loader>();
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [showStats, setShowStats] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("konsign:showStats") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("konsign:showStats", String(showStats));
+  }, [showStats]);
   const visibleFeed = showAllActivity ? activityFeed : activityFeed.slice(0, 5);
 
-  const stats = [
-    // Col 1: Totals        | Col 2: Earnings breakdown | Col 3: Operations
+  const financialStats = [
     { label: "Total Revenue",    value: `$${fmt(Number(totalSales))}`,        icon: DollarSign,  color: "blue",   tip: "Total sale price of all sold items across all consignors." },
     { label: "Consignment Fees", value: `$${fmt(Number(consignmentFees))}`,   icon: TrendingUp,  color: "green",  tip: "Total fees earned from consignment sales (your commission)." },
-    { label: "Total Orders", value: Number(totalOrders).toLocaleString("en-US"), sub: Number(allOrders) > Number(totalOrders) ? `${allOrders} total` : undefined, icon: ShoppingBag, color: "purple", tip: "Orders where payment was captured. Grey number includes all orders." },
-    { label: "Total Earnings",   value: `$${fmt(Number(totalEarnings))}`,     icon: TrendingUp,  color: "amber",  tip: "Consignment fees + store-owned profit combined." },
     { label: "Store Profit",     value: `$${fmt(Number(storeProfit))}`,       icon: ShoppingBag,  color: "green",  tip: "Profit from store-owned inventory (sale price minus cost)." },
-    { label: "Inventory Value",  value: `$${fmt(Number(inventoryValue))}`,    icon: Package,     color: "purple", tip: "Total asking price of all active listings currently for sale." },
+    { label: "Total Earnings",   value: `$${fmt(Number(totalEarnings))}`,     icon: TrendingUp,  color: "amber",  tip: "Consignment fees + store-owned profit combined." },
   ];
 
   const actionTotal = submittedCount + awaitingDropoffCount + withdrawalRequestCount + pendingPickupCount;
@@ -72,12 +77,55 @@ export default function Dashboard() {
 
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-8">
           {/* Stats Grid — 2 rows of 3 */}
-          <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {stats.map((s, i) => (
-              <motion.div key={s.label} variants={itemVariants} className={i === stats.length - 1 ? "col-span-2 md:col-span-1" : ""}>
-                <StatsCard {...s} />
-              </motion.div>
-            ))}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Financial Overview</span>
+              <button
+                onClick={() => setShowStats(!showStats)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 bg-transparent border-0 cursor-pointer hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                {showStats ? <EyeOff size={13} /> : <Eye size={13} />}
+                {showStats ? "Hide" : "Show"}
+              </button>
+            </div>
+            {showStats ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {financialStats.map((s) => (
+                    <motion.div key={s.label} variants={itemVariants}>
+                      <StatsCard {...s} />
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <motion.div variants={itemVariants} className="flex items-center gap-3 px-5 py-3.5 bg-white rounded-xl border border-gray-100" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                    <ShoppingBag size={16} className="text-gray-900 shrink-0" />
+                    <div>
+                      <div className="text-[11px] text-gray-400 font-semibold tracking-tight">Total Orders</div>
+                      <div className="text-lg font-bold text-gray-900 tabular-nums leading-tight">{Number(totalOrders).toLocaleString("en-US")}</div>
+                    </div>
+                  </motion.div>
+                  <motion.div variants={itemVariants} className="flex items-center gap-3 px-5 py-3.5 bg-white rounded-xl border border-gray-100" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                    <Package size={16} className="text-gray-900 shrink-0" />
+                    <div>
+                      <div className="text-[11px] text-gray-400 font-semibold tracking-tight">Active Listings</div>
+                      <div className="text-lg font-bold text-gray-900 tabular-nums leading-tight">{activeListingCount} <span className="text-[11px] text-gray-400 font-normal">{activeProductCount} products</span></div>
+                    </div>
+                  </motion.div>
+                  <motion.div variants={itemVariants} className="flex items-center gap-3 px-5 py-3.5 bg-white rounded-xl border border-gray-100" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+                    <DollarSign size={16} className="text-gray-900 shrink-0" />
+                    <div>
+                      <div className="text-[11px] text-gray-400 font-semibold tracking-tight">Inventory Value</div>
+                      <div className="text-lg font-bold text-gray-900 tabular-nums leading-tight">${fmt(Number(inventoryValue))}</div>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 py-6 text-center text-[13px] text-gray-400">
+                Financial data hidden
+              </div>
+            )}
           </section>
 
           {/* Bottom Two-Column Layout */}

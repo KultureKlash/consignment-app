@@ -118,14 +118,20 @@ export async function searchProducts(
   const q = query.trim();
   if (!q) return [];
 
+  // Split into words — ALL must match somewhere in title, brand, or sku
+  const words = q.split(/\s+/).filter(Boolean);
+  const wordFilters = words.map((word) => ({
+    OR: [
+      { title: { contains: word, mode: "insensitive" as const } },
+      { brand: { contains: word, mode: "insensitive" as const } },
+      { sku: { contains: word, mode: "insensitive" as const } },
+    ],
+  }));
+
   return prisma.product.findMany({
     where: {
       ...(opts?.exclude ? { id: { not: opts.exclude } } : {}),
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { brand: { contains: q, mode: "insensitive" } },
-        { sku: { contains: q, mode: "insensitive" } },
-      ],
+      AND: wordFilters,
     },
     include: opts?.includeVariants ? { variants: { orderBy: { size: "asc" } } } : undefined,
     take: 10,

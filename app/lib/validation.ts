@@ -18,7 +18,7 @@ const optionalText = (maxLen = 200) =>
 
 const price = z
   .string()
-  .transform((v) => parseFloat(v))
+  .transform((v) => parseFloat(v.replace(/,/g, "")))
   .refine((v) => !isNaN(v) && v > 0 && v <= 999999.99, "Price must be between $0.01 and $999,999.99")
   .transform((v) => Math.round(v * 100) / 100); // 2 decimal places
 

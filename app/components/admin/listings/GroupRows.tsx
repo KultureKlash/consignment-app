@@ -150,7 +150,7 @@ export function GroupRows({
                     {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                       <button type="button" onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50 font-[inherit]">Check in</button>
                     )}
-                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                    {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && !(l.status === LISTING_STATUS.SOLD && !l.consignor.storeOwned) && (
                       <button type="button" onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50 font-[inherit]">Edit</button>
                     )}
                     {l.status === LISTING_STATUS.ACTIVE && onCancel && (
@@ -403,7 +403,7 @@ export function GroupRows({
                   {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                     <ActionBtn
                       label="Check in"
-                      icon={<Zap size={13} />}
+                      icon={<Check size={13} />}
                       color="#2c6ecb"
                       bg="#eff6ff"
                       border="#bfdbfe"
@@ -411,7 +411,7 @@ export function GroupRows({
                       disabled={isLoading}
                     />
                   )}
-                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                  {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && !(l.status === LISTING_STATUS.SOLD && !l.consignor.storeOwned) && (
                     <ActionBtn
                       label="Edit"
                       icon={<Pencil size={13} />}
@@ -547,7 +547,7 @@ export function GroupRows({
                       {l.status === LISTING_STATUS.APPROVED && onCheckin && (
                         <button onClick={() => onCheckin(l.id)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-blue-50 text-blue-600 border border-blue-200 cursor-pointer disabled:opacity-50">Check in</button>
                       )}
-                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && (
+                      {onAdminEdit && ![LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWN, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP].includes(l.status) && !(l.status === LISTING_STATUS.SOLD && !l.consignor.storeOwned) && (
                         <button onClick={() => onAdminEdit(l)} disabled={isLoading} className="px-3 py-1.5 text-[11px] font-semibold rounded-md bg-violet-50 text-violet-600 border border-violet-200 cursor-pointer disabled:opacity-50">Edit</button>
                       )}
                       {l.status === LISTING_STATUS.ACTIVE && onCancel && (

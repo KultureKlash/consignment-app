@@ -13,6 +13,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") ?? "").slice(0, 200);
-  const products = await searchProducts(q);
-  return { products };
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+  const { products, hasMore } = await searchProducts(q, { page });
+  return { products, hasMore };
 }

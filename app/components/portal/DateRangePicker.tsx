@@ -29,18 +29,20 @@ function formatShort(d: Date): string {
 export function DateRangePicker({ preset, from, to, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<DateRange | undefined>(
     from && to ? { from: new Date(from + "T12:00:00"), to: new Date(to + "T12:00:00") } : undefined,
   );
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState({ top: 0, right: 0 });
 
-  // Position dropdown below trigger
+  // Position dropdown below trigger, right-aligned to avoid overflow
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 6, left: rect.left });
+    const right = window.innerWidth - rect.right;
+    setPos({ top: rect.bottom + 6, right: Math.max(8, right) });
   }, []);
 
   useEffect(() => {
@@ -113,11 +115,15 @@ export function DateRangePicker({ preset, from, to, onChange }: Props) {
       {open && typeof document !== "undefined" && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed glass-panel-strong rounded-xl overflow-hidden flex shadow-2xl border border-white/[0.15]"
-          style={{ top: pos.top, left: pos.left, zIndex: 9999 }}
+          className={`fixed glass-panel-strong overflow-hidden shadow-2xl border border-white/[0.15] max-h-[85vh] overflow-y-auto flex flex-col ${
+            isMobile
+              ? "left-0 right-0 bottom-0 rounded-t-2xl"
+              : "rounded-xl md:flex-row"
+          }`}
+          style={isMobile ? { zIndex: 9999 } : { zIndex: 9999, top: pos.top, right: pos.right }}
         >
           {/* Presets */}
-          <div className={`py-2 min-w-[130px] ${showCalendar ? "border-r border-white/[0.08]" : ""}`}>
+          <div className={`py-2 min-w-[130px] ${showCalendar ? "border-b md:border-b-0 md:border-r border-white/[0.08]" : ""}`}>
             {PRESETS.map((p) => (
               <div
                 key={p.value}

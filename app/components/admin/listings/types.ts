@@ -58,7 +58,6 @@ export type Props = {
   onRestore?: (listingId: string) => void;
   onApprove?: (listingId: string) => void;
   onReject?: (listingId: string, reason: string) => void;
-  onActivate?: (listingId: string) => void;
   onCheckin?: (listingId: string) => void;
   onApproveWithdrawal?: (listingId: string) => void;
   onDenyWithdrawal?: (listingId: string) => void;

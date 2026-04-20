@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouteLoaderData, useFetcher, useNavigate } from "react-router";
 import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Plus, Package, Lightbulb } from "lucide-react";
+import { compareSizes } from "~/lib/size-order";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, parseCategory, autoSuggest } from "~/lib/categories";
@@ -58,7 +59,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
 
   // Market data
-  const [marketData, setMarketData] = useState<{ lowestPrice: number | null; daysSinceLastListing: number | null } | null>(null);
+  const [marketData, setMarketData] = useState<{ lowestPrice: number | null; daysSinceLastSale: number | null } | null>(null);
 
   const isFootwearCategory = isFootwear(mainCategory ? buildCategory(mainCategory, subCategory) : selectedProduct?.category ?? "");
   const actionData = fetcher.data as { error?: string } | undefined;
@@ -84,20 +85,51 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     }
   }, [title, manualMode]);
 
-  // Debounced product search
+  // Debounced product search with pagination
+  const searchPageRef = useRef(1);
+  const hasMoreRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setSearchResults([]);
+      searchPageRef.current = 1;
+      hasMoreRef.current = false;
       return;
     }
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/portal/api/products?q=${encodeURIComponent(searchQuery)}`);
+        searchPageRef.current = 1;
+        const res = await fetch(`/portal/api/products?q=${encodeURIComponent(searchQuery)}&page=1`);
         const data = await res.json();
         setSearchResults(data.products ?? []);
+        hasMoreRef.current = data.hasMore ?? false;
       } catch { setSearchResults([]); }
     }, 300);
     return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Infinite scroll — load more products when sentinel is visible
+  useEffect(() => {
+    const el = scrollSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreRef.current && !loadingMoreRef.current && searchQuery.trim()) {
+        loadingMoreRef.current = true;
+        searchPageRef.current++;
+        fetch(`/portal/api/products?q=${encodeURIComponent(searchQuery)}&page=${searchPageRef.current}`)
+          .then((r) => r.json())
+          .then((data) => {
+            setSearchResults((prev) => [...prev, ...(data.products ?? [])]);
+            hasMoreRef.current = data.hasMore ?? false;
+            loadingMoreRef.current = false;
+          })
+          .catch(() => { loadingMoreRef.current = false; });
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [searchQuery]);
 
   // Debounced brand search
@@ -208,7 +240,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     <div>
       <AppHeader title="Submit Listing" subtitle="Submit an item for review" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
 
-      <div className="px-4 md:px-8 pb-8 max-w-2xl">
+      <div className={`px-4 md:px-8 pb-8 ${showSearch ? "" : "max-w-2xl"}`}>
         {/* Back link */}
         <button
           onClick={() => navigate("/portal/listings")}
@@ -229,7 +261,8 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           if (manualMode && !title.trim()) errors.add("title");
           if (!size.trim()) errors.add("size");
           if (isFootwearCategory && !gtin.trim()) errors.add("gtin");
-          if (!price.trim() || isNaN(parseFloat(price)) || parseFloat(price) <= 0) errors.add("price");
+          const rawPrice = parseFloat(price.replace(/,/g, ""));
+          if (!price.trim() || isNaN(rawPrice) || rawPrice <= 0) errors.add("price");
           if (errors.size > 0) {
             e.preventDefault();
             setFieldErrors(errors);
@@ -244,49 +277,56 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           <input type="hidden" name="subCategory" value={subCategory} />
           <input type="hidden" name="sku" value={sku} />
 
-          {/* Step 1: Product Search */}
+          {/* Step 1: Product Search — full page card grid */}
           {showSearch && (
-            <div className="glass-panel rounded-2xl p-4 md:p-6 animate-slide-up space-y-4">
-              <h3 className="text-sm font-semibold">Find Your Product</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by product name or SKU..."
-                  className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
-                  autoFocus
-                />
+            <div className="animate-slide-up space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by product name or SKU..."
+                    className="glass-input w-full pl-12 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleManualMode}
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-3.5 rounded-2xl text-xs font-semibold text-primary bg-white/[0.06] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.1] transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add manually
+                </button>
               </div>
 
-              {/* Search results */}
+              {/* Search results — card grid */}
               {searchResults.length > 0 && (
-                <div className="space-y-1 max-h-60 overflow-y-auto">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5">
                   {searchResults.map((product) => (
                     <button
                       key={product.id}
                       type="button"
                       onClick={() => handleSelectProduct(product)}
-                      className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/[0.06] transition-colors cursor-pointer flex items-center gap-3"
+                      className="text-left rounded-2xl overflow-hidden bg-white/[0.04] border border-[rgba(255,255,255,0.06)] hover:bg-white/[0.08] hover:border-[rgba(255,255,255,0.12)] transition-all cursor-pointer group"
                     >
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
                           alt={product.title}
-                          className="w-9 h-9 rounded-lg object-cover border border-[rgba(255,255,255,0.08)] shrink-0"
+                          className="w-full aspect-square object-cover group-hover:scale-[1.02] transition-transform duration-200"
                         />
                       ) : (
-                        <span className="w-9 h-9 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        </span>
+                        <div className="w-full aspect-square bg-white/[0.03] flex items-center justify-center">
+                          <Package className="w-10 h-10 text-muted-foreground/40" />
+                        </div>
                       )}
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{product.title}</div>
-                        <div className="text-xs text-muted-foreground flex gap-2">
+                      <div className="p-3">
+                        <div className="text-sm font-medium leading-tight line-clamp-2">{product.title}</div>
+                        <div className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
                           {product.brand && <span>{product.brand}</span>}
-                          {product.sku && <span>· {product.sku}</span>}
-                          <span>· {product.variants.length} size{product.variants.length !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
                     </button>
@@ -294,15 +334,14 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
                 </div>
               )}
 
-              {/* Not found toggle */}
-              <button
-                type="button"
-                onClick={handleManualMode}
-                className="flex items-center gap-2 text-xs text-primary font-medium hover:opacity-80 transition-opacity cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                I didn't find my item — add manually
-              </button>
+              {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground text-sm">
+                  No products found for "{searchQuery}"
+                </div>
+              )}
+
+              {/* Infinite scroll sentinel */}
+              <div ref={scrollSentinelRef} className="h-1" />
             </div>
           )}
 
@@ -422,7 +461,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
                 {selectedProduct && selectedProduct.variants.length > 0 && !newSize ? (
                   <div className={`space-y-2 rounded-xl p-1 -m-1 transition-shadow ${errorRing("size")}`}>
                     <div className="flex flex-wrap gap-2">
-                      {selectedProduct.variants.map((v) => (
+                      {[...selectedProduct.variants].sort((a, b) => compareSizes(a.size, b.size)).map((v) => (
                         <button
                           key={v.id}
                           type="button"
@@ -487,7 +526,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           )}
 
           {/* Market Context */}
-          {marketData && (marketData.lowestPrice !== null || marketData.daysSinceLastListing !== null) && (
+          {marketData && (marketData.lowestPrice !== null || marketData.daysSinceLastSale !== null) && (
             <div className="glass-panel rounded-2xl p-4 animate-slide-up">
               <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Market Context</h3>
               <div className="flex gap-6">
@@ -496,16 +535,16 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
                     <TrendingDown className="w-4 h-4 text-[hsl(var(--success))]" />
                     <div>
                       <div className="text-sm font-bold tabular-nums">${fmt(marketData.lowestPrice)}</div>
-                      <div className="text-[10px] text-muted-foreground">Lowest active price</div>
+                      <div className="text-[10px] text-muted-foreground">Lowest ask</div>
                     </div>
                   </div>
                 )}
-                {marketData.daysSinceLastListing !== null && (
+                {marketData.daysSinceLastSale !== null && (
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[hsl(var(--warning))]" />
                     <div>
-                      <div className="text-sm font-bold tabular-nums">{marketData.daysSinceLastListing}d</div>
-                      <div className="text-[10px] text-muted-foreground">Since last listing</div>
+                      <div className="text-sm font-bold tabular-nums">{marketData.daysSinceLastSale}d</div>
+                      <div className="text-[10px] text-muted-foreground">Last sold</div>
                     </div>
                   </div>
                 )}
@@ -527,7 +566,15 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
                       inputMode="decimal"
                       name="price"
                       value={price}
-                      onChange={(e) => { setPrice(e.target.value.replace(",", ".")); clearError("price"); }}
+                      onChange={(e) => { setPrice(e.target.value.replace(/[^0-9.]/g, "")); clearError("price"); }}
+                      onBlur={() => {
+                        const num = parseFloat(price);
+                        if (!isNaN(num) && num > 0) setPrice(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                      }}
+                      onFocus={() => {
+                        const num = parseFloat(price.replace(/,/g, ""));
+                        if (!isNaN(num)) setPrice(String(num));
+                      }}
                       className={`glass-input w-full pl-7 pr-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("price")}`}
                       placeholder="0.00"
                     />

@@ -10,13 +10,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const url = new URL(request.url);
   const variantId = url.searchParams.get("variantId") ?? "";
-  if (!variantId) return { lowestPrice: null, daysSinceLastListing: null };
+  if (!variantId) return { lowestPrice: null, daysSinceLastSale: null };
 
   // Verify the consignor owns at least one listing for this variant
   const owns = await prisma.listing.count({
     where: { consignorId: consignor.id, variantId },
   });
-  if (owns === 0) return { lowestPrice: null, daysSinceLastListing: null };
+  if (owns === 0) return { lowestPrice: null, daysSinceLastSale: null };
 
   return getVariantMarketData(variantId);
 }
