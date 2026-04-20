@@ -14,17 +14,18 @@ Backend
 
 - Node.js
 - TypeScript
-- React Router (Remix)
-- Shopify Admin GraphQL API
+- React Router 7 (Remix-style file routing)
+- Shopify Admin GraphQL API (October 2025)
 - Prisma ORM
-- SQLite (development)
-- PostgreSQL (production)
+- PostgreSQL (Docker local dev, Neon cloud prod)
 
 Frontend
 
-- React (inline CSSProperties, no Tailwind)
+- React with Tailwind CSS (admin + portal)
 - Shopify Shadow DOM components (`s-page`, `s-section`, `s-button`, `s-app-nav`)
 - Shopify App Bridge
+- Framer Motion (animations)
+- Lucide React (icons)
 
 ---
 
@@ -65,15 +66,16 @@ They browse products and complete checkout through Shopify.
 
 ## Consignors (Resellers)
 
-Consignors log into the **marketplace dashboard inside the application**.
+Consignors log into the **portal** (standalone, dark glass theme, OTP email login).
 
 Capabilities:
 
-- search products
-- create listings
-- manage inventory
-- view sales
-- request payouts
+- Dashboard with earnings chart, stats, notifications
+- Search products and submit listings
+- View and manage active listings (inline price edit, withdrawal request)
+- View sales history with date filters and PDF export
+- View payouts, upload invoices (business), mark invoice sent
+- Edit profile, tax status, notification preferences
 
 Consignors **do not access Shopify Admin**.
 
@@ -95,11 +97,13 @@ Admin Panel (Home, Create Listing, Listings, Orders, Consignors)
 
 Admin pages:
 
-- **Home** — dashboard overview with stats and recent activity
+- **Home** — dashboard overview with stats, action items, activity feed, financial stats toggle
 - **Create Listing** — form to create listings with product search, barcode/GTIN support, and 10 most recent listings
-- **Listings** — full listing management with search, filters (status, category, subcategory, consignor), sorting, pagination, and grouped-by-product view
-- **Orders** — order monitoring
-- **Consignors** — consignor management with fee rates and balances
+- **Listings** — full listing management with search, filters (status, category, subcategory, consignor, section), sorting, pagination, grouped-by-product view, bulk actions, retry Shopify sync
+- **Orders** — order list + detail page (items, ledger, timeline, cost/profit for store-owned)
+- **Consignors** — consignor management with fee rates, balances, suspension
+- **Payouts** — unpaid, pending, history sections with CSV download
+- **Sections** — store section management (add/rename/delete)
 
 ---
 
@@ -143,55 +147,83 @@ Shopify mirrors:
 
 ```
 app/
-  routes/
-    app._index.tsx          — Home dashboard
-    app.inventory.tsx       — Create Listing page
-    app.listings.tsx        — All Listings (filtered, paginated, grouped)
-    app.orders.tsx          — Orders page
-    app.consignors.tsx      — Consignors list page
-    app.consignors.$id.tsx  — Consignor detail/edit page
-    app.api.products.tsx    — Product search API
-    app.api.brands.tsx      — Brand autocomplete API
-    app.api.taxonomy.tsx    — Shopify taxonomy API
-    app.payouts.tsx         — Payout management page
-    app.activity.tsx        — Full activity feed page
-    app.tsx                 — App shell with nav
-  services/
-    catalog.server.ts       — Product/variant find-or-create
-    dashboard.server.ts     — Dashboard stats and activity feed
-    listings.server.ts      — Listing creation, cancellation, bulk cancellation
-    listing-queries.server.ts — Listing search, filter, pagination
-    orders.server.ts        — Order processing, refunds, cancellations, balance
-    payouts.server.ts       — Payout creation, mark paid, cancel, page data
-    inventory.server.ts     — Shopify inventory sync
-    shopify-products.server.ts — Shopify product/variant creation, image upload, backfill
-    shopify-taxonomy.server.ts — Shopify taxonomy resolution
-    webhooks.server.ts      — Webhook dedup and dispatch
+  routes/                        — Flat dot-notation (app.*, portal.*, webhooks.*, health)
+    app._index.tsx               — Home dashboard
+    app.inventory.tsx            — Create Listing page
+    app.listings.tsx             — All Listings (filtered, paginated, grouped)
+    app.orders.tsx               — Orders page
+    app.orders_.$id.tsx          — Order detail page
+    app.consignors.tsx           — Consignors list page
+    app.consignors_.$id.tsx      — Consignor detail/edit page
+    app.payouts.tsx              — Payout management page
+    app.sections.tsx             — Store section management
+    app.activity.tsx             — Full activity feed page
+    app.api.products.tsx         — Product search API
+    app.api.brands.tsx           — Brand autocomplete API
+    app.api.taxonomy.tsx         — Shopify taxonomy API
+    app.api.impersonate.tsx      — Generate portal impersonation token
+    app.api.invoice.$id.tsx      — Download invoice PDF
+    portal.dashboard.tsx         — Consignor dashboard
+    portal.listings.tsx          — Consignor listings (infinite scroll mobile)
+    portal.listings_.new.tsx     — Submit new listing
+    portal.payouts.tsx           — Consignor payouts
+    portal.sales.tsx             — Sales history
+    portal.profile.tsx           — Profile edit
+    portal_.login.tsx            — OTP email login
+    webhooks.orders.create.tsx   — Process new order
+    webhooks.orders.fulfilled.tsx — Mark fulfilled, consignor sees "sold"
+    webhooks.refunds.create.tsx  — Process refund
+    health.tsx                   — Health check endpoint
+    app.tsx                      — App shell with nav
+
+  services/                      — Domain-organized, barrel exports
+    admin/                       — Admin dashboard, listing-actions dispatcher, payouts
+    catalog/                     — Product/variant find-or-create
+    consignors/                  — Consignor CRUD, suspension
+    email/                       — 7 transactional email templates (Resend)
+    inventory/                   — Shopify inventory sync
+    listings/                    — Listing mutations + queries
+    orders/                      — Order processing, refunds, balance
+    otp/                         — OTP generation + verification
+    portal/                      — Consignor auth, dashboard, sales, payouts, products
+    shopify/                     — Shopify product sync, taxonomy
+    submission/                  — Submission lifecycle (approve, edit, withdraw, bulk)
+    webhooks/                    — Webhook idempotency (WebhookEvent dedup)
+
   components/
-    CreateListingForm.tsx   — Full listing creation form
-    ListingsTable.tsx       — Flat + grouped-by-product table with thumbnails
-    ListingsFilter.tsx      — Search, status, category, consignor filters
-    QuickAddPopover.tsx     — Inline quick-add popover for existing products
-    Pagination.tsx          — Page navigation
-    CustomSelect.tsx        — Dropdown with label/value support
-    Dropdown.tsx            — Portal-based dropdown (Shadow DOM compatible)
-    StatsCard.tsx           — Dashboard stat card
-    ActionItem.tsx          — Dashboard action item
-    ActivityItem.tsx        — Dashboard activity item
+    admin/
+      shared/                    — StatsCard, ActionItem, ActivityItem, CustomSelect, Dropdown, DateRangeFilter
+      listings/                  — ListingsTable, GroupRows, modals, ListingActionsContext, BulkActionBar
+      create-listing/            — CreateListingForm + Context + sub-components
+      payouts/                   — UnpaidSection, PendingSection, HistorySection
+      consignors/                — ConsignorsListPage, ConsignorDetailPage
+      orders/                    — OrdersListPage, OrderDetailPage
+      sections/                  — SectionsPage
+    portal/
+      shared/                    — AppHeader, Sidebar, GlassSelect, DateRangePicker, InfoTip
+      auth/                      — LoginPage
+      dashboard/                 — DashboardPage
+      listings/                  — ListingGroup, MobileDetailDrawer, InlinePrice, StatusTabs
+      payouts/                   — PayoutsPage
+      profile/                   — ProfilePage
+      sales/                     — SalesPage
+
   lib/
-    listing-ui.ts           — Shared styles and helpers
-    image-processing.ts     — Product image resize and white-square padding
-    size-order.ts           — Size sorting (numeric + clothing sizes)
-    categories/             — Category taxonomy data and helpers
+    domain/                      — LISTING_STATUS, ORDER_STATUS, PAYOUT_STATUS, TRANSACTION_TYPE, CONSIGNOR_STATUS
+    finance/                     — calculateFee, computeTax
+    formatting/                  — csv, currency (fmt), pdf
+    system/                      — env, logger, rate-limit, sentry
+    categories/                  — Constants, auto-suggest, barcode, helpers
+    validation.ts                — Zod schemas
+    size-order.ts                — Size sorting
+    image-processing.ts          — Product image resize
+    deriveProductMetafields.ts   — age_group + target_gender
 
 prisma/
-  schema.prisma             — 12 models
+  schema.prisma                  — 14 models (Session, Consignor, Product, Variant, Listing, Order, OrderItem, Transaction, Payout, PayoutItem, WebhookEvent, ReassignmentLog, OtpCode, StoreSection)
 
-docs/
-  architecture.md
-  FEATURES.md
-  system-diagram.md
-  reseller-system-architecture.md
+tests/                           — 350+ Vitest tests
+docs/                            — Architecture, features, standards, checklists
 ```
 
 ---
@@ -218,25 +250,28 @@ Route files should stay under ~200 lines. Business logic lives in **services**.
 
 # Services Layer
 
-Services contain the core marketplace logic.
+Services contain the core marketplace logic. Organized into domain folders with barrel exports.
 
 ```
 app/services/
+  admin/         — Dashboard stats, listing-actions dispatcher, payouts
+  catalog/       — Product/variant find-or-create
+  consignors/    — Consignor CRUD, suspension
+  email/         — 7 transactional email templates (Resend)
+  inventory/     — Shopify inventory sync
+  listings/      — mutations.server.ts (create/cancel), queries.server.ts (search/filter)
+  orders/        — processing.server.ts, refunds.server.ts, balance.server.ts, queries.server.ts
+  otp/           — OTP generation + verification
+  portal/        — Auth, dashboard, sales, payouts, notifications, products
+  shopify/       — Product sync, taxonomy, helpers
+  submission/    — Approval, edit, lifecycle, bulk, consignor-actions
+  webhooks/      — Webhook idempotency (WebhookEvent dedup)
 ```
 
-Current services:
-
-```
-catalog.server.ts            — findOrCreateProduct, findOrCreateVariant
-dashboard.server.ts          — getDashboardData (stats, activity feed)
-listings.server.ts           — createListing, cancelListing, bulkCancelListings
-listing-queries.server.ts    — queryListings (search, filter, sort, paginate)
-consignors.server.ts         — getConsignorDetail, updateConsignor
-orders.server.ts             — processOrder, cancelOrder, refundOrder, creditOrder, getConsignorBalance
-inventory.server.ts          — syncVariantInventory
-shopify-products.server.ts   — ensureShopifyProductAndVariant, backfillProductImages
-shopify-taxonomy.server.ts   — resolveShopifyTaxonomyId
-webhooks.server.ts           — withWebhookDedup
+Each folder has an `index.ts` barrel export. Import from the folder:
+```typescript
+import { createListing } from "~/services/listings";
+import { processOrder } from "~/services/orders";
 ```
 
 ---
@@ -288,7 +323,7 @@ Server-side search, filter, sort, and pagination for the listings admin page.
 queryListings({ search, status, category, consignorId, sortBy, sortDir, page, limit })
 ```
 
-SQLite-compatible text search across product title, styleId, brand, consignor name/email.
+PostgreSQL case-insensitive text search across product title, styleId, brand, consignor name/email.
 
 ---
 
@@ -390,27 +425,13 @@ Payout lifecycle: `pending` → `invoiced` (future consignor portal) → `paid`
 
 ---
 
-## StockX Integration Service (planned)
-
-Will handle product catalog import from StockX.
-
-Planned functions:
-
-```
-importStockXProduct(styleId)
-fetchProductImages(styleId)
-fetchMarketPrice(styleId)
-```
-
----
-
 # Database Models
 
 The system uses the following Prisma models:
 
 ```
 Session          — Shopify OAuth sessions
-Consignor        — Seller accounts with fee rate
+Consignor        — Seller accounts with fee rate, tax status, store-owned flag
 Product          — Catalog items (styleId, brand, category, imageUrl)
 Variant          — Sizes with optional GTIN barcode
 Listing          — Per-item inventory (1 row = 1 physical item, optional reassignment tracking)
@@ -421,6 +442,8 @@ WebhookEvent     — Idempotent webhook processing
 Payout           — Consignor payout records (pending → invoiced → paid)
 PayoutItem       — Join table linking payouts to specific transactions
 ReassignmentLog  — Audit trail for post-payout refund reassignments
+OtpCode          — OTP codes for portal email login
+StoreSection     — Physical store sections for listing organization
 ```
 
 Data flow:
@@ -494,7 +517,7 @@ Consignor B → $450 (1 listing row)
 Consignor C → $470 (1 listing row)
 ```
 
-Statuses: `active`, `pending_sale`, `sold`, `cancelled`
+Statuses: `submitted`, `approved_awaiting_dropoff`, `active`, `paused`, `pending_sale`, `sold`, `cancelled`, `rejected`, `withdrawal_requested`, `pending_pickup`, `withdrawn`
 
 ---
 

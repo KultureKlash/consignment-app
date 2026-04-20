@@ -75,7 +75,7 @@ All of the following are already in the code:
 
 ## 5. Rate Limits (May Need Tuning)
 
-Current limits in `app/lib/rate-limit.server.ts`:
+Current limits in `app/lib/system/rate-limit.server.ts` (also re-exported at `app/lib/rate-limit.server.ts`):
 
 | Limiter | Limit | Scope | Notes |
 |---------|-------|-------|-------|

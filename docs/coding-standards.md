@@ -76,9 +76,22 @@ logger.error("Shopify sync failed", { listingId, error: err.message });
 
 ## Constants & Magic Strings
 
-- **Use `LISTING_STATUS` from `~/lib/listing-statuses`** — never raw status strings like `"submitted"` or `"active"` in service/component code.
+- **Use status constants from `~/lib/domain`** — never raw status strings in service/component code:
+  - `LISTING_STATUS` — submitted, approved_awaiting_dropoff, active, paused, pending_sale, sold, cancelled, rejected, withdrawal_requested, pending_pickup, withdrawn
+  - `ORDER_STATUS` — open, refunded, cancelled, fulfilled
+  - `PAYOUT_STATUS` — pending, invoiced, paid
+  - `TRANSACTION_TYPE` — sale, refund, void
+  - `CONSIGNOR_STATUS` — active, suspended
 - If a string value is used in 2+ places, extract it to a constant.
-- Status groups (`TERMINAL_STATUSES`, `ACTIVE_STATUSES`) live in `listing-statuses.ts`.
+- Status groups (`TERMINAL_STATUSES`, `ACTIVE_STATUSES`) live in `lib/domain/listing-statuses.ts`.
+
+---
+
+## Fee Calculation
+
+- **Always use `calculateFee` from `~/lib/finance`** for fee/commission/consignor-amount math.
+- Never inline fee arithmetic (`price * feeRate`) — the canonical function handles rounding consistently.
+- Import: `import { calculateFee } from "~/lib/finance";`
 
 ---
 
@@ -162,30 +175,70 @@ logger.error("Shopify sync failed", { listingId, error: err.message });
 
 ---
 
+## Domain Folder Structure
+
+One domain = one folder. Each folder has an `index.ts` barrel export.
+
+**Rule:** Import from the folder, not individual files:
+```typescript
+// Good
+import { createListing } from "~/services/listings";
+import { LISTING_STATUS } from "~/lib/domain";
+import { calculateFee } from "~/lib/finance";
+
+// Bad
+import { createListing } from "~/services/listings/mutations.server";
+```
+
+**Services naming convention:**
+- `mutations.server.ts` — write operations (create, update, delete)
+- `queries.server.ts` — read operations (search, list, detail)
+- `[domain].server.ts` — single-file domains (e.g., `inventory.server.ts`)
+
+---
+
 ## Project Structure
 
 ```
 app/
   components/
-    admin/           — admin UI (inline styles, Shopify theme)
-      listings/      — ListingsTable + sub-components
-      create-listing/ — CreateListingForm + Context + sub-components
-      payouts/       — Payout page sections
-    portal/          — consignor portal (Tailwind, dark glass theme)
-      listings/      — Portal listing components
-    shared/          — Cross-cutting components
-  services/
-    submission/      — Listing submission lifecycle (approve, edit, checkin, withdraw)
-    portal/          — Consignor-facing services (dashboard, sales, payouts, auth)
-    shopify/         — Shopify API integration (products, taxonomy)
-    admin/           — Admin action dispatchers
-    (root)           — Core services (catalog, listings, orders, payouts, inventory)
+    admin/
+      shared/          — Reusable admin UI (StatsCard, CustomSelect, Dropdown, etc.)
+      listings/        — ListingsTable, GroupRows, modals, ListingActionsContext, BulkActionBar
+      create-listing/  — CreateListingForm + Context + sub-components
+      payouts/         — Payout page sections (Unpaid, Pending, History)
+      consignors/      — ConsignorsListPage, ConsignorDetailPage
+      orders/          — OrdersListPage, OrderDetailPage
+      sections/        — SectionsPage
+    portal/
+      shared/          — AppHeader, Sidebar, GlassSelect, DateRangePicker, InfoTip
+      auth/            — LoginPage
+      dashboard/       — DashboardPage
+      listings/        — ListingGroup, MobileDetailDrawer, InlinePrice, StatusTabs
+      payouts/         — PayoutsPage
+      profile/         — ProfilePage
+      sales/           — SalesPage
+  services/            — Domain folders with barrel exports
+    admin/             — Dashboard stats, listing-actions dispatcher, payouts
+    catalog/           — Product/variant find-or-create
+    consignors/        — CRUD, suspension
+    email/             — 7 transactional email templates
+    inventory/         — Shopify inventory sync
+    listings/          — mutations + queries
+    orders/            — processing, refunds, balance, queries
+    otp/               — OTP generation/verification
+    portal/            — Auth, dashboard, sales, payouts, notifications, products
+    shopify/           — Product sync, taxonomy
+    submission/        — Approval, edit, lifecycle, bulk, consignor-actions
+    webhooks/          — Webhook idempotency
   lib/
-    categories/      — Category constants, auto-suggest, barcode generation
-    admin/           — Admin UI helpers and styles
-    (root)           — Shared utilities (validation, tax, currency, pdf, logger)
-  hooks/             — React hooks (useListingToasts, etc.)
-  routes/            — Flat dot-notation (app.*, portal.*, webhooks.*)
+    domain/            — Status constants (LISTING_STATUS, ORDER_STATUS, PAYOUT_STATUS, etc.)
+    finance/           — Fee calculation, tax computation
+    formatting/        — CSV, currency, PDF
+    system/            — Logger, rate-limit, env, sentry
+    categories/        — Category constants, auto-suggest, barcode generation
+    (root)             — Validation, size-order, image-processing, deriveProductMetafields
+  routes/              — Flat dot-notation (app.*, portal.*, webhooks.*, health)
 ```
 
 ---

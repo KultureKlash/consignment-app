@@ -139,6 +139,7 @@ These features enable multi-seller marketplace functionality.
 ## Order Processing
 
 [x] Shopify `orders/create` webhook
+[x] Shopify `orders/fulfilled` webhook (triggers consignor "sold" visibility)
 [x] Shopify `orders/cancelled` webhook
 [x] Shopify `refunds/create` webhook
 [x] Variant detection from order
@@ -302,6 +303,11 @@ Admin manages the marketplace from **inside Shopify Admin** via embedded app.
 [~] Marketplace overview dashboard (has stats, missing trend charts)
 [x] Product catalog management (edit/merge existing products)
 [x] Consignor account freeze / suspension
+[x] Dashboard financial stats toggle (hidden by default for privacy)
+[x] Retry Shopify sync button (re-sync product/variant to Shopify from listing row)
+[x] Invoice download (admin downloads consignor-uploaded invoice PDF)
+[x] Edit cost on sold items (updates transaction snapshots)
+[x] Deny withdrawal (admin can deny a consignor's withdrawal request)
 [ ] Ledger inspection view (browse all transactions)
 
 ---
@@ -347,9 +353,11 @@ Consignor-facing portal for managing listings, sales, and payouts.
 ## Portal Listing Creation
 
 [x] Product search (debounced, searches existing catalog)
+[x] Full-page product search with card grid + infinite scroll
+[x] Word-based search with relevance ranking
 [x] New product creation (title, brand, category, size, GTIN)
 [x] Brand autocomplete API
-[x] Price input with validation
+[x] Price input with validation and auto-formatting
 [x] Image upload (base64)
 [x] Category/subcategory selection
 [x] Edit submitted listings
@@ -372,6 +380,7 @@ Consignor-facing portal for managing listings, sales, and payouts.
 [x] Unbatched sales section (expandable, itemized)
 [x] Active payouts with item breakdown
 [x] Mark Invoice Sent button (business consignors only)
+[x] Invoice PDF upload (business consignors upload PDF, admin downloads)
 [x] Individual consignors: invoice UI hidden, status shows "Processing"
 [x] Payout history (paid)
 [x] Mobile-responsive card layout + desktop table layout
@@ -452,7 +461,7 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 297 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts, submission, listing-management, products)
+[x] Vitest test suite — 350+ tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts, submission, listing-management, fee-calc, metafields, security, session-timeout, tax, payout-statuses, dashboard)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
 [x] Comprehensive seed data (8 consignors incl. 2 shop consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)

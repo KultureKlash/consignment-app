@@ -38,6 +38,9 @@
 | `app.api.products.tsx` | `/app/api/products` | Product search API |
 | `app.api.taxonomy.tsx` | `/app/api/taxonomy` | Shopify taxonomy search API |
 | `app.api.impersonate.tsx` | `/app/api/impersonate` | Generate impersonation token for portal |
+| `app.api.invoice.$id.tsx` | `/app/api/invoice/:id` | Download consignor-uploaded invoice PDF |
+| `app.cleanup.tsx` | `/app/cleanup` | Database cleanup utilities |
+| `app.feedback.tsx` | `/app/feedback` | Admin feedback form |
 
 ## Portal Routes (Consignor-facing, standalone)
 
@@ -59,6 +62,7 @@
 | `portal.api.products.tsx` | `/portal/api/products` | Product search (portal) |
 | `portal.api.market-data.tsx` | `/portal/api/market-data` | Market data (lowest prices) |
 | `portal.api.notifications-read.tsx` | `/portal/api/notifications-read` | Mark notifications read |
+| `portal.feedback.tsx` | `/portal/feedback` | Portal feedback form |
 
 ## Webhook Routes
 
@@ -68,6 +72,7 @@
 | `webhooks.orders.paid.tsx` | orders/paid | Mark order as paid |
 | `webhooks.orders.cancelled.tsx` | orders/cancelled | Handle cancellation |
 | `webhooks.refunds.create.tsx` | refunds/create | Process refund → restock |
+| `webhooks.orders.fulfilled.tsx` | orders/fulfilled | Mark order fulfilled, trigger consignor "sold" visibility |
 | `webhooks.app.scopes_update.tsx` | app/scopes_update | Re-auth on permission change |
 | `webhooks.app.uninstalled.tsx` | app/uninstalled | Cleanup on uninstall |
 
@@ -78,6 +83,7 @@
 | `auth.$.tsx` | Shopify OAuth catch-all |
 | `auth.login/route.tsx` | Shopify OAuth login |
 | `_index/route.tsx` | Root redirect |
+| `health.tsx` | Health check endpoint (`/health`) |
 | `api.products.create.ts` | Product creation REST endpoint |
 
 ---
@@ -86,18 +92,25 @@
 
 ### Admin (`app/components/admin/`)
 
+#### Shared (`app/components/admin/shared/`)
+
 | Component | Purpose |
 |-----------|---------|
-| `ListingsFilter.tsx` | Filter bar — search, status/category/consignor/section chip filters |
 | `StatsCard.tsx` | Dashboard stat card — icon, value, trend, info tooltip |
 | `ActionItem.tsx` | Action required item — glowing color line, count |
 | `ActivityItem.tsx` | Activity feed item |
 | `CustomSelect.tsx` | Dropdown select — searchable, chipStyle support |
 | `DateRangeFilter.tsx` | Date picker — presets + DayPicker calendar |
 | `Dropdown.tsx` | Portal-rendered dropdown container |
+
+#### Top-level admin components (`app/components/admin/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `ListingsFilter.tsx` | Filter bar — search, status/category/consignor/section chip filters |
 | `QuickAddPopover.tsx` | Quick-add listing popover from listings table |
 | `BulkActionBar.tsx` | Floating bulk-action toolbar — approve, activate, cancel selected listings |
-| `Pagination.tsx` | Page navigation (shared) |
+| `DateRangeFilter.tsx` | Date picker (top-level alias) |
 
 #### Listings (`app/components/admin/listings/`)
 
@@ -106,13 +119,21 @@ Refactored from the monolithic `ListingsTable.tsx` into focused sub-components.
 | File | Purpose |
 |------|---------|
 | `types.ts` | Shared TypeScript types — Listing, ProductGroup, VariantInfo, SortKey, Props, EditApproveFields, EditProductFields |
-| `helpers.tsx` | Shared styles and utility functions — sorting, formatting, inline-edit styles |
+| `listing-styles.ts` | Shared inline styles — inputStyle, sectionCard, thStyle, tdStyle, badges |
+| `listing-ui.ts` | UI helpers — status labels, relative time, statusBadge colors |
+| `listing-utils.tsx` | Utility functions — sorting, formatting, grouping logic |
+| `ListingActionsContext.tsx` | React Context for listing actions — eliminates prop drilling for approve/reject/edit/cancel |
 | `SectionPicker.tsx` | Portal-rendered store-section dropdown with search |
 | `GroupRows.tsx` | Expandable product group rows — variant listing rows, inline actions, quick-add |
+| `ListingsFilter.tsx` | Listings-specific filter bar |
+| `BulkActionBar.tsx` | Bulk action toolbar (listings-specific) |
+| `QuickAddPopover.tsx` | Quick-add popover (listings-specific) |
 | `RejectModal.tsx` | Rejection reason modal |
 | `EditListingModal.tsx` | Edit listing fields modal — price, cost, section, status |
 | `EditProductModal.tsx` | Edit product fields modal — title, brand, category, image |
 | `ListingsTable.tsx` | Main listings table — orchestrates group rows, modals, bulk selection |
+| `Pagination.tsx` | Page navigation |
+| `useListingToasts.ts` | Toast notifications for listing action fetcher results |
 | `index.ts` | Barrel export — default ListingsTable + type re-exports |
 
 #### Create Listing (`app/components/admin/create-listing/`)
@@ -131,19 +152,40 @@ Refactored from the monolithic `CreateListingForm.tsx` into focused sub-componen
 | `CreateListingForm.tsx` | Main form — orchestrates all sub-components, handles submit |
 | `index.ts` | Barrel export — default CreateListingForm |
 
+#### Consignors (`app/components/admin/consignors/`)
+
+| File | Purpose |
+|------|---------|
+| `ConsignorsListPage.tsx` | Consignor list — name, email, fee rate, balance |
+| `ConsignorDetailPage.tsx` | Consignor detail — edit, suspend, tax fields, View Portal |
+
+#### Orders (`app/components/admin/orders/`)
+
+| File | Purpose |
+|------|---------|
+| `OrdersListPage.tsx` | Order list with filters, CSV download |
+| `OrderDetailPage.tsx` | Order detail — items, ledger, timeline, tax, cost/profit for store-owned |
+
+#### Sections (`app/components/admin/sections/`)
+
+| File | Purpose |
+|------|---------|
+| `SectionsPage.tsx` | Store section management (add/rename/delete) |
+
 #### Payouts (`app/components/admin/payouts/`)
 
 Refactored payout page sections into standalone components.
 
 | File | Purpose |
 |------|---------|
-| `helpers.tsx` | Shared types (UnpaidEntry, PayoutRef), StatCard component, CSV download helpers |
+| `payoutHelpers.tsx` | Shared types (UnpaidEntry, PayoutRef), StatCard component, CSV download helpers |
 | `UnpaidSection.tsx` | Unpaid consignors section — expandable rows, create payout action, CSV download |
 | `PendingSection.tsx` | Pending payouts section — mark invoiced/paid actions, CSV download |
 | `HistorySection.tsx` | Completed payouts history section — expandable rows, CSV download |
-| `index.ts` | Barrel export — all sections, helpers, types |
 
 ### Portal (`app/components/portal/`)
+
+#### Shared (`app/components/portal/shared/`)
 
 | Component | Purpose |
 |-----------|---------|
@@ -153,97 +195,219 @@ Refactored payout page sections into standalone components.
 | `DateRangePicker.tsx` | Glass-themed date picker — presets + DayPicker, portal rendering |
 | `InfoTip.tsx` | Info tooltip (hover/tap for explanation) |
 
+#### Top-level portal components (`app/components/portal/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `AppHeader.tsx` | Portal header (top-level alias) |
+| `Sidebar.tsx` | Sidebar nav (top-level alias) |
+| `GlassSelect.tsx` | Glass select (top-level alias) |
+| `DateRangePicker.tsx` | Date picker (top-level alias) |
+| `InfoTip.tsx` | Info tooltip (top-level alias) |
+
+#### Auth (`app/components/portal/auth/`)
+
+| File | Purpose |
+|------|---------|
+| `LoginPage.tsx` | OTP email login page component |
+
+#### Dashboard (`app/components/portal/dashboard/`)
+
+| File | Purpose |
+|------|---------|
+| `DashboardPage.tsx` | Consignor dashboard — stats, chart, notifications |
+
 #### Listings (`app/components/portal/listings/`)
 
 Refactored portal listings page into focused sub-components.
 
 | File | Purpose |
 |------|---------|
-| `helpers.ts` | Status constants (labels, colors, tabs), groupByProduct utility, ListingRow/ProductGroup types |
+| `listingHelpers.ts` | Status constants (labels, colors, tabs), groupByProduct utility, ListingRow/ProductGroup types |
 | `StatusBadge.tsx` | Colored pill badge for listing status |
 | `InlinePrice.tsx` | Inline-editable price field with fetcher submit |
-| `ListingGroup.tsx` | Desktop product group — expandable variant rows, action buttons |
+| `ListingGroup.tsx` | Desktop product group — expandable variant rows, action buttons, product images, sort by size |
 | `MobileDetailDrawer.tsx` | Full-screen mobile drawer for listing details and actions |
 | `ConfirmModal.tsx` | Reusable confirmation dialog (cancel, withdraw, delete) |
 | `StatusTabs.tsx` | Active/Inactive/All status filter tab bar |
 | `useInfiniteScroll.ts` | Infinite scroll hook — fetches next page on scroll, merges results |
 | `index.ts` | Barrel export — StatusBadge, InlinePrice, ListingGroup, MobileDetailDrawer, ConfirmModal |
 
+#### Payouts (`app/components/portal/payouts/`)
+
+| File | Purpose |
+|------|---------|
+| `PayoutsPage.tsx` | Portal payouts page — unbatched, pending, paid sections |
+
+#### Profile (`app/components/portal/profile/`)
+
+| File | Purpose |
+|------|---------|
+| `ProfilePage.tsx` | Profile edit — name, email, phone, tax, avatar |
+
+#### Sales (`app/components/portal/sales/`)
+
+| File | Purpose |
+|------|---------|
+| `SalesPage.tsx` | Sales history — date filter, PDF download |
+
 ---
 
 ## Services
 
-### Core (`app/services/`)
+All services are organized into domain folders with barrel exports (`index.ts`). Import from the folder, not individual files.
+
+### Catalog (`app/services/catalog/`)
 
 | Service | Purpose |
 |---------|---------|
 | `catalog.server.ts` | findOrCreateProduct, findOrCreateVariant |
-| `listings.server.ts` | createListing, cancelListing, bulkCancelListings, restoreListing |
-| `submission.server.ts` | Barrel re-export — delegates to `app/services/submission/` sub-modules (see below) |
-| `inventory.server.ts` | syncInventory — sets price + qty on Shopify variant, manages inventory levels |
-| `listing-queries.server.ts` | queryListings — filters, pagination, grouped mode |
-| `orders.server.ts` | processOrder, refundOrder, getConsignorBalance, creditOrder |
-| `order-queries.server.ts` | getOrderDetail |
-| `consignors.server.ts` | createConsignor, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorDetail |
-| `payouts.server.ts` | createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData |
-| `dashboard.server.ts` | getDashboardData, getActivityFeed |
-| `email.server.ts` | sendOtpEmail (Resend SDK) |
-| `otp.server.ts` | generateOtp, verifyOtp |
-| `webhooks.server.ts` | withWebhookDedup (idempotency) |
+| `index.ts` | Barrel export |
 
-### Submission (`app/services/submission/`)
-
-Refactored from the monolithic `submission.server.ts` into focused sub-modules.
+### Listings (`app/services/listings/`)
 
 | Service | Purpose |
 |---------|---------|
-| `portal.server.ts` | submitListing, updateSubmittedListing, deleteSubmittedListing — consignor-facing submission actions |
+| `mutations.server.ts` | createListing, cancelListing, bulkCancelListings, restoreListing |
+| `queries.server.ts` | queryListings — filters, pagination, grouped mode |
+| `index.ts` | Barrel export |
+
+### Orders (`app/services/orders/`)
+
+| Service | Purpose |
+|---------|---------|
+| `processing.server.ts` | processOrder, creditOrder — allocation and sale transactions |
+| `refunds.server.ts` | refundOrder, cancelOrder — refund/cancel with restock |
+| `queries.server.ts` | getOrderDetail |
+| `balance.server.ts` | getConsignorBalance |
+| `index.ts` | Barrel export |
+
+### Consignors (`app/services/consignors/`)
+
+| Service | Purpose |
+|---------|---------|
+| `consignors.server.ts` | createConsignor, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorDetail |
+| `index.ts` | Barrel export |
+
+### Inventory (`app/services/inventory/`)
+
+| Service | Purpose |
+|---------|---------|
+| `inventory.server.ts` | syncInventory, safeSyncInventory — sets price + qty on Shopify variant, manages inventory levels |
+| `index.ts` | Barrel export |
+
+### Email (`app/services/email/`)
+
+| Service | Purpose |
+|---------|---------|
+| `email.server.ts` | 7 email templates — OTP, item sold, payout ready, withdrawal approved, submission confirmed, rejected, suspended |
+| `index.ts` | Barrel export |
+
+### OTP (`app/services/otp/`)
+
+| Service | Purpose |
+|---------|---------|
+| `otp.server.ts` | generateOtp, verifyOtp, cleanExpiredOtps |
+| `index.ts` | Barrel export |
+
+### Webhooks (`app/services/webhooks/`)
+
+| Service | Purpose |
+|---------|---------|
+| `webhooks.server.ts` | withWebhookDedup (idempotency via WebhookEvent model) |
+| `index.ts` | Barrel export |
+
+### Submission (`app/services/submission/`)
+
+Listing submission lifecycle — focused sub-modules.
+
+| Service | Purpose |
+|---------|---------|
+| `consignor-actions.server.ts` | submitListing, updateSubmittedListing, deleteSubmittedListing — consignor-facing submission actions |
 | `approval.server.ts` | approveListing, rejectListing — admin approval/rejection |
 | `edit.server.ts` | adminEditAndApprove, adminEditListing, adminEditProduct — admin inline editing |
-| `lifecycle.server.ts` | activateListing, requestWithdrawal, approveWithdrawal, completeWithdrawal — listing lifecycle transitions |
+| `lifecycle.server.ts` | activateListing, requestWithdrawal, approveWithdrawal, denyWithdrawal, completeWithdrawal — listing lifecycle transitions |
 | `bulk.server.ts` | bulkApproveListing, bulkActivateListing — bulk admin actions |
+| `index.ts` | Barrel export |
 
 ### Admin (`app/services/admin/`)
 
 | Service | Purpose |
 |---------|---------|
-| `listing-actions.server.ts` | Route-level action handler — dispatches listing form intents (approve, reject, edit, cancel, restore, bulk ops) |
+| `listing-actions.server.ts` | Route-level action handler — dispatches listing form intents (approve, reject, edit, cancel, restore, bulk ops, retry sync) |
+| `dashboard.server.ts` | getDashboardData, getActivityFeed — admin dashboard stats |
+| `payouts.server.ts` | getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout |
+| `index.ts` | Barrel export |
 
 ### Portal (`app/services/portal/`)
 
 | Service | Purpose |
 |---------|---------|
 | `auth.server.ts` | authenticatePortal, createSessionCookie, createImpersonationToken, verifyImpersonationToken |
-| `dashboard.server.ts` | getConsignorDashboard — slimmed down, delegates to notifications/sales/payouts sub-modules |
+| `dashboard.server.ts` | getConsignorDashboard — stats, chart, notifications, financial stats toggle |
 | `notifications.server.ts` | buildNotifications, getConsignorNotifications — portal notification feed |
 | `sales.server.ts` | getConsignorSales — sales history with filters and date range |
 | `payouts.server.ts` | getConsignorPayouts — payout history for portal view |
-| `products.server.ts` | searchProducts, getMarketData |
+| `products.server.ts` | searchProducts, getMarketData — word-based search with relevance ranking |
+| `index.ts` | Barrel export |
 
 ### Shopify (`app/services/shopify/`)
 
 | Service | Purpose |
 |---------|---------|
 | `products.server.ts` | ensureShopifyProductAndVariant, updateShopifyProduct, updateShopifyProductImage, backfillProductImages |
+| `shopify-create.server.ts` | Shopify product creation sub-functions |
+| `shopify-helpers.server.ts` | Shopify helper utilities |
 | `taxonomy.server.ts` | resolveShopifyTaxonomyId (search-based), searchShopifyTaxonomy |
-
----
-
-## Hooks (`app/hooks/`)
-
-| Hook | Purpose |
-|------|---------|
-| `useListingToasts.ts` | Shows toast notifications for listing action fetcher results, with optional post-action callback |
+| `index.ts` | Barrel export |
 
 ---
 
 ## Lib / Utilities
 
-### Admin (`app/lib/admin/`)
+### Domain (`app/lib/domain/`)
+
+Status constants and business domain enums.
 
 | File | Purpose |
 |------|---------|
-| `listing-ui.ts` | Shared inline styles: inputStyle, labelStyle, sectionCard, sectionHeader, sectionTitle, statusBadge, thStyle, tdStyle |
+| `listing-statuses.ts` | LISTING_STATUS constants, TERMINAL_STATUSES, ACTIVE_STATUSES, status groups |
+| `order-statuses.ts` | ORDER_STATUS constants (open, refunded, cancelled, fulfilled) |
+| `payout-statuses.ts` | PAYOUT_STATUS constants (pending, invoiced, paid), TRANSACTION_TYPE, CONSIGNOR_STATUS |
+| `index.ts` | Barrel export |
+
+### Finance (`app/lib/finance/`)
+
+Financial calculation utilities.
+
+| File | Purpose |
+|------|---------|
+| `fee-calc.ts` | calculateFee — canonical fee/commission/consignor-amount calculation |
+| `tax.ts` | computeTax — GST/QST calculation per province (QC: GST+QST, others: GST only) |
+| `index.ts` | Barrel export |
+
+### Formatting (`app/lib/formatting/`)
+
+Display and export utilities.
+
+| File | Purpose |
+|------|---------|
+| `csv.ts` | generateCsv, downloadCsv — client-side CSV generation |
+| `currency.ts` | fmt() — format number as $X,XXX.XX |
+| `pdf.ts` | downloadStatement — PDF payout statements with jsPDF + autoTable |
+| `index.ts` | Barrel export |
+
+### System (`app/lib/system/`)
+
+Infrastructure and cross-cutting concerns.
+
+| File | Purpose |
+|------|---------|
+| `env.server.ts` | Environment variable access and validation |
+| `logger.server.ts` | Structured JSON logger (info, error, warn) |
+| `rate-limit.server.ts` | In-memory sliding-window rate limiter (login: 10/15min, portal API: 60/min, forms: 20/min) |
+| `sentry.server.ts` | Sentry error tracking integration |
+| `index.ts` | Barrel export |
 
 ### Categories (`app/lib/categories/`)
 
@@ -257,16 +421,26 @@ Refactored from the monolithic `submission.server.ts` into focused sub-modules.
 
 ### Root (`app/lib/`)
 
+Legacy files (many re-exported via domain folders above).
+
 | File | Purpose |
 |------|---------|
-| `tax.ts` | computeTax — GST/QST calculation per province (QC: GST+QST, others: GST only) |
-| `csv.ts` | generateCsv, downloadCsv — client-side CSV generation |
-| `pdf.ts` | downloadStatement — PDF payout statements with jsPDF + autoTable |
-| `currency.ts` | fmt() — format number as $X,XXX.XX |
+| `tax.ts` | computeTax (legacy location — canonical is `finance/tax.ts`) |
+| `csv.ts` | generateCsv (legacy location — canonical is `formatting/csv.ts`) |
+| `pdf.ts` | downloadStatement (legacy location — canonical is `formatting/pdf.ts`) |
+| `currency.ts` | fmt() (legacy location — canonical is `formatting/currency.ts`) |
+| `fee-calc.ts` | calculateFee (legacy location — canonical is `finance/fee-calc.ts`) |
+| `listing-statuses.ts` | LISTING_STATUS (legacy location — canonical is `domain/listing-statuses.ts`) |
+| `order-statuses.ts` | ORDER_STATUS (legacy location — canonical is `domain/order-statuses.ts`) |
+| `payout-statuses.ts` | PAYOUT_STATUS (legacy location — canonical is `domain/payout-statuses.ts`) |
 | `validation.ts` | Zod schemas: createConsignor, updateConsignor, submitListing, adminEditListing, verifyOtp, etc. |
-| `rate-limit.server.ts` | In-memory sliding-window rate limiter (login: 10/15min, portal API: 60/min, forms: 20/min) |
+| `rate-limit.server.ts` | Rate limiter (legacy location — canonical is `system/rate-limit.server.ts`) |
+| `logger.server.ts` | Logger (legacy location — canonical is `system/logger.server.ts`) |
+| `env.server.ts` | Env (legacy location — canonical is `system/env.server.ts`) |
+| `sentry.server.ts` | Sentry (legacy location — canonical is `system/sentry.server.ts`) |
 | `size-order.ts` | compareSizes — intelligent size sorting (numeric, clothing letters, OS) |
 | `image-processing.ts` | processProductImage — resize/compress for upload |
+| `deriveProductMetafields.ts` | Derive age_group + target_gender from category/title |
 
 ---
 
@@ -304,15 +478,21 @@ Refactored from the monolithic `submission.server.ts` into focused sub-modules.
 | `catalog.test.ts` | findOrCreateProduct, findOrCreateVariant |
 | `categories.test.ts` | autoSuggest, buildCategory, parseCategory, isFootwear, abbreviations, barcode |
 | `consignors.test.ts` | CRUD, suspension, tax fields |
+| `dashboard.test.ts` | getDashboardData, getActivityFeed |
+| `fee-calc.test.ts` | calculateFee edge cases, rounding |
 | `inventory.test.ts` | syncInventory, price sync, qty calculation |
 | `listing-management.test.ts` | Cancel, restore, bulk operations |
 | `listings.test.ts` | createListing end-to-end |
+| `metafields.test.ts` | deriveProductMetafields (age_group, target_gender) |
 | `orders.test.ts` | processOrder, refund, balance calculation |
+| `payout-statuses.test.ts` | PAYOUT_STATUS, TRANSACTION_TYPE, CONSIGNOR_STATUS constants |
 | `payouts.test.ts` | createPayout, markInvoiced, markPaid, cancel |
 | `security.test.ts` | Auth, rate limiting, HMAC cookies, OTP |
+| `session-timeout.test.ts` | Cookie idle/absolute timeout, sliding window |
 | `shopify-products.test.ts` | ensureShopifyProductAndVariant, SKU generation, taxonomy |
 | `shopify-taxonomy.test.ts` | resolveShopifyTaxonomyId, searchShopifyTaxonomy |
 | `submission.test.ts` | approve, reject, activate, edit, withdrawal lifecycle |
+| `tax.test.ts` | computeTax per-province calculations |
 | `webhooks.test.ts` | Webhook dedup, order processing |
 | `setup.ts` | Test setup — clean DB before each test |
 | `helpers/mock-admin.ts` | Mock Shopify admin client for tests |

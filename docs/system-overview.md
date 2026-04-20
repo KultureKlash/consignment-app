@@ -10,9 +10,9 @@ A Shopify embedded app that powers a consignment marketplace. The local database
 |-------|-----------|
 | **Framework** | React Router 7 (Remix-style file routing) + Vite |
 | **Language** | TypeScript (ESM) |
-| **Database** | Prisma ORM → SQLite (dev) / PostgreSQL (prod) |
+| **Database** | Prisma ORM → PostgreSQL (Docker local dev, Neon cloud prod) |
 | **Shopify** | @shopify/shopify-app-react-router, App Bridge React, Admin API (October 2025) |
-| **UI** | Shopify Shadow DOM components (`s-page`, `s-button`, etc.) + inline CSSProperties |
+| **UI** | Shopify Shadow DOM components (`s-page`, `s-button`, etc.) + Tailwind CSS |
 | **Icons** | Lucide React |
 | **Animation** | Framer Motion |
 | **Testing** | Vitest (unit/integration), Playwright (e2e) |
@@ -52,16 +52,17 @@ vite                                 — Build tool + HMR
                                  │
                     ┌────────────▼────────────┐
                     │    Services Layer       │
-                    │  (one concern per file) │
+                    │  (domain folders)       │
                     │                         │
-                    │  catalog ← listings ──→ shopify-products
+                    │  catalog/ ← listings/ ──→ shopify/
                     │              │              │
                     │              ▼              ▼
-                    │          inventory    shopify-taxonomy
+                    │          inventory/    shopify/taxonomy
                     │              │
-                    │  orders ─────┘
-                    │  webhooks (dedup wrapper)
-                    │  listing-queries (search/filter)
+                    │  orders/ ────┘
+                    │  webhooks/ (dedup wrapper)
+                    │  submission/ (approve, edit, lifecycle)
+                    │  portal/ (auth, dashboard, sales)
                     └────────────┬────────────┘
                                  │
                     ┌────────────▼────────────┐
@@ -69,7 +70,7 @@ vite                                 — Build tool + HMR
                     └────────────┬────────────┘
                                  │
                     ┌────────────▼────────────┐
-                    │    SQLite / PostgreSQL  │
+                    │    PostgreSQL           │
                     └─────────────────────────┘
 ```
 
@@ -97,7 +98,7 @@ export default prisma;
 
 ## Database Schema
 
-10 models. All IDs are CUID strings unless noted. Nullable Shopify IDs allow records to exist before being synced to Shopify.
+14 models. All IDs are CUID strings unless noted. Nullable Shopify IDs allow records to exist before being synced to Shopify.
 
 ### Entity Relationship Diagram
 
@@ -309,18 +310,18 @@ Tracks payments made to consignors.
 
 ## Services
 
-All service files live in `app/services/`. Each owns one concern.
+All services are organized into domain folders under `app/services/`. Each folder has an `index.ts` barrel export. Import from the folder: `import { createListing } from "~/services/listings"`.
 
 ### Service Call Graph
 
 ```
 createListing()
-  ├── findOrCreateProduct()        ← catalog.server.ts
-  ├── findOrCreateVariant()        ← catalog.server.ts
-  ├── generateBarcode()            ← lib/categories
-  ├── ensureShopifyProductAndVariant()  ← shopify-products.server.ts
-  │     └── resolveShopifyTaxonomyId()  ← shopify-taxonomy.server.ts
-  └── syncInventory()              ← inventory.server.ts
+  ├── findOrCreateProduct()        ← services/catalog/
+  ├── findOrCreateVariant()        ← services/catalog/
+  ├── generateBarcode()            ← lib/categories/
+  ├── ensureShopifyProductAndVariant()  ← services/shopify/
+  │     └── resolveShopifyTaxonomyId()  ← services/shopify/
+  └── syncInventory()              ← services/inventory/
 
 processOrder()
   ├── [allocate listings in transaction]
@@ -332,7 +333,7 @@ cancelOrder() / refundOrder()
   └── syncInventory() × N variants
 ```
 
-### catalog.server.ts
+### services/catalog/catalog.server.ts
 **Purpose:** Database-only product/variant lookup and creation. No Shopify calls.
 
 | Function | What it does |
@@ -343,7 +344,7 @@ cancelOrder() / refundOrder()
 - Case-insensitive search (handles SQLite sensitivity quirks)
 - Footwear identified by presence of `styleId`
 
-### listings.server.ts
+### services/listings/mutations.server.ts
 **Purpose:** Create and cancel per-item listings.
 
 **`createListing()` — 5-step flow:**
@@ -358,7 +359,7 @@ cancelOrder() / refundOrder()
 
 **`cancelListing()`:** Sets status to `"cancelled"`, syncs inventory.
 
-### listing-queries.server.ts
+### services/listings/queries.server.ts
 **Purpose:** Paginated, filtered listing search for the admin UI.
 
 **`queryListings(filters)`** supports:
@@ -367,7 +368,7 @@ cancelOrder() / refundOrder()
 - Sort by: date, price, status (asc/desc)
 - Pagination with configurable page size (default 25)
 
-### orders.server.ts
+### services/orders/ (processing.server.ts, refunds.server.ts, balance.server.ts)
 **Purpose:** Full order lifecycle — allocation, payment, cancellation, refunds, balance.
 
 | Function | What it does |
@@ -394,7 +395,7 @@ ORDER BY price DESC, createdAt DESC
 
 All mutations happen inside `prisma.$transaction()`. Inventory sync happens after the transaction commits.
 
-### shopify-products.server.ts
+### services/shopify/products.server.ts
 **Purpose:** Sync products and variants to Shopify Admin API.
 
 **`ensureShopifyProductAndVariant()`:**
@@ -407,7 +408,7 @@ All mutations happen inside `prisma.$transaction()`. Inventory sync happens afte
 
 **Key Shopify API detail (October 2025):** `ProductCreateInput` does NOT accept `variants` as input. You define `productOptions` with `values`, and Shopify auto-creates variants from the option values. Read them back from the response.
 
-### shopify-taxonomy.server.ts
+### services/shopify/taxonomy.server.ts
 **Purpose:** Map local categories to Shopify taxonomy GIDs.
 
 | Function | What it does |
@@ -417,7 +418,7 @@ All mutations happen inside `prisma.$transaction()`. Inventory sync happens afte
 
 Uses process-level in-memory cache. Caches null results to avoid repeated lookups for unknown categories.
 
-### inventory.server.ts
+### services/inventory/inventory.server.ts
 **Purpose:** Sync inventory count and price to Shopify.
 
 **`syncInventory()` — Lowest-price-tier model:**
@@ -432,7 +433,7 @@ Uses process-level in-memory cache. Caches null results to avoid repeated lookup
 
 **Why lowest-price-tier?** Shopify shows one price per variant. We show the lowest available price and stock only the items at that price. Higher-priced listings become available after lower ones sell.
 
-### webhooks.server.ts
+### services/webhooks/webhooks.server.ts
 **Purpose:** Idempotent webhook processing via `WebhookEvent` table.
 
 **`withWebhookDedup(shopifyEventId, topic, shopifyObjectId, handler)`:**
@@ -461,14 +462,33 @@ app/routes/
 │   ├── app._index.tsx              → /app (Dashboard)
 │   ├── app.inventory.tsx           → /app/inventory (Create Listing form)
 │   ├── app.listings.tsx            → /app/listings (Listings table + filters)
-│   ├── app.orders.tsx              → /app/orders (Order monitoring)
+│   ├── app.orders.tsx              → /app/orders (Order list)
+│   ├── app.orders_.$id.tsx         → /app/orders/:id (Order detail)
 │   ├── app.consignors.tsx          → /app/consignors (Seller management)
+│   ├── app.consignors_.$id.tsx     → /app/consignors/:id (Consignor detail)
+│   ├── app.payouts.tsx             → /app/payouts (Payout management)
+│   ├── app.sections.tsx            → /app/sections (Store sections)
+│   ├── app.activity.tsx            → /app/activity (Full activity feed)
 │   ├── app.api.products.tsx        → /app/api/products?q= (JSON: product search)
 │   ├── app.api.brands.tsx          → /app/api/brands?q= (JSON: brand autocomplete)
-│   └── app.api.taxonomy.tsx        → /app/api/taxonomy?q= (JSON: Shopify categories)
+│   ├── app.api.taxonomy.tsx        → /app/api/taxonomy?q= (JSON: Shopify categories)
+│   ├── app.api.impersonate.tsx     → /app/api/impersonate (Portal impersonation)
+│   └── app.api.invoice.$id.tsx     → /app/api/invoice/:id (Invoice PDF download)
+├── portal.tsx                      → Layout: /portal/* (auth guard + sidebar)
+│   ├── portal.dashboard.tsx        → /portal/dashboard
+│   ├── portal.listings.tsx         → /portal/listings
+│   ├── portal.listings_.new.tsx    → /portal/listings/new
+│   ├── portal.payouts.tsx          → /portal/payouts
+│   ├── portal.sales.tsx            → /portal/sales
+│   └── portal.profile.tsx          → /portal/profile
+├── portal_.login.tsx               → /portal/login (OTP email)
+├── portal_.logout.tsx              → /portal/logout
+├── portal_.impersonate.tsx         → /portal/impersonate (token accept)
+├── health.tsx                      → /health (health check)
 ├── auth.$.tsx                      → OAuth callback (Shopify-managed)
 ├── webhooks.orders.create.tsx      → Webhook: orders/create
 ├── webhooks.orders.paid.tsx        → Webhook: orders/paid
+├── webhooks.orders.fulfilled.tsx   → Webhook: orders/fulfilled
 ├── webhooks.orders.cancelled.tsx   → Webhook: orders/cancelled
 ├── webhooks.refunds.create.tsx     → Webhook: refunds/create
 ├── webhooks.app.uninstalled.tsx    → Webhook: app/uninstalled
@@ -667,6 +687,16 @@ Consignors see "sold" only when the order is paid and listing transitions from `
 
 ## Lib Helpers
 
+Organized into domain folders with barrel exports:
+
+| Folder | Purpose |
+|--------|---------|
+| `lib/domain/` | Status constants: LISTING_STATUS, ORDER_STATUS, PAYOUT_STATUS, TRANSACTION_TYPE, CONSIGNOR_STATUS |
+| `lib/finance/` | `calculateFee()`, `computeTax()` — canonical financial math |
+| `lib/formatting/` | `fmt()` (currency), `generateCsv()`, `downloadStatement()` (PDF) |
+| `lib/system/` | `logger`, `rateLimiter`, `env`, `sentry` — infrastructure |
+| `lib/categories/` | Category constants, auto-suggest, barcode generation, helpers |
+
 ### Categories (`app/lib/categories/`)
 
 | File | Exports |
@@ -676,24 +706,19 @@ Consignors see "sold" only when the order is paid and listing transitions from `
 | `barcode.ts` | `generateBarcode(brand, sub, size)` → `"FOG-HOD-L-A7X2KM9B"`, `abbreviateBrand()`, `abbreviateSubcategory()` |
 | `auto-suggest.ts` | `autoSuggest(title)` → `{brand?, mainCategory?, subCategory?}` from keyword rules |
 
-### Listing UI (`app/lib/listing-ui.ts`)
-
-Shared inline styles (inputStyle, labelStyle, etc.), status badge colors, `relativeTime()` formatter, `statusLabel()` display names. Used across listing components.
-
 ---
 
 ## Components
 
-All in `app/components/`. All use inline CSSProperties (no CSS files).
+All in `app/components/`. Admin uses Tailwind CSS. Portal uses Tailwind with dark glass theme.
 
-| Component | Purpose |
-|-----------|---------|
-| `CreateListingForm` | Full listing creation form: product search, size, GTIN, brand/category autocomplete, Shopify taxonomy override |
-| `ListingsTable` | Flat or grouped-by-product table with sortable columns |
-| `ListingsFilter` | Search + status + category + consignor filter bar with debounced search |
-| `Pagination` | Page navigation (shows 5 pages around current) |
-| `CustomSelect` | Custom dropdown supporting label/value pairs |
-| `Dropdown` | Portal-based dropdown positioned under anchor (Shadow DOM compatible) |
+Components are organized into domain folders:
+- `admin/shared/` — Reusable admin UI (StatsCard, CustomSelect, Dropdown, etc.)
+- `admin/listings/` — ListingsTable, GroupRows, modals, ListingActionsContext
+- `admin/create-listing/` — CreateListingForm + Context + sub-components
+- `admin/payouts/` — Payout page sections
+- `portal/shared/` — AppHeader, Sidebar, GlassSelect, DateRangePicker
+- `portal/listings/` — ListingGroup, MobileDetailDrawer, InlinePrice, StatusTabs
 
 ---
 
@@ -701,8 +726,8 @@ All in `app/components/`. All use inline CSSProperties (no CSS files).
 
 **Config:** `vitest.config.ts`
 
-- Database: `file:./test.sqlite` (isolated from dev DB)
-- `fileParallelism: false` — tests run sequentially (shared SQLite file)
+- Database: PostgreSQL test database (isolated from dev DB)
+- `fileParallelism: false` — tests run sequentially (shared DB)
 - `pool: "forks"` — separate process per test file
 
 **Setup:** `tests/setup.ts`
@@ -723,6 +748,11 @@ createTestConsignor(overrides?) → Consignor with defaults
 - `tests/shopify-products.test.ts` — Product/variant Shopify sync
 - `tests/shopify-taxonomy.test.ts` — Taxonomy resolution
 - `tests/categories.test.ts` — Auto-suggestion rules
+- `tests/fee-calc.test.ts` — Fee calculation edge cases
+- `tests/security.test.ts` — Auth, rate limiting, HMAC cookies
+- `tests/submission.test.ts` — Submission lifecycle (approve, reject, edit, withdraw)
+- `tests/dashboard.test.ts` — Dashboard stats and activity feed
+- `tests/tax.test.ts` — Province-based tax computation
 
 ---
 
