@@ -4,7 +4,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useCallback, useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/admin-payouts.server";
+import { getPayoutsPageData, createPayout, markInvoiced, markPaid, cancelPayout } from "~/services/admin";
 import { fmt } from "~/lib/currency";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import { DollarSign, Clock, CheckCircle2, FileText, X } from "lucide-react";

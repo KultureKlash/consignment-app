@@ -1,10 +1,10 @@
 import prisma from "~/db.server";
-import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
-import { syncInventory } from "~/services/inventory.server";
-import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
-import { logger } from "~/lib/logger.server";
-import { sendSubmissionConfirmedEmail } from "~/services/email.server";
+import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog";
+import { syncInventory } from "~/services/inventory";
+import { LISTING_STATUS } from "~/lib/domain";
+import { CONSIGNOR_STATUS } from "~/lib/domain";
+import { logger } from "~/lib/system";
+import { sendSubmissionConfirmedEmail } from "~/services/email";
 
 /** Throws if the consignor account is suspended. Used by all portal-facing functions. */
 async function requireActiveConsignor(consignorId: string) {

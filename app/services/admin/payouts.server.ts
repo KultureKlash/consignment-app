@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
-import { sendPayoutReadyEmail } from "~/services/email.server";
-import { PAYOUT_STATUS } from "~/lib/payout-statuses";
-import { TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { sendPayoutReadyEmail } from "~/services/email";
+import { PAYOUT_STATUS } from "~/lib/domain";
+import { TRANSACTION_TYPE } from "~/lib/domain";
 
 /**
  * Get all data needed for the payouts admin page:

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma } from "./setup";
-import { withWebhookDedup } from "~/services/webhooks.server";
+import { withWebhookDedup } from "~/services/webhooks";
 
 describe("webhooks.server — withWebhookDedup", () => {
   it("processes new events and marks them completed", async () => {

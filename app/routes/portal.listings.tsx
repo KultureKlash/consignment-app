@@ -5,7 +5,7 @@ import { redirect } from "react-router";
 import { Plus, Package, Search, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal } from "~/services/submission.server";
+import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal } from "~/services/submission";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 import { LISTING_STATUS } from "~/lib/listing-statuses";

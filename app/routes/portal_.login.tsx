@@ -23,7 +23,7 @@ export async function action({ request }: ActionFunctionArgs) {
       const { requestOtpSchema, parseForm } = await import("~/lib/validation");
       const data = parseForm(requestOtpSchema, form);
 
-      const { requestOtp } = await import("~/services/otp.server");
+      const { requestOtp } = await import("~/services/otp");
       const result = await requestOtp(data.email);
 
       if (result.error) return { error: result.error };
@@ -34,7 +34,7 @@ export async function action({ request }: ActionFunctionArgs) {
       const { verifyOtpSchema, parseForm } = await import("~/lib/validation");
       const parsed = parseForm(verifyOtpSchema, form);
 
-      const { verifyOtp } = await import("~/services/otp.server");
+      const { verifyOtp } = await import("~/services/otp");
       const result = await verifyOtp(parsed.email, parsed.code);
 
       if ("error" in result) return { error: result.error, email: parsed.email };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { deleteListing, bulkDeleteListings } from "~/services/listing-mutations.server";
+import { deleteListing, bulkDeleteListings } from "~/services/listings";
 
 async function createTestListing(overrides: { price?: number; status?: string } = {}) {
   const consignor = await createTestConsignor();

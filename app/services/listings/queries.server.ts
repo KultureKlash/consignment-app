@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { Prisma } from "@prisma/client";
 import { CATEGORIES } from "~/lib/categories";
-import { logger } from "~/lib/logger.server";
+import { logger } from "~/lib/system";
 
 export type ListingFilters = {
   search?: string;

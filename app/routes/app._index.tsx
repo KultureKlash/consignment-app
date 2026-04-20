@@ -3,7 +3,7 @@ import { Link, useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getDashboardData } from "~/services/admin-dashboard.server";
+import { getDashboardData } from "~/services/admin";
 import { motion } from "framer-motion";
 import { Package, ShoppingBag, TrendingUp, DollarSign, History, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { fmt } from "~/lib/currency";

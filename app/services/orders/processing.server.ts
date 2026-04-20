@@ -1,10 +1,10 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { syncInventory } from "~/services/inventory.server";
+import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { calculateFee } from "~/lib/fee-calc";
-import { sendItemSoldEmail } from "~/services/email.server";
+import { sendItemSoldEmail } from "~/services/email";
 
 /**
  * Process an incoming order — allocate per-item listings to order items.

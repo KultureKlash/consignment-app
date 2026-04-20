@@ -1,5 +1,5 @@
-import { createWebhookHandler } from "~/services/webhooks.server";
-import { fulfillOrder } from "~/services/orders.server";
+import { createWebhookHandler } from "~/services/webhooks";
+import { fulfillOrder } from "~/services/orders";
 
 export const action = createWebhookHandler({
   idPrefix: "fulfilled",

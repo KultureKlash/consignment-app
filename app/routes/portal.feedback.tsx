@@ -5,7 +5,7 @@ import { redirect } from "react-router";
 import { MessageSquare, Bug, Lightbulb, HelpCircle, Check } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { sendEmail } from "~/services/email.server";
+import { sendEmail } from "~/services/email";
 import { logger } from "~/lib/logger.server";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";

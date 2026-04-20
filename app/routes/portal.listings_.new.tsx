@@ -2,7 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { redirect } from "react-router";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { submitListing } from "~/services/submission.server";
+import { submitListing } from "~/services/submission";
 import { isFootwear, buildCategory } from "~/lib/categories";
 import { NewListingPage } from "~/components/portal/listings/new/NewListingPage";
 import type { ProductResult } from "~/components/portal/listings/new/NewListingPage";

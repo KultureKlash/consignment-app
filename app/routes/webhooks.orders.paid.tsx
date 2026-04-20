@@ -1,5 +1,5 @@
-import { creditOrder } from "~/services/orders.server";
-import { createWebhookHandler } from "~/services/webhooks.server";
+import { creditOrder } from "~/services/orders";
+import { createWebhookHandler } from "~/services/webhooks";
 
 export const action = createWebhookHandler({
   idPrefix: "paid",

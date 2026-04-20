@@ -1,5 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { deleteListing, bulkDeleteListings, createListing, restoreListing } from "~/services/listing-mutations.server";
+import { deleteListing, bulkDeleteListings, createListing, restoreListing } from "~/services/listings";
 import {
   approveListing,
   rejectListing,
@@ -13,10 +13,10 @@ import {
   denyWithdrawal,
   completeWithdrawal,
   updateListingCost,
-} from "~/services/submission.server";
+} from "~/services/submission";
 import prisma from "~/db.server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
-import { syncInventory } from "~/services/inventory.server";
+import { syncInventory } from "~/services/inventory";
 
 export async function handleListingAction(admin: AdminApiContext, formData: FormData) {
   const intent = formData.get("intent") as string;

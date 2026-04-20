@@ -1,11 +1,10 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
+import { findOrCreateProduct, findOrCreateVariant, ensureVariantBarcode } from "~/services/catalog";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
-import { syncInventory } from "~/services/inventory.server";
-import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { ensureVariantBarcode } from "~/services/catalog.server";
-import { logger } from "~/lib/logger.server";
+import { syncInventory } from "~/services/inventory";
+import { LISTING_STATUS } from "~/lib/domain";
+import { logger } from "~/lib/system";
 
 export async function createListing({
   admin,

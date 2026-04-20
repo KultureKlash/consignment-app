@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
-import { syncInventory } from "~/services/inventory.server";
+import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS, TERMINAL_STATUSES } from "~/lib/listing-statuses";
 import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { logger } from "~/lib/logger.server";

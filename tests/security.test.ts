@@ -5,7 +5,7 @@ import {
   authenticatePortal,
   createSessionCookie,
 } from "~/services/portal/auth.server";
-import { requestOtp, verifyOtp } from "~/services/otp.server";
+import { requestOtp, verifyOtp } from "~/services/otp";
 import { checkRateLimit } from "~/lib/rate-limit.server";
 import {
   requestOtpSchema,
@@ -459,7 +459,7 @@ describe("Authorization — ownership checks", () => {
       data: { variantId: variant.id, consignorId: victim.id, price: 100, status: "submitted" },
     });
 
-    const { deleteSubmittedListing } = await import("~/services/submission.server");
+    const { deleteSubmittedListing } = await import("~/services/submission");
     await expect(
       deleteSubmittedListing({ listingId: listing.id, consignorId: attacker.id })
     ).rejects.toThrow();
@@ -475,7 +475,7 @@ describe("Authorization — ownership checks", () => {
       data: { variantId: variant.id, consignorId: victim.id, price: 200, status: "submitted" },
     });
 
-    const { updateSubmittedListing } = await import("~/services/submission.server");
+    const { updateSubmittedListing } = await import("~/services/submission");
     await expect(
       updateSubmittedListing({ listingId: listing.id, consignorId: attacker.id, size: "9", price: 1 })
     ).rejects.toThrow();
@@ -491,7 +491,7 @@ describe("Authorization — ownership checks", () => {
       data: { variantId: variant.id, consignorId: victim.id, price: 300, status: "active" },
     });
 
-    const { requestWithdrawal } = await import("~/services/submission.server");
+    const { requestWithdrawal } = await import("~/services/submission");
     await expect(
       requestWithdrawal({ listingId: listing.id, consignorId: attacker.id })
     ).rejects.toThrow();

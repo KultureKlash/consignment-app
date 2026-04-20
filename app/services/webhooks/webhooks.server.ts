@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import prisma from "~/db.server";
-import { logger } from "~/lib/logger.server";
+import { logger } from "~/lib/system";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 

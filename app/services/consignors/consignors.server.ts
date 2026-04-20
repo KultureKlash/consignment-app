@@ -1,8 +1,8 @@
 import prisma from "~/db.server";
-import { getConsignorBalance } from "~/services/orders.server";
-import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
-import { sendAccountSuspendedEmail } from "~/services/email.server";
+import { getConsignorBalance } from "~/services/orders";
+import { LISTING_STATUS } from "~/lib/domain";
+import { CONSIGNOR_STATUS } from "~/lib/domain";
+import { sendAccountSuspendedEmail } from "~/services/email";
 
 /**
  * Get full consignor detail: profile + balance + listing status counts.

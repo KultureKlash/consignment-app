@@ -16,7 +16,7 @@ import {
   denyWithdrawal,
   completeWithdrawal,
   adminEditAndApprove,
-} from "~/services/submission.server";
+} from "~/services/submission";
 
 describe("submission pipeline", () => {
   // ── Submit ──

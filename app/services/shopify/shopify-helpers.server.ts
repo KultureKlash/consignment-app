@@ -1,5 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { getPrimaryLocationId } from "~/services/inventory.server";
+import { getPrimaryLocationId } from "~/services/inventory";
 import { compareSizes } from "~/lib/size-order";
 import { logger } from "~/lib/logger.server";
 import type { Product, Variant } from "@prisma/client";

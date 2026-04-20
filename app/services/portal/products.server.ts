@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { searchProducts as searchProductsBase } from "~/services/catalog.server";
+import { searchProducts as searchProductsBase } from "~/services/catalog";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 export type PortalProductResult = {

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
-import { queryListings } from "~/services/listing-queries.server";
+import { queryListings } from "~/services/listings";
 import { handleListingAction } from "~/services/admin/listing-actions.server";
 import { useListingToasts } from "~/components/admin/listings/useListingToasts";
 import ListingsFilter from "~/components/admin/ListingsFilter";

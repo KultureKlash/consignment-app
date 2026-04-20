@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { ORDER_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { ORDER_STATUS, TRANSACTION_TYPE } from "~/lib/domain";
 
 export async function getOrderDetail(id: string) {
   const order = await prisma.order.findUnique({

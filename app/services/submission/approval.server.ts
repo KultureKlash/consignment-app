@@ -1,6 +1,6 @@
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { sendListingApprovedEmail, sendListingRejectedEmail } from "~/services/email.server";
+import { sendListingApprovedEmail, sendListingRejectedEmail } from "~/services/email";
 
 // ── Admin: Approve a submitted listing ──
 

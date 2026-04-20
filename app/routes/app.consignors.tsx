@@ -2,8 +2,8 @@ import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "re
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getConsignorBalance } from "~/services/orders.server";
-import { createConsignor } from "~/services/consignors.server";
+import { getConsignorBalance } from "~/services/orders";
+import { createConsignor } from "~/services/consignors";
 import prisma from "~/db.server";
 import { ConsignorsListPage } from "~/components/admin/consignors/ConsignorsListPage";
 

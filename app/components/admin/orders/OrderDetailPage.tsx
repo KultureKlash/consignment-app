@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
-import type { getOrderDetail } from "~/services/order-queries.server";
+import type { getOrderDetail } from "~/services/orders";
 
 // ── Types ──
 

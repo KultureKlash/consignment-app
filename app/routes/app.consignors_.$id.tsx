@@ -4,8 +4,8 @@ import { authenticate } from "../shopify.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { logger } from "~/lib/logger.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors.server";
-import { syncInventory } from "~/services/inventory.server";
+import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor, getConsignorVariantIds } from "~/services/consignors";
+import { syncInventory } from "~/services/inventory";
 import prisma from "~/db.server";
 import { ConsignorDetailPage } from "~/components/admin/consignors/ConsignorDetailPage";
 

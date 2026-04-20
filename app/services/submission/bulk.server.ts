@@ -2,7 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { checkinListing } from "./lifecycle.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { sendListingApprovedEmail, sendListingLiveEmail } from "~/services/email.server";
+import { sendListingApprovedEmail, sendListingLiveEmail } from "~/services/email";
 
 // ── Admin: Bulk approve ──
 

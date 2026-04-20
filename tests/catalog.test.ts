@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog.server";
+import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog";
 
 describe("catalog.server", () => {
   describe("findOrCreateProduct", () => {

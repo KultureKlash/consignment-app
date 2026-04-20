@@ -1,8 +1,8 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Variant } from "@prisma/client";
-import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { logger } from "~/lib/logger.server";
+import { LISTING_STATUS } from "~/lib/domain";
+import { logger } from "~/lib/system";
 
 export async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(`#graphql

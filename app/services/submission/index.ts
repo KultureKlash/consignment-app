@@ -1,32 +1,31 @@
-// Barrel re-export — actual implementations are in app/services/submission/
 export {
   submitListing,
   updateSubmittedListing,
   deleteSubmittedListing,
   updateActiveListingPrice,
   requestWithdrawal,
-} from "./submission/portal.server";
+} from "./consignor-actions.server";
 
 export {
   approveListing,
   rejectListing,
   adminEditAndApprove,
-} from "./submission/approval.server";
+} from "./approval.server";
 
 export {
   adminEditProduct,
   adminEditListing,
   updateListingCost,
-} from "./submission/edit.server";
+} from "./edit.server";
 
 export {
   checkinListing,
   approveWithdrawal,
   denyWithdrawal,
   completeWithdrawal,
-} from "./submission/lifecycle.server";
+} from "./lifecycle.server";
 
 export {
   bulkApproveListing,
   bulkCheckinListing,
-} from "./submission/bulk.server";
+} from "./bulk.server";

@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders.server";
+import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders";
 import { buildNotifications } from "./notifications.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";

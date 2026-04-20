@@ -1,7 +1,7 @@
 import { randomInt, timingSafeEqual } from "crypto";
 import prisma from "~/db.server";
-import { sendOtpEmail } from "~/services/email.server";
-import { CONSIGNOR_STATUS } from "~/lib/order-statuses";
+import { sendOtpEmail } from "~/services/email";
+import { CONSIGNOR_STATUS } from "~/lib/domain";
 
 // ── OTP Logic ──
 

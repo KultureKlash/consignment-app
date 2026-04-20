@@ -1,11 +1,11 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
-import { safeSyncInventory } from "~/services/inventory.server";
+import { safeSyncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { ensureVariantBarcode } from "~/services/catalog.server";
+import { ensureVariantBarcode } from "~/services/catalog";
 import { logger } from "~/lib/logger.server";
-import { sendWithdrawalApprovedEmail, sendListingLiveEmail } from "~/services/email.server";
+import { sendWithdrawalApprovedEmail, sendListingLiveEmail } from "~/services/email";
 
 // ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──
 

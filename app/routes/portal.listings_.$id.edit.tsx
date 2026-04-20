@@ -5,7 +5,7 @@ import { redirect } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { updateSubmittedListing } from "~/services/submission.server";
+import { updateSubmittedListing } from "~/services/submission";
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import type { loader as portalLoader } from "./portal";

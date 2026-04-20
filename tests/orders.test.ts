@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders.server";
-import { getOrderDetail } from "~/services/order-queries.server";
+import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders";
+import { getOrderDetail } from "~/services/orders";
 
 async function setupVariant(shopifyVariantId = "gid://shopify/ProductVariant/100") {
   const product = await prisma.product.create({

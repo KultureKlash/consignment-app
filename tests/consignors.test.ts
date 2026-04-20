@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor } from "~/services/consignors.server";
+import { getConsignorDetail, updateConsignor, suspendConsignor, unsuspendConsignor } from "~/services/consignors";
 
 async function setupConsignorWithListings() {
   const consignor = await createTestConsignor({ name: "Alice", email: "alice@test.com", feeRate: 0.15 });
@@ -276,7 +276,7 @@ describe("suspension — blocks portal submissions", () => {
     await suspendConsignor(consignor.id);
 
     await expect(
-      (await import("~/services/submission.server")).submitListing({
+      (await import("~/services/submission")).submitListing({
         consignorId: consignor.id,
         title: "Test Shoe",
         size: "10",
@@ -308,7 +308,7 @@ describe("suspension — blocks portal submissions", () => {
     await suspendConsignor(consignor.id);
 
     await expect(
-      (await import("~/services/submission.server")).deleteSubmittedListing({
+      (await import("~/services/submission")).deleteSubmittedListing({
         listingId: listing.id,
         consignorId: consignor.id,
       }),
@@ -337,7 +337,7 @@ describe("suspension — blocks portal submissions", () => {
     await suspendConsignor(consignor.id);
 
     await expect(
-      (await import("~/services/submission.server")).requestWithdrawal({
+      (await import("~/services/submission")).requestWithdrawal({
         listingId: listing.id,
         consignorId: consignor.id,
       }),

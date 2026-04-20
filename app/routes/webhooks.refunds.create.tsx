@@ -1,6 +1,6 @@
 import { unauthenticated } from "../shopify.server";
-import { refundOrder } from "~/services/orders.server";
-import { createWebhookHandler } from "~/services/webhooks.server";
+import { refundOrder } from "~/services/orders";
+import { createWebhookHandler } from "~/services/webhooks";
 
 export const action = createWebhookHandler({
   idPrefix: "refund",
