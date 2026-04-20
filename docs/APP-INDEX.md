@@ -124,14 +124,18 @@ Refactored from the monolithic `ListingsTable.tsx` into focused sub-components.
 | `listing-utils.tsx` | Utility functions — sorting, formatting, grouping logic |
 | `ListingActionsContext.tsx` | React Context for listing actions — eliminates prop drilling for approve/reject/edit/cancel |
 | `SectionPicker.tsx` | Portal-rendered store-section dropdown with search |
-| `GroupRows.tsx` | Expandable product group rows — variant listing rows, inline actions, quick-add |
+| `ListingsTable.tsx` | Main listings table — orchestrates views, modals, bulk selection |
+| `GroupedView.tsx` | Grouped-by-product view mode for listings table |
+| `FlatView.tsx` | Flat (ungrouped) view mode for listings table |
+| `GroupRows.tsx` | Expandable product group rows — orchestrates desktop/mobile variants |
+| `GroupRowsDesktop.tsx` | Desktop variant of group rows — full table layout |
+| `GroupRowsMobile.tsx` | Mobile variant of group rows — compact card layout |
 | `ListingsFilter.tsx` | Listings-specific filter bar |
 | `BulkActionBar.tsx` | Bulk action toolbar (listings-specific) |
 | `QuickAddPopover.tsx` | Quick-add popover (listings-specific) |
 | `RejectModal.tsx` | Rejection reason modal |
 | `EditListingModal.tsx` | Edit listing fields modal — price, cost, section, status |
 | `EditProductModal.tsx` | Edit product fields modal — title, brand, category, image |
-| `ListingsTable.tsx` | Main listings table — orchestrates group rows, modals, bulk selection |
 | `Pagination.tsx` | Page navigation |
 | `useListingToasts.ts` | Toast notifications for listing action fetcher results |
 | `index.ts` | Barrel export — default ListingsTable + type re-exports |
@@ -157,14 +161,19 @@ Refactored from the monolithic `CreateListingForm.tsx` into focused sub-componen
 | File | Purpose |
 |------|---------|
 | `ConsignorsListPage.tsx` | Consignor list — name, email, fee rate, balance |
-| `ConsignorDetailPage.tsx` | Consignor detail — edit, suspend, tax fields, View Portal |
+| `ConsignorDetailPage.tsx` | Consignor detail — orchestrates form, listings summary, suspend |
+| `ConsignorForm.tsx` | Consignor edit form — name, email, phone, fee rate, tax fields |
+| `ConsignorListingsSummary.tsx` | Consignor's listing status counts and recent listings |
 
 #### Orders (`app/components/admin/orders/`)
 
 | File | Purpose |
 |------|---------|
 | `OrdersListPage.tsx` | Order list with filters, CSV download |
-| `OrderDetailPage.tsx` | Order detail — items, ledger, timeline, tax, cost/profit for store-owned |
+| `OrderDetailPage.tsx` | Order detail — orchestrates items, ledger, timeline sections |
+| `OrderItems.tsx` | Order line items table — allocated listings, consignor, price |
+| `OrderLedger.tsx` | Financial ledger — transactions, fees, tax breakdown, cost/profit for store-owned |
+| `OrderTimeline.tsx` | Order event timeline — status changes, fulfillment, refunds |
 
 #### Sections (`app/components/admin/sections/`)
 
@@ -233,17 +242,37 @@ Refactored portal listings page into focused sub-components.
 | `useInfiniteScroll.ts` | Infinite scroll hook — fetches next page on scroll, merges results |
 | `index.ts` | Barrel export — StatusBadge, InlinePrice, ListingGroup, MobileDetailDrawer, ConfirmModal |
 
-#### Payouts (`app/components/portal/payouts/`)
+#### New Listing (`app/components/portal/listings/new/`)
+
+Refactored from monolithic `NewListingPage` into focused sub-components.
 
 | File | Purpose |
 |------|---------|
-| `PayoutsPage.tsx` | Portal payouts page — unbatched, pending, paid sections |
+| `NewListingPage.tsx` | New listing page — orchestrates product search and form |
+| `ProductSearchGrid.tsx` | Product search grid — typeahead search with product cards |
+| `ProductForm.tsx` | Listing submission form — size, price, condition, image |
+
+#### Payouts (`app/components/portal/payouts/`)
+
+Refactored from monolithic `PayoutsPage` into focused sub-components.
+
+| File | Purpose |
+|------|---------|
+| `PayoutsPage.tsx` | Portal payouts page — orchestrates summary and sections |
+| `PayoutsSummary.tsx` | Payout summary stats — total earned, pending, paid |
+| `UnbatchedSection.tsx` | Unbatched sold items awaiting payout |
+| `ActivePayouts.tsx` | Active/pending payouts section |
+| `PaidHistory.tsx` | Completed payout history section |
 
 #### Profile (`app/components/portal/profile/`)
 
+Refactored from monolithic `ProfilePage` into focused sub-components.
+
 | File | Purpose |
 |------|---------|
-| `ProfilePage.tsx` | Profile edit — name, email, phone, tax, avatar |
+| `ProfilePage.tsx` | Profile page — orchestrates account info and tax settings |
+| `AccountInfo.tsx` | Account info section — name, email, phone, avatar |
+| `TaxSettings.tsx` | Tax settings section — business type, tax numbers, province |
 
 #### Sales (`app/components/portal/sales/`)
 

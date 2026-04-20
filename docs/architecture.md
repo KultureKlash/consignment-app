@@ -193,19 +193,20 @@ app/
   components/
     admin/
       shared/                    — StatsCard, ActionItem, ActivityItem, CustomSelect, Dropdown, DateRangeFilter
-      listings/                  — ListingsTable, GroupRows, modals, ListingActionsContext, BulkActionBar
+      listings/                  — ListingsTable, GroupedView, FlatView, GroupRows (Desktop/Mobile), modals, ListingActionsContext, BulkActionBar
       create-listing/            — CreateListingForm + Context + sub-components
       payouts/                   — UnpaidSection, PendingSection, HistorySection
-      consignors/                — ConsignorsListPage, ConsignorDetailPage
-      orders/                    — OrdersListPage, OrderDetailPage
+      consignors/                — ConsignorsListPage, ConsignorDetailPage, ConsignorForm, ConsignorListingsSummary
+      orders/                    — OrdersListPage, OrderDetailPage, OrderItems, OrderLedger, OrderTimeline
       sections/                  — SectionsPage
     portal/
       shared/                    — AppHeader, Sidebar, GlassSelect, DateRangePicker, InfoTip
       auth/                      — LoginPage
       dashboard/                 — DashboardPage
       listings/                  — ListingGroup, MobileDetailDrawer, InlinePrice, StatusTabs
-      payouts/                   — PayoutsPage
-      profile/                   — ProfilePage
+      listings/new/              — NewListingPage, ProductSearchGrid, ProductForm
+      payouts/                   — PayoutsPage, PayoutsSummary, UnbatchedSection, ActivePayouts, PaidHistory
+      profile/                   — ProfilePage, TaxSettings, AccountInfo
       sales/                     — SalesPage
 
   lib/
