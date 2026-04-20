@@ -79,6 +79,17 @@ export function PendingSection({
                         ? (payout.invoiceSent ? "Invoice Sent" : (payout.consignor.taxStatus === "business" ? "Awaiting Invoice" : "Pending Payment"))
                         : "Invoice Received"}
                     </span>
+                    {payout.invoiceFileName && (
+                      <a
+                        href={`/app/api/invoice/${payout.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors no-underline"
+                        title={`Download ${payout.invoiceFileName}`}
+                      >
+                        <Download size={10} />
+                        PDF
+                      </a>
+                    )}
                     <span className="text-sm font-bold text-[#1a1a1a] tabular-nums w-[90px] text-right">
                       ${fmt(payout.amount)}
                     </span>

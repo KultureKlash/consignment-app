@@ -47,6 +47,7 @@ export interface PayoutRef {
   status: string;
   createdAt: string;
   invoiceSent?: boolean | null;
+  invoiceFileName?: string | null;
   consignorId: string;
   consignor: ConsignorRef;
   items: PayoutItemRef[];

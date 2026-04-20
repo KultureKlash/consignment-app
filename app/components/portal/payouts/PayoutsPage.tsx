@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFetcher, useRouteLoaderData } from "react-router";
-import { ChevronDown, ChevronRight, Clock, CheckCircle2, CircleDot, DollarSign, Send, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, CheckCircle2, CircleDot, DollarSign, Upload, FileText, Download } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { DateRangePicker } from "~/components/portal/DateRangePicker";
@@ -331,18 +331,33 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
                     {isOpen && (
                       <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
                         {!isIndividual && payout.status === PAYOUT_STATUS.PENDING && !payout.invoiceSent && (
+                          <div className="px-6 md:px-10 py-4 border-b border-[rgba(255,255,255,0.06)]">
+                            <label className="flex flex-col items-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed border-[rgba(255,255,255,0.12)] hover:border-blue-400/40 hover:bg-white/[0.03] transition-all cursor-pointer">
+                              <Upload className="w-5 h-5 text-blue-400" />
+                              <span className="text-xs font-semibold text-muted-foreground">Upload Invoice (PDF)</span>
+                              <span className="text-[10px] text-muted-foreground/60">Max 5MB</span>
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                disabled={isSubmitting}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const fd = new FormData();
+                                  fd.append("intent", "upload-invoice");
+                                  fd.append("payoutId", payout.id);
+                                  fd.append("invoice", file);
+                                  fetcher.submit(fd, { method: "POST", encType: "multipart/form-data" });
+                                }}
+                              />
+                            </label>
+                          </div>
+                        )}
+                        {!isIndividual && payout.invoiceSent && payout.invoiceFileName && (
                           <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                fetcher.submit({ intent: "mark-invoice-sent", payoutId: payout.id }, { method: "POST" });
-                              }}
-                              disabled={isSubmitting}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.08] text-muted-foreground hover:text-foreground hover:bg-white/[0.12] transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                              <Send className="w-3 h-3 text-blue-400" />
-                              Mark invoice sent
-                            </button>
+                            <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-xs text-muted-foreground">{payout.invoiceFileName}</span>
                           </div>
                         )}
                         <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-10 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.04)]">
