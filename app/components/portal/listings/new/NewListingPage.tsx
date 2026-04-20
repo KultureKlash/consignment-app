@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouteLoaderData, useFetcher, useNavigate } from "react-router";
-import { ArrowLeft, Search, ChevronDown, TrendingDown, Clock, Plus, Package, Lightbulb } from "lucide-react";
-import { compareSizes } from "~/lib/size-order";
+import { ArrowLeft } from "lucide-react";
+import { isFootwear, buildCategory, parseCategory, autoSuggest } from "~/lib/categories";
 import { AppHeader } from "~/components/portal/AppHeader";
-import { GlassSelect } from "~/components/portal/GlassSelect";
-import { CATEGORIES, MAIN_CATEGORIES, isFootwear, buildCategory, parseCategory, autoSuggest } from "~/lib/categories";
-import { fmt } from "~/lib/currency";
+import { ProductSearchGrid } from "./ProductSearchGrid";
+import { ProductForm } from "./ProductForm";
 import type { loader as portalLoader } from "~/routes/portal";
 
 export type ProductResult = {
@@ -63,9 +62,6 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
 
   const isFootwearCategory = isFootwear(mainCategory ? buildCategory(mainCategory, subCategory) : selectedProduct?.category ?? "");
   const actionData = fetcher.data as { error?: string } | undefined;
-
-  const errorRing = (field: string) =>
-    fieldErrors.has(field) ? "ring-2 ring-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : "";
 
   // Auto-suggest brand + category from title (manual mode only)
   useEffect(() => {
@@ -234,8 +230,6 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     }
   }, [size, selectedProduct, newSize]);
 
-  const subCategories = mainCategory ? (CATEGORIES[mainCategory] ?? []) : [];
-
   return (
     <div>
       <AppHeader title="Submit Listing" subtitle="Submit an item for review" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
@@ -279,332 +273,61 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
 
           {/* Step 1: Product Search — full page card grid */}
           {showSearch && (
-            <div className="animate-slide-up space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by product name or SKU..."
-                    className="glass-input w-full pl-12 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleManualMode}
-                  className="shrink-0 flex items-center gap-1.5 px-4 py-3.5 rounded-2xl text-xs font-semibold text-primary bg-white/[0.06] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.1] transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add manually
-                </button>
-              </div>
-
-              {/* Search results — card grid */}
-              {searchResults.length > 0 && (
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5">
-                  {searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => handleSelectProduct(product)}
-                      className="text-left rounded-2xl overflow-hidden bg-white/[0.04] border border-[rgba(255,255,255,0.06)] hover:bg-white/[0.08] hover:border-[rgba(255,255,255,0.12)] transition-all cursor-pointer group"
-                    >
-                      {product.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.title}
-                          className="w-full aspect-square object-cover group-hover:scale-[1.02] transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="w-full aspect-square bg-white/[0.03] flex items-center justify-center">
-                          <Package className="w-10 h-10 text-muted-foreground/40" />
-                        </div>
-                      )}
-                      <div className="p-3">
-                        <div className="text-sm font-medium leading-tight line-clamp-2">{product.title}</div>
-                        <div className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
-                          {product.brand && <span>{product.brand}</span>}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                <div className="text-center py-10 text-muted-foreground text-sm">
-                  No products found for "{searchQuery}"
-                </div>
-              )}
-
-              {/* Infinite scroll sentinel */}
-              <div ref={scrollSentinelRef} className="h-1" />
-            </div>
+            <ProductSearchGrid
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchResults={searchResults}
+              onSelectProduct={handleSelectProduct}
+              onManualMode={handleManualMode}
+              scrollSentinelRef={scrollSentinelRef}
+            />
           )}
 
           {/* Selected product or manual entry */}
           {(selectedProduct || manualMode) && (
-            <div className="glass-panel rounded-2xl p-4 md:p-6 animate-slide-up space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
-                  {selectedProduct ? "Product Selected" : "New Product Details"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  Change
-                </button>
-              </div>
-
-              {/* Tips for manual entry */}
-              {manualMode && (
-                <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-4 py-3 flex gap-3">
-                  <Lightbulb className="w-4 h-4 text-primary/60 shrink-0 mt-0.5" />
-                  <div className="text-xs text-muted-foreground leading-relaxed space-y-1">
-                    <p><span className="text-foreground/80 font-medium">Product name</span> — use the exact title from StockX to keep it standardized</p>
-                    <p><span className="text-foreground/80 font-medium">SKU</span> — found on the inner tag or shoe box, helps with tracking</p>
-                    <p><span className="text-foreground/80 font-medium">GTIN</span> — the barcode number on the box, type or scan it</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedProduct ? (
-                /* Product selected — show summary */
-                <div className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-[rgba(255,255,255,0.08)]">
-                  <div className="text-sm font-medium">{selectedProduct.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {selectedProduct.brand && <span>{selectedProduct.brand} · </span>}
-                    {selectedProduct.category && <span>{selectedProduct.category} · </span>}
-                    {selectedProduct.sku && <span>{selectedProduct.sku}</span>}
-                  </div>
-                </div>
-              ) : (
-                /* Manual entry fields */
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">Product Name</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => { setTitle(e.target.value); clearError("title"); }}
-                      className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("title")}`}
-                      placeholder="e.g. Nike Air Max 90"
-                    />
-                  </div>
-                  <div className="relative">
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">Brand</label>
-                    <input
-                      type="text"
-                      value={brand}
-                      onChange={(e) => { setBrand(e.target.value); setShowBrandSuggestions(true); }}
-                      onBlur={() => setTimeout(() => setShowBrandSuggestions(false), 200)}
-                      className="glass-input w-full px-3 py-2.5 rounded-xl text-sm"
-                      placeholder="e.g. Nike"
-                    />
-                    {showBrandSuggestions && brandSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 glass-panel-strong rounded-xl overflow-hidden z-20 max-h-40 overflow-y-auto">
-                        {brandSuggestions.map((b) => (
-                          <button
-                            key={b}
-                            type="button"
-                            onClick={() => { setBrand(b); setShowBrandSuggestions(false); }}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.08] cursor-pointer"
-                          >
-                            {b}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground block mb-1.5">Category</label>
-                      <GlassSelect
-                        options={MAIN_CATEGORIES.map((cat) => ({ label: cat, value: cat }))}
-                        value={mainCategory}
-                        onChange={(v) => { setMainCategory(v); setSubCategory(""); }}
-                        placeholder="Select..."
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground block mb-1.5">Subcategory</label>
-                      <GlassSelect
-                        options={subCategories.map((sub) => ({ label: sub, value: sub }))}
-                        value={subCategory}
-                        onChange={setSubCategory}
-                        placeholder="Select..."
-                        disabled={!mainCategory}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">SKU <span className="text-muted-foreground/60 font-normal">(optional)</span></label>
-                    <input
-                      type="text"
-                      value={sku}
-                      onChange={(e) => setSku(e.target.value)}
-                      className="glass-input w-full px-3 py-2.5 rounded-xl text-sm"
-                      placeholder="e.g. CD0881-100"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Size selection */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1.5">Size</label>
-                {selectedProduct && selectedProduct.variants.length > 0 && !newSize ? (
-                  <div className={`space-y-2 rounded-xl p-1 -m-1 transition-shadow ${errorRing("size")}`}>
-                    <div className="flex flex-wrap gap-2">
-                      {[...selectedProduct.variants].sort((a, b) => compareSizes(a.size, b.size)).map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => handleSelectVariant(v)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                            size === v.size
-                              ? "bg-primary/20 text-primary border border-primary/30"
-                              : "bg-white/[0.06] text-muted-foreground hover:bg-white/[0.1] border border-transparent"
-                          }`}
-                        >
-                          {v.size}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => { setNewSize(true); setSize(""); setSelectedVariantId(""); setGtin(""); }}
-                        className="px-3 py-1.5 rounded-lg text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors cursor-pointer border border-transparent"
-                      >
-                        + New size
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <input
-                    type={isFootwearCategory ? "number" : "text"}
-                    name="size"
-                    value={size}
-                    onChange={(e) => { setSize(e.target.value); clearError("size"); }}
-                    className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("size")}`}
-                    placeholder={isFootwearCategory ? "e.g. 10" : "e.g. M, L, O/S"}
-                    step={isFootwearCategory ? "0.5" : undefined}
-                    min={isFootwearCategory ? "1" : undefined}
-                    max={isFootwearCategory ? "99" : undefined}
-                  />
-                )}
-                {!size && <input type="hidden" name="size" value="" />}
-                {size && <input type="hidden" name="size" value={size} />}
-              </div>
-
-              {/* GTIN — only shown for footwear; non-footwear gets auto-generated */}
-              {isFootwearCategory ? (
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                    GTIN / Barcode
-                  </label>
-                  <input
-                    type="text"
-                    name="gtin"
-                    value={gtin}
-                    onChange={(e) => { setGtin(e.target.value); clearError("gtin"); }}
-                    className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("gtin")}`}
-                    placeholder="e.g. 194500787612"
-                    readOnly={!!(selectedProduct && size && !newSize && gtin)}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center pt-6">
-                  <p className="text-xs text-muted-foreground">Barcode will be auto-generated.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Market Context */}
-          {marketData && (marketData.lowestPrice !== null || marketData.daysSinceLastSale !== null) && (
-            <div className="glass-panel rounded-2xl p-4 animate-slide-up">
-              <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Market Context</h3>
-              <div className="flex gap-6">
-                {marketData.lowestPrice !== null && (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-[hsl(var(--success))]" />
-                    <div>
-                      <div className="text-sm font-bold tabular-nums">${fmt(marketData.lowestPrice)}</div>
-                      <div className="text-[10px] text-muted-foreground">Lowest ask</div>
-                    </div>
-                  </div>
-                )}
-                {marketData.daysSinceLastSale !== null && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[hsl(var(--warning))]" />
-                    <div>
-                      <div className="text-sm font-bold tabular-nums">{marketData.daysSinceLastSale}d</div>
-                      <div className="text-[10px] text-muted-foreground">Last sold</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Price + Quantity */}
-          {(selectedProduct || manualMode) && (
-            <div className="glass-panel rounded-2xl p-4 md:p-6 animate-slide-up space-y-4">
-              <h3 className="text-sm font-semibold">Pricing</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Ask Price</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      name="price"
-                      value={price}
-                      onChange={(e) => { setPrice(e.target.value.replace(/[^0-9.]/g, "")); clearError("price"); }}
-                      onBlur={() => {
-                        const num = parseFloat(price);
-                        if (!isNaN(num) && num > 0) setPrice(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                      }}
-                      onFocus={() => {
-                        const num = parseFloat(price.replace(/,/g, ""));
-                        if (!isNaN(num)) setPrice(String(num));
-                      }}
-                      className={`glass-input w-full pl-7 pr-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("price")}`}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">Quantity</label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="glass-input w-full px-3 py-2.5 rounded-xl text-sm"
-                    min="1"
-                    max="50"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Submit */}
-          {(selectedProduct || manualMode) && (
-            <button
-              type="submit"
-              disabled={fetcher.state !== "idle"}
-              className="btn-cta w-full py-3 text-sm text-center"
-            >
-              {fetcher.state !== "idle" ? "Submitting..." : "Submit for Review"}
-            </button>
+            <ProductForm
+              selectedProduct={selectedProduct}
+              manualMode={manualMode}
+              title={title}
+              onTitleChange={setTitle}
+              brand={brand}
+              onBrandChange={setBrand}
+              brandSuggestions={brandSuggestions}
+              showBrandSuggestions={showBrandSuggestions}
+              onShowBrandSuggestions={setShowBrandSuggestions}
+              onSelectBrand={(b) => { setBrand(b); setShowBrandSuggestions(false); }}
+              mainCategory={mainCategory}
+              onMainCategoryChange={setMainCategory}
+              subCategory={subCategory}
+              onSubCategoryChange={setSubCategory}
+              sku={sku}
+              onSkuChange={setSku}
+              size={size}
+              onSizeChange={setSize}
+              newSize={newSize}
+              onNewSize={() => { setNewSize(true); setSize(""); setSelectedVariantId(""); setGtin(""); }}
+              onSelectVariant={handleSelectVariant}
+              gtin={gtin}
+              onGtinChange={setGtin}
+              isFootwearCategory={isFootwearCategory}
+              marketData={marketData}
+              price={price}
+              onPriceChange={setPrice}
+              onPriceBlur={() => {
+                const num = parseFloat(price);
+                if (!isNaN(num) && num > 0) setPrice(num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+              }}
+              onPriceFocus={() => {
+                const num = parseFloat(price.replace(/,/g, ""));
+                if (!isNaN(num)) setPrice(String(num));
+              }}
+              quantity={quantity}
+              onQuantityChange={setQuantity}
+              onReset={handleReset}
+              fieldErrors={fieldErrors}
+              clearError={clearError}
+              isSubmitting={fetcher.state !== "idle"}
+            />
           )}
         </fetcher.Form>
       </div>

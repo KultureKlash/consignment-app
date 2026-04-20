@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useFetcher, Link } from "react-router";
-import { Settings, User, Mail, Phone, Percent, Save, Check, Palette, Bell, Building2, UserRound, MapPin, FileText, MessageSquare } from "lucide-react";
+import { useFetcher } from "react-router";
+import { User, Mail, Phone, Save, Check, Palette, Bell } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
-import { GlassSelect } from "~/components/portal/GlassSelect";
+import { TaxSettings } from "./TaxSettings";
+import { AccountInfo } from "./AccountInfo";
 import type { PortalNotification } from "~/services/portal/notifications.server";
 import type { action } from "~/routes/portal.profile";
 
@@ -19,20 +20,9 @@ const AVATAR_COLORS = [
   { name: "Berry",    value: "hsl(325, 50%, 40%)" },
 ];
 
-const PROVINCES = [
-  { code: "QC", name: "Quebec",  gst: 5, pst: 9.975, hst: 0,  tax: 14.975 },
-  { code: "ON", name: "Ontario", gst: 5, pst: 0,     hst: 0,  tax: 5      },
-];
-
 function getInitials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 }
-
-const PROVINCE_OPTIONS = PROVINCES.map((p) => ({
-  label: p.name,
-  value: p.code,
-  detail: `${p.tax}%`,
-}));
 
 interface ProfileConsignor {
   id: string;
@@ -78,8 +68,6 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
     inApp: parsedPrefs?.inApp !== false,
     email: parsedPrefs?.email === true,
   });
-
-  const selectedProvince = PROVINCES.find((p) => p.code === province);
 
   const hasChanges =
     name.trim() !== consignor.name ||
@@ -244,112 +232,16 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
               </div>
             </div>
 
-            {/* Tax Status */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                Tax Status
-              </label>
-              <input type="hidden" name="taxStatus" value={taxStatus} />
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setTaxStatus("individual")}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 cursor-pointer ${
-                    taxStatus === "individual"
-                      ? "border-[hsl(var(--cta))]/50 bg-[hsl(var(--cta))]/10"
-                      : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
-                  }`}
-                >
-                  <UserRound className={`w-4 h-4 ${taxStatus === "individual" ? "text-[hsl(var(--cta))]" : "text-muted-foreground"}`} />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Individual</div>
-                    <div className="text-[10px] text-muted-foreground">Personal consignment</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTaxStatus("business")}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 cursor-pointer ${
-                    taxStatus === "business"
-                      ? "border-[hsl(var(--cta))]/50 bg-[hsl(var(--cta))]/10"
-                      : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
-                  }`}
-                >
-                  <Building2 className={`w-4 h-4 ${taxStatus === "business" ? "text-[hsl(var(--cta))]" : "text-muted-foreground"}`} />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Business</div>
-                    <div className="text-[10px] text-muted-foreground">Registered company</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Business tax fields -- shown when taxStatus is "business" */}
-            {taxStatus === "business" && (
-              <div className="space-y-4 pt-2 pl-1 border-l-2 border-[hsl(var(--cta))]/20 ml-1">
-                {/* Province */}
-                <div className="pl-4">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                    Province
-                  </label>
-                  <input type="hidden" name="province" value={province} />
-                  <GlassSelect
-                    options={PROVINCE_OPTIONS}
-                    value={province}
-                    onChange={setProvince}
-                    placeholder="Select province..."
-                    icon={<MapPin className="w-4 h-4" />}
-                  />
-                  {selectedProvince && (
-                    <p className="text-[11px] text-muted-foreground mt-1.5">
-                      Tax rate: <span className="text-foreground font-medium">{selectedProvince.tax}%</span>
-                      {selectedProvince.hst > 0 && ` (HST ${selectedProvince.hst}%)`}
-                      {selectedProvince.gst > 0 && selectedProvince.pst > 0 && selectedProvince.code !== "QC" && ` (GST ${selectedProvince.gst}% + PST ${selectedProvince.pst}%)`}
-                      {selectedProvince.gst > 0 && selectedProvince.pst === 0 && selectedProvince.hst === 0 && ` (GST ${selectedProvince.gst}%)`}
-                      {selectedProvince.code === "QC" && ` (GST ${selectedProvince.gst}% + QST ${selectedProvince.pst}%)`}
-                    </p>
-                  )}
-                </div>
-
-                {/* GST/HST Number */}
-                <div className="pl-4">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                    {selectedProvince?.hst ? "HST Number" : "GST Number"}
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                    <input
-                      type="text"
-                      name="gstNumber"
-                      value={gstNumber}
-                      onChange={(e) => setGstNumber(e.target.value)}
-                      className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm"
-                      placeholder={selectedProvince?.hst ? "HST registration number" : "GST registration number"}
-                    />
-                  </div>
-                </div>
-
-                {/* QST Number -- Quebec only */}
-                {province === "QC" && (
-                  <div className="pl-4">
-                    <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                      QST Number
-                    </label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                      <input
-                        type="text"
-                        name="qstNumber"
-                        value={qstNumber}
-                        onChange={(e) => setQstNumber(e.target.value)}
-                        className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm"
-                        placeholder="QST registration number"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <TaxSettings
+              taxStatus={taxStatus}
+              province={province}
+              gstNumber={gstNumber}
+              qstNumber={qstNumber}
+              onTaxStatusChange={setTaxStatus}
+              onProvinceChange={setProvince}
+              onGstNumberChange={setGstNumber}
+              onQstNumberChange={setQstNumber}
+            />
 
             {/* Save */}
             {fetcher.data?.error && (
@@ -380,37 +272,11 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
           </fetcher.Form>
         </div>
 
-        {/* Commission info */}
-        <div className="glass-panel rounded-2xl p-6 md:p-8 animate-slide-up" style={{ animationDelay: "120ms" }}>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center">
-              <Percent className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">Commission</h2>
-              <p className="text-xs text-muted-foreground">Your fee structure</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 glass-panel rounded-xl px-4 py-3.5">
-            <div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Store Fee</div>
-              <div className="text-lg font-bold tabular-nums">{feePercent}%</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Your Payout</div>
-              <div className="text-lg font-bold text-[hsl(var(--success))] tabular-nums">{payoutPercent}%</div>
-            </div>
-          </div>
-
-          <div className="mt-6 px-4 py-4 rounded-xl bg-white/[0.03] border border-[rgba(255,255,255,0.06)]">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              For every sale, you receive <span className="text-foreground font-semibold">{payoutPercent}%</span> of the sale price.
-              The remaining <span className="text-foreground font-semibold">{feePercent}%</span> is the store's commission.
-              Contact admin to discuss your fee rate.
-            </p>
-          </div>
-        </div>
+        <AccountInfo
+          feePercent={feePercent}
+          payoutPercent={payoutPercent}
+          memberSince={memberSince}
+        />
 
         {/* Notifications */}
         <div className="glass-panel rounded-2xl animate-slide-up overflow-hidden" style={{ animationDelay: "160ms" }}>
@@ -444,30 +310,6 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Account info */}
-        <div className="glass-panel rounded-2xl p-6 animate-slide-up" style={{ animationDelay: "200ms" }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center">
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">Account</h2>
-              <p className="text-xs text-muted-foreground">Member since {memberSince}</p>
-            </div>
-          </div>
-
-          <div className="text-xs text-muted-foreground leading-relaxed">
-            For account changes, payouts, or any questions, reach out to the store team.
-          </div>
-          <Link
-            to="/portal/feedback"
-            className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/[0.06] border border-[rgba(255,255,255,0.08)] text-xs font-medium text-muted-foreground no-underline hover:bg-white/[0.1] hover:text-foreground transition-colors"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Send Feedback
-          </Link>
         </div>
       </div>
     </div>
