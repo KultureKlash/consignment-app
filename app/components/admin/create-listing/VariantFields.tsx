@@ -1,5 +1,5 @@
 import { Barcode } from "lucide-react";
-import CustomSelect from "~/components/admin/CustomSelect";
+import CustomSelect from "~/components/admin/shared/CustomSelect";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function VariantFields() {

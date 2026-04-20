@@ -4,7 +4,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { createListing, deleteListing } from "~/services/listings.server";
+import { createListing, deleteListing } from "~/services/listing-mutations.server";
 import { adminEditListing } from "~/services/submission.server";
 import prisma from "~/db.server";
 import CreateListingForm from "~/components/admin/create-listing";

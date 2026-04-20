@@ -1,5 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { deleteListing, bulkDeleteListings, createListing, restoreListing } from "~/services/listings.server";
+import { deleteListing, bulkDeleteListings, createListing, restoreListing } from "~/services/listing-mutations.server";
 import {
   approveListing,
   rejectListing,

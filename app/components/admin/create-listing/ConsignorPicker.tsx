@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
-import Dropdown from "~/components/admin/Dropdown";
+import Dropdown from "~/components/admin/shared/Dropdown";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function ConsignorPicker() {

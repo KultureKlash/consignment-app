@@ -1,6 +1,6 @@
 import { Search, Package } from "lucide-react";
 import { parseCategory } from "~/lib/categories";
-import Dropdown from "~/components/admin/Dropdown";
+import Dropdown from "~/components/admin/shared/Dropdown";
 import { useCreateListing } from "./CreateListingContext";
 
 export default function ProductSearch() {

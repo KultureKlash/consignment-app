@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import CustomSelect from "./CustomSelect";
+import CustomSelect from "./shared/CustomSelect";
 
 type Consignor = { id: string; name: string };
 

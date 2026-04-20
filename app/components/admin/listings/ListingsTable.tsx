@@ -11,9 +11,8 @@ import {
   checkboxClass,
   checkboxThClass,
   checkboxTdClass,
-  groupByProduct,
-  SortIndicator,
-} from "./listingHelpers";
+} from "./listing-styles";
+import { groupByProduct, SortIndicator } from "./listing-utils";
 import { GroupRows } from "./GroupRows";
 import { RejectModal } from "./RejectModal";
 import { EditListingModal } from "./EditListingModal";

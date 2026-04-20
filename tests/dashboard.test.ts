@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { getDashboardData, getActivityFeed } from "~/services/dashboard.server";
+import { getDashboardData, getActivityFeed } from "~/services/admin-dashboard.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Helpers ──

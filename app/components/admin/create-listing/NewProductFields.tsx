@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
-import Dropdown from "~/components/admin/Dropdown";
+import Dropdown from "~/components/admin/shared/Dropdown";
 import { NewProductCategoryPicker } from "./CategoryPicker";
 import ImageUpload from "./ImageUpload";
 import { useCreateListing } from "./CreateListingContext";

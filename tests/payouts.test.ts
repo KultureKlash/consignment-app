@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData } from "~/services/payouts.server";
+import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData } from "~/services/admin-payouts.server";
 
 async function setupVariant() {
   const product = await prisma.product.create({

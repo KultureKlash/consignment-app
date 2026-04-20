@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Search, MapPin } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import CustomSelect from "~/components/admin/CustomSelect";
+import CustomSelect from "~/components/admin/shared/CustomSelect";
 
 type Consignor = { id: string; name: string };
 

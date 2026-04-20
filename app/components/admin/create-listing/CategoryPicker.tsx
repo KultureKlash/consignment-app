@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
-import Dropdown from "~/components/admin/Dropdown";
-import CustomSelect from "~/components/admin/CustomSelect";
+import Dropdown from "~/components/admin/shared/Dropdown";
+import CustomSelect from "~/components/admin/shared/CustomSelect";
 import { useCreateListing } from "./CreateListingContext";
 
 export function NewProductCategoryPicker() {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronRight, Search, Download } from "lucide-react";
-import CustomSelect from "~/components/admin/CustomSelect";
+import CustomSelect from "~/components/admin/shared/CustomSelect";
 import DateRangeFilter from "~/components/admin/DateRangeFilter";
 import { fmt } from "~/lib/currency";
 import { generateCsv, downloadCsv } from "~/lib/csv";

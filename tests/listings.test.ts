@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { createListing } from "~/services/listings.server";
+import { createListing } from "~/services/listing-mutations.server";
 
 describe("listings.server", () => {
   describe("createListing", () => {

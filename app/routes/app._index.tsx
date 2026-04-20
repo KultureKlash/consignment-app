@@ -3,13 +3,13 @@ import { Link, useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { getDashboardData } from "~/services/dashboard.server";
+import { getDashboardData } from "~/services/admin-dashboard.server";
 import { motion } from "framer-motion";
 import { Package, ShoppingBag, TrendingUp, DollarSign, History, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { fmt } from "~/lib/currency";
-import StatsCard from "~/components/admin/StatsCard";
-import ActionItem from "~/components/admin/ActionItem";
-import ActivityItem from "~/components/admin/ActivityItem";
+import StatsCard from "~/components/admin/shared/StatsCard";
+import ActionItem from "~/components/admin/shared/ActionItem";
+import ActivityItem from "~/components/admin/shared/ActivityItem";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
