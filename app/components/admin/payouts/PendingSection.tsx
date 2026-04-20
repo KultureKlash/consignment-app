@@ -80,15 +80,26 @@ export function PendingSection({
                         : "Invoice Received"}
                     </span>
                     {payout.invoiceFileName && (
-                      <a
-                        href={`/app/api/invoice/${payout.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors no-underline"
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fetch(`/app/api/invoice/${payout.id}`)
+                            .then((r) => r.blob())
+                            .then((blob) => {
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = payout.invoiceFileName ?? "invoice.pdf";
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            });
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer border-0"
                         title={`Download ${payout.invoiceFileName}`}
                       >
                         <Download size={10} />
                         PDF
-                      </a>
+                      </button>
                     )}
                     <span className="text-sm font-bold text-[#1a1a1a] tabular-nums w-[90px] text-right">
                       ${fmt(payout.amount)}

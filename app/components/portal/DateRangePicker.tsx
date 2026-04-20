@@ -35,14 +35,15 @@ export function DateRangePicker({ preset, from, to, onChange }: Props) {
   const [range, setRange] = useState<DateRange | undefined>(
     from && to ? { from: new Date(from + "T12:00:00"), to: new Date(to + "T12:00:00") } : undefined,
   );
-  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  // Position dropdown below trigger, right-aligned to avoid overflow
+  // Position dropdown below trigger, clamped to viewport
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const right = window.innerWidth - rect.right;
-    setPos({ top: rect.bottom + 6, right: Math.max(8, right) });
+    // Try left-align first, clamp so it doesn't overflow right edge
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 420));
+    setPos({ top: rect.bottom + 6, left });
   }, []);
 
   useEffect(() => {
@@ -120,7 +121,7 @@ export function DateRangePicker({ preset, from, to, onChange }: Props) {
               ? "left-0 right-0 bottom-0 rounded-t-2xl"
               : "rounded-xl md:flex-row"
           }`}
-          style={isMobile ? { zIndex: 9999 } : { zIndex: 9999, top: pos.top, right: pos.right }}
+          style={isMobile ? { zIndex: 9999 } : { zIndex: 9999, top: pos.top, left: pos.left }}
         >
           {/* Presets */}
           <div className={`py-2 min-w-[130px] ${showCalendar ? "border-b md:border-b-0 md:border-r border-white/[0.08]" : ""}`}>

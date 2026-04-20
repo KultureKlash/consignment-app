@@ -28,15 +28,18 @@ export async function action({ request }: ActionFunctionArgs) {
     const file = formData.get("invoice") as File;
     if (!file || file.size === 0) return { error: "No file selected" };
     if (file.size > 5 * 1024 * 1024) return { error: "File too large (max 5MB)" };
-    if (!file.type.includes("pdf")) return { error: "Only PDF files are accepted" };
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Server-side PDF validation — magic bytes check (client MIME type is spoofable)
+    if (buffer.slice(0, 5).toString() !== "%PDF-") return { error: "Only PDF files are accepted" };
 
     const payout = await prisma.payout.findFirst({
       where: { id: payoutId, consignorId: consignor.id },
     });
     if (!payout) return { error: "Payout not found" };
 
-    const buffer = await file.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
+    const base64 = buffer.toString("base64");
 
     await prisma.payout.update({
       where: { id: payoutId },

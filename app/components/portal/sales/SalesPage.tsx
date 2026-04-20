@@ -62,7 +62,7 @@ interface SalesPageProps {
 export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatarColor, notifications }: SalesPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState(filters.search);
-  const [datePreset, setDatePreset] = useState("all");
+  const [datePreset, setDatePreset] = useState("30d");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
@@ -109,6 +109,15 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
     ? sales.filter((s: any) => { const d = new Date(s.date); return d >= dateRange.from && d <= dateRange.to; })
     : sales;
 
+  // Compute stats from filtered data so cards match the date filter
+  const filteredStats = {
+    totalEarned: filteredSales.reduce((sum: number, s: any) => sum + (storeOwned ? s.profit : s.payout), 0),
+    itemsSold: filteredSales.length,
+    avgSale: filteredSales.length > 0
+      ? filteredSales.reduce((sum: number, s: any) => sum + s.salePrice, 0) / filteredSales.length
+      : 0,
+  };
+
   const handleDownloadPdf = () => {
     const headers = storeOwned
       ? ["Product", "Size", "Date", "Sale", "Cost", "Profit"]
@@ -143,9 +152,9 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
         {/* Stats — Desktop */}
         <div className="hidden md:grid grid-cols-3 gap-4">
           {[
-            { label: storeOwned ? "Total Profit" : "Total Earned", display: `$${fmt(stats.totalEarned)}`, icon: DollarSign, color: "text-[hsl(var(--success))]" },
-            { label: "Items Sold", display: String(stats.itemsSold), icon: ShoppingBag, color: "text-primary" },
-            { label: "Avg. Sale", display: `$${fmt(stats.avgSale)}`, icon: TrendingUp, color: "text-[hsl(var(--warning))]" },
+            { label: storeOwned ? "Total Profit" : "Total Earned", display: `$${fmt(filteredStats.totalEarned)}`, icon: DollarSign, color: "text-[hsl(var(--success))]" },
+            { label: "Items Sold", display: String(filteredStats.itemsSold), icon: ShoppingBag, color: "text-primary" },
+            { label: "Avg. Sale", display: `$${fmt(filteredStats.avgSale)}`, icon: TrendingUp, color: "text-[hsl(var(--warning))]" },
           ].map((stat, i) => (
             <div key={stat.label} className="stat-card animate-slide-up !p-5" style={{ animationDelay: `${i * 80}ms` }}>
               <div className="flex items-center justify-between">
@@ -167,7 +176,7 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
           <div className="stat-card animate-slide-up !p-4 flex flex-col justify-between">
             <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{storeOwned ? "Total Profit" : "Total Earned"}</p>
             <div className="flex items-end justify-between mt-auto pt-3">
-              <p className="text-xl font-bold tracking-tight tabular-nums">${fmt(stats.totalEarned)}</p>
+              <p className="text-xl font-bold tracking-tight tabular-nums">${fmt(filteredStats.totalEarned)}</p>
               <DollarSign className="w-4 h-4 text-[hsl(var(--success))]/50" />
             </div>
           </div>
@@ -178,14 +187,14 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
               <div className="w-10 h-10 rounded-full bg-[hsl(var(--warning))]/10 flex items-center justify-center mb-3">
                 <TrendingUp className="w-5 h-5 text-[hsl(var(--warning))]" />
               </div>
-              <p className="text-3xl font-bold tracking-tight tabular-nums">${fmt(stats.avgSale)}</p>
+              <p className="text-3xl font-bold tracking-tight tabular-nums">${fmt(filteredStats.avgSale)}</p>
             </div>
           </div>
           {/* Items Sold — bottom left */}
           <div className="stat-card animate-slide-up !p-4 flex flex-col justify-between" style={{ animationDelay: "80ms" }}>
             <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Items Sold</p>
             <div className="flex items-end justify-between mt-auto pt-3">
-              <p className="text-xl font-bold tracking-tight tabular-nums">{stats.itemsSold}</p>
+              <p className="text-xl font-bold tracking-tight tabular-nums">{filteredStats.itemsSold}</p>
               <ShoppingBag className="w-4 h-4 text-primary/50" />
             </div>
           </div>
@@ -215,24 +224,8 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
           />
         </div>
 
-        {/* Tabs + Download */}
-        <div className="flex items-center gap-2 animate-slide-up" style={{ animationDelay: "280ms" }}>
-          <div className="flex rounded-xl glass-panel p-1 flex-1">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => updateFilter({ status: tab.key })}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  activeTab === tab.key
-                    ? "bg-white/[0.1] text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Download */}
+        <div className="flex items-center justify-end gap-2 animate-slide-up" style={{ animationDelay: "280ms" }}>
           {filteredSales.length > 0 && (
             <button onClick={handleDownloadPdf} title="Download PDF" className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0">
               <Download className="w-4 h-4" />
@@ -257,22 +250,21 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
               <table className="w-full" style={{ tableLayout: "fixed" }}>
                 <colgroup>
                   <col style={{ width: "28%" }} />
-                  <col style={{ width: "6%" }} />
-                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "7%" }} />
                   <col style={{ width: "11%" }} />
-                  <col style={{ width: "11%" }} />
-                  <col style={{ width: "11%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "16%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-white/[0.06]">
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "left" }}>Product</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>Size</th>
-                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>Sale</th>
-                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>{storeOwned ? "Cost" : "Fee"}</th>
-                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "right" }}>{storeOwned ? "Profit" : "Payout"}</th>
-                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "left" }}>Date</th>
+                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>Sale</th>
+                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>{storeOwned ? "Cost" : "Fee"}</th>
+                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>{storeOwned ? "Profit" : "Payout"}</th>
+                    <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>Date</th>
                     <th className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4" style={{ textAlign: "center" }}>Status</th>
                   </tr>
                 </thead>
@@ -281,14 +273,14 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
                     <tr key={sale.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                       <td className="text-sm font-medium px-4 py-3.5 text-left">{sale.product}</td>
                       <td className="text-sm text-muted-foreground px-4 py-3.5 text-center whitespace-nowrap">{sale.size}</td>
-                      <td className="text-sm tabular-nums text-right px-4 py-3.5 whitespace-nowrap">${fmt(sale.salePrice)}</td>
-                      <td className="text-sm tabular-nums text-right text-muted-foreground px-4 py-3.5 whitespace-nowrap">
+                      <td className="text-sm tabular-nums text-center px-4 py-3.5 whitespace-nowrap">${fmt(sale.salePrice)}</td>
+                      <td className="text-sm tabular-nums text-center text-muted-foreground px-4 py-3.5 whitespace-nowrap">
                         {storeOwned ? `$${fmt(sale.cost)}` : `-$${fmt(sale.fee)}`}
                       </td>
-                      <td className="text-sm tabular-nums text-right font-semibold text-[hsl(var(--success))] px-4 py-3.5 whitespace-nowrap">
+                      <td className="text-sm tabular-nums text-center font-semibold text-[hsl(var(--success))] px-4 py-3.5 whitespace-nowrap">
                         ${fmt(storeOwned ? sale.profit : sale.payout)}
                       </td>
-                      <td className="text-xs text-muted-foreground px-4 py-3.5 text-left whitespace-nowrap">{formatDate(sale.date)}</td>
+                      <td className="text-xs text-muted-foreground px-4 py-3.5 text-center whitespace-nowrap">{formatDate(sale.date)}</td>
                       <td className="text-center px-4 py-3.5">
                         <StatusBadge status={sale.status} />
                       </td>

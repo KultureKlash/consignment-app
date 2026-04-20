@@ -41,17 +41,21 @@ export async function searchProducts(
     take: fetchLimit,
   });
 
-  // Sort by relevance: whole-word title matches > substring matches > brand/sku
+  // Sort by relevance: starts-with > whole-word > substring
   const lowerWords = words.map((w) => w.toLowerCase());
-  const wordBoundaryPatterns = lowerWords.map((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"));
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const startsWithPatterns = lowerWords.map((w) => new RegExp(`\\b${escape(w)}`, "i"));
+  const wholeWordPatterns = lowerWords.map((w) => new RegExp(`\\b${escape(w)}\\b`, "i"));
 
   const scored = allProducts.map((p) => {
     const title = p.title;
-    // Whole-word matches in title score highest (prevents "4" matching "2024")
-    const wholeWordMatches = wordBoundaryPatterns.filter((re) => re.test(title)).length;
+    // Words in title that START with the search term (e.g. "ni" → "Nike" matches)
+    const startsWithMatches = startsWithPatterns.filter((re) => re.test(title)).length;
+    // Exact whole-word matches (e.g. "4" matches "4" but not "2024")
+    const wholeWordMatches = wholeWordPatterns.filter((re) => re.test(title)).length;
     const substringMatches = lowerWords.filter((w) => title.toLowerCase().includes(w)).length;
-    // Whole-word matches weighted 10x over substring matches
-    const score = wholeWordMatches * 10 + substringMatches;
+    // starts-with 100x > whole-word 10x > substring 1x
+    const score = startsWithMatches * 100 + wholeWordMatches * 10 + substringMatches;
     return { product: p, score };
   });
   scored.sort((a, b) => b.score - a.score || b.product.variants.length - a.product.variants.length);
