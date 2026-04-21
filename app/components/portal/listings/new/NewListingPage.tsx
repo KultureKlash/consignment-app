@@ -46,6 +46,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
   const [gtin, setGtin] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [imageData, setImageData] = useState<string | undefined>();
   const [newSize, setNewSize] = useState(false);
 
   // Validation errors
@@ -213,6 +214,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     setQuantity("1");
     setSelectedVariantId("");
     setNewSize(false);
+    setImageData(undefined);
     setMarketData(null);
   };
 
@@ -270,6 +272,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           <input type="hidden" name="mainCategory" value={mainCategory} />
           <input type="hidden" name="subCategory" value={subCategory} />
           <input type="hidden" name="sku" value={sku} />
+          {imageData && <input type="hidden" name="imageData" value={imageData} />}
 
           {/* Step 1: Product Search — full page card grid */}
           {showSearch && (
@@ -323,6 +326,8 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
               }}
               quantity={quantity}
               onQuantityChange={setQuantity}
+              imageData={imageData}
+              onImageChange={setImageData}
               onReset={handleReset}
               fieldErrors={fieldErrors}
               clearError={clearError}

@@ -1,4 +1,5 @@
-import { Lightbulb, TrendingDown, Clock } from "lucide-react";
+import { Lightbulb, TrendingDown, Clock, Camera } from "lucide-react";
+import { processProductImage } from "~/lib/image-processing";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
 import { compareSizes } from "~/lib/size-order";
@@ -42,6 +43,9 @@ interface ProductFormProps {
   onPriceFocus: () => void;
   quantity: string;
   onQuantityChange: (v: string) => void;
+  // Image (new product only)
+  imageData?: string;
+  onImageChange: (data: string | undefined) => void;
   // Reset + errors
   onReset: () => void;
   fieldErrors: Set<string>;
@@ -82,6 +86,8 @@ export function ProductForm({
   onPriceFocus,
   quantity,
   onQuantityChange,
+  imageData,
+  onImageChange,
   onReset,
   fieldErrors,
   clearError,
@@ -118,6 +124,45 @@ export function ProductForm({
               <p><span className="text-foreground/80 font-medium">SKU</span> — found on the inner tag or shoe box, helps with tracking</p>
               <p><span className="text-foreground/80 font-medium">GTIN</span> — the barcode number on the box, type or scan it</p>
             </div>
+          </div>
+        )}
+
+        {/* Image upload — only for new products */}
+        {manualMode && (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Product Photo</label>
+            {imageData ? (
+              <div className="flex items-center gap-3">
+                <img src={imageData} alt="" className="w-20 h-20 rounded-xl object-cover border border-[rgba(255,255,255,0.08)]" />
+                <button
+                  type="button"
+                  onClick={() => onImageChange(undefined)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-0"
+                >
+                  Replace
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center gap-2 py-6 rounded-xl border-2 border-dashed border-[rgba(255,255,255,0.12)] hover:border-primary/40 hover:bg-white/[0.02] transition-all cursor-pointer">
+                <Camera className="w-6 h-6 text-muted-foreground/60" />
+                <span className="text-xs font-medium text-muted-foreground">Add Photo</span>
+                <span className="text-[10px] text-muted-foreground/50">Auto-resized to 1200×1200</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) { alert("Image too large (max 10MB)"); return; }
+                    try {
+                      const data = await processProductImage(file);
+                      onImageChange(data);
+                    } catch { alert("Failed to process image"); }
+                  }}
+                />
+              </label>
+            )}
           </div>
         )}
 

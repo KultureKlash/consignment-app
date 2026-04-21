@@ -57,6 +57,15 @@ export async function action({ request }: ActionFunctionArgs) {
       return { error: "GTIN is required for footwear" };
     }
 
+    // Image upload — server-side validation
+    const rawImageData = (form.get("imageData") as string) || undefined;
+    let imageData: string | undefined;
+    if (rawImageData) {
+      if (!rawImageData.startsWith("data:image/png;base64,")) return { error: "Invalid image format" };
+      if (rawImageData.length > 2_000_000) return { error: "Image too large" };
+      imageData = rawImageData;
+    }
+
     await submitListing({
       consignorId: consignor.id,
       title: data.title,
@@ -67,6 +76,7 @@ export async function action({ request }: ActionFunctionArgs) {
       gtin: data.gtin,
       price: data.price,
       count: data.quantity,
+      imageData,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {
