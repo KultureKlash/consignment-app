@@ -1,204 +1,223 @@
-# Consignment Marketplace App
+# Konsign — Consignment Marketplace App
 
-This project is a **multi-seller consignment marketplace built on Shopify**.
-
-Shopify is used as the **storefront and checkout**, while the application manages all marketplace logic including:
-
-• product catalog
-• consignor listings
-• inventory aggregation
-• order allocation
-• financial ledger
-• payouts
-
-The system behaves similarly to **StockX-style marketplaces** where multiple sellers can list the same product variant.
+Shopify embedded app for managing a multi-seller consignment marketplace. Built with Remix (React Router 7), Prisma, PostgreSQL, and Tailwind CSS.
 
 ---
 
-# IMPORTANT
+## Quick Start (New Computer Setup)
 
-Before modifying code, **always read the documentation in `/docs`**.
+### Prerequisites
 
-These files define the system architecture, coding rules, and development roadmap.
+Install these first:
 
-AI coding tools (Claude, Copilot, ChatGPT) should **review these documents first before generating code**.
+1. **Node.js** (v20+) — [nodejs.org](https://nodejs.org)
+2. **Docker Desktop** — [docker.com](https://www.docker.com/products/docker-desktop)
+3. **Shopify CLI** — `npm install -g @shopify/cli`
+4. **Git** — [git-scm.com](https://git-scm.com)
 
----
+### Step 1: Clone the repo
 
-# Documentation
-
-All project documentation is located in:
-
-```
-/docs
+```bash
+git clone https://github.com/KultureKlash/consignment-app.git
+cd consignment-app
 ```
 
----
+### Step 2: Install dependencies
 
-## Architecture
-
-These files explain how the system is designed.
-
-`/docs/architecture.md`
-Main system architecture and project structure.
-
-`/docs/system-diagram.md`
-Visual overview of the marketplace architecture.
-
-`/docs/reseller-system-architecture.md`
-Detailed explanation of marketplace logic including listings, orders, inventory, and payouts.
-
----
-
-## Development Rules
-
-`/docs/coding-standards.md`
-
-Defines coding conventions and architectural rules.
-
-Examples:
-
-• business logic must stay in services
-• routes must remain thin
-• database access goes through Prisma
-• maintain consistent service structure
-
----
-
-## Feature Planning
-
-`/docs/features.md`
-
-Roadmap of all planned marketplace features grouped by development phase.
-
----
-
-## Development History
-
-`/docs/build-log.md`
-
-Chronological development log describing major milestones and changes.
-
----
-
-# Core Architecture Rule
-
-This project follows a **service-based architecture**.
-
-```
-routes → services → prisma → database
+```bash
+npm install
 ```
 
-Routes must **never contain business logic**.
+### Step 3: Start the database
 
-Routes are responsible for:
+```bash
+# Start PostgreSQL in Docker (runs on port 5432)
+docker run -d \
+  --name konsign-db \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=konsign \
+  -p 5432:5432 \
+  postgres:16
 
-• request validation
-• authentication
-• calling services
-• returning responses
-
-All marketplace logic lives in:
-
+# Create the test database (for running tests without wiping dev data)
+docker exec konsign-db psql -U postgres -c "CREATE DATABASE konsign_test;"
 ```
-app/services/
+
+### Step 4: Create the `.env` file
+
+Create a file called `.env` in the project root:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/konsign"
+NODE_ENV="development"
+COOKIE_SECRET="dev-cookie-secret-change-in-prod"
+SHOPIFY_API_KEY="your-shopify-api-key"
+SHOPIFY_API_SECRET="your-shopify-api-secret"
+SHOPIFY_APP_URL="https://your-cloudflare-tunnel.trycloudflare.com"
+SCOPES="write_products,read_products,write_inventory,read_inventory"
+PORT=3000
+```
+
+Get the Shopify API key/secret from [Shopify Partners](https://partners.shopify.com) → Apps → Kulture Konsign → API credentials.
+
+Optional (not needed for dev):
+```env
+RESEND_API_KEY="re_xxxxx"
+RESEND_FROM_EMAIL="no-reply@konsign.shopkultureklash.com"
+SENTRY_DSN="https://xxxxx@sentry.io/xxxxx"
+```
+
+### Step 5: Push the database schema
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+### Step 6: Start the dev server
+
+```bash
+npm run dev
+```
+
+This starts the Shopify dev tunnel + Remix dev server. The app will be available in your Shopify admin under Apps → Kulture Konsign.
+
+### Step 7: Verify
+
+- Open Shopify admin → Apps → Kulture Konsign → should load the dashboard
+- Visit the portal URL shown in the terminal → consignor login page
+
+---
+
+## Running Tests
+
+```bash
+# Run all 391 tests
+npx vitest run
+
+# Run a specific test file
+npx vitest run tests/orders.test.ts
+
+# Watch mode
+npx vitest
+```
+
+Tests use a separate database (`konsign_test`) to avoid wiping dev data.
+
+---
+
+## Database Management
+
+```bash
+# Start the database (if stopped)
+docker start konsign-db
+
+# Stop the database
+docker stop konsign-db
+
+# Reset dev database (wipes all data)
+npx prisma db push --force-reset
+
+# View database in browser
+npx prisma studio
 ```
 
 ---
 
-# Project Structure
+## Project Structure
 
 ```
 app/
-  routes/
-  services/
-  db.server.ts
-  shopify.server.ts
-
+  routes/              — Thin wrappers (auth + service call + render)
+  services/            — Business logic organized by domain
+    orders/            — Order processing, refunds, balance
+    listings/          — Create, delete, restore, query listings
+    catalog/           — Product/variant CRUD + search
+    consignors/        — Consignor management
+    inventory/         — Shopify inventory sync
+    email/             — Transactional emails (Resend)
+    admin/             — Admin dashboard, payouts, listing actions
+    portal/            — Consignor auth, dashboard, sales, payouts
+    shopify/           — Shopify GraphQL API integration
+    submission/        — Listing lifecycle (approve, reject, checkin)
+  components/
+    admin/             — Admin UI (Shopify embedded)
+    portal/            — Consignor portal UI (dark theme)
+  lib/                 — Pure utilities
+    domain/            — Status constants
+    finance/           — Fee calculation, tax
+    formatting/        — Currency, CSV, PDF
+    system/            — Logger, Sentry, rate limiting
+    categories/        — Category constants + auto-suggest
+docs/                  — Architecture, coding standards, checklists
+tests/                 — 391 Vitest tests
 prisma/
-  schema.prisma
-
-docs/
-  architecture.md
-  system-diagram.md
-  reseller-system-architecture.md
-  coding-standards.md
-  features.md
-  build-log.md
+  schema.prisma        — Database schema (14 models)
 ```
 
 ---
 
-# Tech Stack
+## Key Commands
 
-Backend
-
-• Node.js
-• TypeScript
-• React Router (Shopify template)
-• Prisma ORM
-• SQLite (development database)
-• PostgreSQL (production database)
-• Shopify Admin GraphQL API
-
-Frontend
-
-• React
-• Shopify Polaris
-• Shopify App Bridge
-
-Integrations
-
-• Shopify Storefront
-• StockX Product Catalog API
-• GTIN barcode scanning
+| Command | What it does |
+|---------|-------------|
+| `npm run dev` | Start dev server (Shopify tunnel + Remix) |
+| `npm run build` | Build for production |
+| `npx vitest run` | Run all tests |
+| `npx prisma studio` | Open database browser |
+| `npx prisma db push` | Push schema changes to database |
+| `npx prisma generate` | Regenerate Prisma client after schema changes |
 
 ---
 
-# Marketplace Data Model
+## Tech Stack
 
-```
-Product
-  ↓
-Variant (size)
-  ↓
-Listing (consignor inventory)
-  ↓
-OrderItem
-  ↓
-Transaction
-  ↓
-Payout
-```
+- **Framework:** Remix (React Router 7)
+- **Database:** PostgreSQL (Docker local, Neon cloud prod)
+- **ORM:** Prisma
+- **UI:** Tailwind CSS v4 + Framer Motion
+- **Hosting:** Fly.io (Toronto region)
+- **Email:** Resend
+- **Error tracking:** Sentry
+- **Auth:** HMAC-SHA256 signed cookies (portal), Shopify App Bridge (admin)
 
 ---
 
-# Inventory Rule
+## Documentation
 
-Shopify inventory must equal:
-
-```
-SUM(listings.quantity)
-```
-
-Example:
-
-Consignor A → qty 2
-Consignor B → qty 1
-Consignor C → qty 3
-
-Shopify inventory:
-
-```
-6
-```
+| File | What it covers |
+|------|---------------|
+| `docs/APP-INDEX.md` | Full file reference — every service, route, component |
+| `docs/architecture.md` | System design + folder structure |
+| `docs/coding-standards.md` | Rules for code quality |
+| `docs/FEATURES.md` | All implemented features |
+| `docs/PRODUCTION-CHECKLIST.md` | Deploy checklist + migration data |
+| `docs/system-overview.md` | Deep technical reference |
 
 ---
 
-# Development Workflow
+## Troubleshooting
 
-1. Read `/docs/architecture.md`
-2. Confirm feature status in `/docs/features.md`
-3. Implement logic inside **services**
-4. Expose functionality through **routes**
-5. Update documentation if architecture changes
+**Docker database won't start:**
+```bash
+docker rm konsign-db  # Remove old container
+# Then re-run the docker run command from Step 3
+```
+
+**Prisma generate fails (EPERM on Windows):**
+```bash
+# Stop dev server first, then:
+rm -f node_modules/.prisma/client/query_engine-windows.dll.node
+npx prisma generate
+```
+
+**Tests fail with database errors:**
+```bash
+# Push schema to test database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/konsign_test" npx prisma db push
+```
+
+**Shopify app doesn't load in admin:**
+- Make sure `npm run dev` is running (creates the tunnel)
+- Check that the app URL in Shopify Partners matches the tunnel URL
+- Try `npm run dev -- --reset` to re-link the app
