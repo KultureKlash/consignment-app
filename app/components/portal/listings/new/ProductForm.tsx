@@ -146,7 +146,6 @@ export function ProductForm({
               <label className="flex flex-col items-center gap-2 py-6 rounded-xl border-2 border-dashed border-[rgba(255,255,255,0.12)] hover:border-primary/40 hover:bg-white/[0.02] transition-all cursor-pointer">
                 <Camera className="w-6 h-6 text-muted-foreground/60" />
                 <span className="text-xs font-medium text-muted-foreground">Add Photo</span>
-                <span className="text-[10px] text-muted-foreground/50">Auto-resized to 1200×1200</span>
                 <input
                   type="file"
                   accept="image/*"
