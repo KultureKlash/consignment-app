@@ -8,28 +8,40 @@ export default async () => {
 
 function Extension() {
   const { data } = shopify;
-  const productGid = data?.product?.id;
-  const appUrl = data?.app?.applicationUrl;
+  const productGid = data?.selected?.[0]?.id;
 
   const [info, setInfo] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!productGid || !appUrl) return;
+    if (!productGid) {
+      setError("No product selected");
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
-        const token = await shopify.auth.idToken();
-        const url = new URL("/app/api/product-block", appUrl);
-        url.searchParams.set("id", productGid);
-        const res = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const res = await shopify.query(
+          `query GetSummary($id: ID!) {
+            product(id: $id) {
+              metafield(namespace: "konsign", key: "summary") { value }
+            }
+          }`,
+          { variables: { id: productGid } },
+        );
+        const valueStr = res?.data?.product?.metafield?.value;
+        if (!valueStr) {
+          if (!cancelled) {
+            setInfo(null);
+            setLoading(false);
+          }
+          return;
+        }
+        const parsed = JSON.parse(valueStr);
         if (!cancelled) {
-          setInfo(json);
+          setInfo(parsed);
           setLoading(false);
         }
       } catch (err) {
@@ -42,14 +54,12 @@ function Extension() {
     return () => {
       cancelled = true;
     };
-  }, [productGid, appUrl]);
+  }, [productGid]);
 
   if (loading) {
     return (
       <s-admin-block heading="Konsign Inventory">
-        <s-stack direction="block" gap="small-200">
-          <s-spinner accessibilityLabel="Loading" />
-        </s-stack>
+        <s-spinner accessibilityLabel="Loading" />
       </s-admin-block>
     );
   }
@@ -57,15 +67,18 @@ function Extension() {
   if (error) {
     return (
       <s-admin-block heading="Konsign Inventory">
-        <s-text color="critical">Couldn't load Konsign data: {error}</s-text>
+        <s-paragraph tone="critical">Couldn't load: {error}</s-paragraph>
       </s-admin-block>
     );
   }
 
-  if (!info?.found) {
+  if (!info) {
     return (
       <s-admin-block heading="Konsign Inventory">
-        <s-text color="subdued">This product isn't synced to Konsign yet.</s-text>
+        <s-paragraph tone="neutral">
+          No Konsign data for this product yet. It will populate the next time a listing on this
+          product changes.
+        </s-paragraph>
       </s-admin-block>
     );
   }
@@ -73,61 +86,65 @@ function Extension() {
   const { totalActive, lowest, variants, actions } = info;
   const actionItems = [
     { count: actions.awaitingPrice, label: "awaiting price" },
-    { count: actions.submitted, label: "submitted (pending review)" },
+    { count: actions.submitted, label: "submitted" },
     { count: actions.awaitingDropoff, label: "awaiting drop-off" },
     { count: actions.withdrawalRequested, label: "withdrawal requested" },
     { count: actions.pendingPickup, label: "pending pickup" },
   ].filter((a) => a.count > 0);
 
-  const launchUrl = `${appUrl}app/listings?search=${encodeURIComponent(info.product.title)}`;
-
   return (
     <s-admin-block heading="Konsign Inventory">
       <s-stack direction="block" gap="base">
-        {/* Headline summary */}
-        <s-stack direction="inline" gap="base">
-          <s-stack direction="block" gap="extra-tight">
-            <s-text type="strong">{totalActive} active listing{totalActive !== 1 ? "s" : ""}</s-text>
-            {lowest && (
-              <s-text color="subdued">
-                Lowest ${lowest.price.toFixed(2)} · {lowest.owner}
-              </s-text>
-            )}
-          </s-stack>
+        {/* Headline — count + lowest price */}
+        <s-stack direction="block" gap="extra-tight">
+          <s-text type="strong">
+            {totalActive} active listing{totalActive !== 1 ? "s" : ""}
+          </s-text>
+          {lowest && (
+            <s-text color="subdued">
+              Lowest <s-text type="strong">${lowest.price.toFixed(2)}</s-text> · {lowest.owner}
+            </s-text>
+          )}
         </s-stack>
 
-        {/* Action items banner */}
+        {/* Action banner */}
         {actionItems.length > 0 && (
           <s-banner tone="warning">
             <s-stack direction="block" gap="extra-tight">
               {actionItems.map((a) => (
-                <s-text key={a.label}>{a.count} {a.label}</s-text>
+                <s-text key={a.label}>
+                  <s-text type="strong">{a.count}</s-text> {a.label}
+                </s-text>
               ))}
             </s-stack>
           </s-banner>
         )}
 
-        {/* Per-variant breakdown */}
+        {/* By-size table */}
         {variants.length > 0 && (
-          <s-table>
+          <s-table variant="auto">
             <s-table-header-row>
-              <s-table-header>Size</s-table-header>
-              <s-table-header>Listings</s-table-header>
-              <s-table-header>Lowest</s-table-header>
-              <s-table-header>Owner</s-table-header>
+              <s-table-header><s-text color="subdued">Size</s-text></s-table-header>
+              <s-table-header><s-text color="subdued">Listings</s-text></s-table-header>
+              <s-table-header><s-text color="subdued">Lowest</s-text></s-table-header>
+              <s-table-header><s-text color="subdued">Owner</s-text></s-table-header>
             </s-table-header-row>
             <s-table-body>
               {variants.map((v) => (
                 <s-table-row key={v.variantId}>
-                  <s-table-cell>{v.size}</s-table-cell>
                   <s-table-cell>
-                    {v.activeCount}
+                    <s-text type="strong">{v.size}</s-text>
+                  </s-table-cell>
+                  <s-table-cell>
+                    <s-text>{v.activeCount}</s-text>
                     {v.needsPrice > 0 && (
-                      <s-text color="subdued"> +{v.needsPrice} unpriced</s-text>
+                      <s-text color="subdued"> +{v.needsPrice}</s-text>
                     )}
                   </s-table-cell>
                   <s-table-cell>
-                    {v.lowestPrice != null ? `$${v.lowestPrice.toFixed(2)}` : "—"}
+                    <s-text>
+                      {v.lowestPrice != null ? `$${v.lowestPrice.toFixed(2)}` : "—"}
+                    </s-text>
                   </s-table-cell>
                   <s-table-cell>
                     <s-text color="subdued">{v.lowestOwner ?? "—"}</s-text>
@@ -137,11 +154,6 @@ function Extension() {
             </s-table-body>
           </s-table>
         )}
-
-        {/* Deep link */}
-        <s-link href={launchUrl} target="_top">
-          Open in Konsign →
-        </s-link>
       </s-stack>
     </s-admin-block>
   );

@@ -2,6 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify/taxonomy.server";
+import { parseCategory } from "~/lib/categories";
 import { logger } from "~/lib/logger.server";
 import { uploadProductImage } from "~/services/shopify/shopify-helpers.server";
 import {
@@ -24,6 +25,9 @@ export async function updateShopifyProduct({
   if (!product.shopifyProductId) return;
 
   const taxonomyId = await resolveShopifyTaxonomyId(admin, product.category);
+  const productType = product.category
+    ? (parseCategory(product.category).sub ?? parseCategory(product.category).main)
+    : undefined;
 
   const response = await admin.graphql(
     `mutation productUpdate($input: ProductInput!) {
@@ -38,6 +42,7 @@ export async function updateShopifyProduct({
           id: product.shopifyProductId,
           title: product.title,
           vendor: product.brand || undefined,
+          ...(productType ? { productType } : {}),
           ...(taxonomyId ? { category: taxonomyId } : {}),
         },
       },

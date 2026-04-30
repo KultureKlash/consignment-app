@@ -208,7 +208,26 @@ Each row gets its own cost from `buy_price_all` JSON entries.
 
 ---
 
-## 10. Pre-Launch Verification
+## 10. Backfill Konsign Inventory metafields (one-time)
+
+The "Konsign Inventory" Admin Block extension on Shopify product pages reads
+data from a `konsign.summary` metafield on each product. The metafield is
+auto-updated on every listing change, but existing products start empty.
+
+After deploy, run the one-time backfill so the block renders for all products:
+
+- [ ] Open the embedded admin app → navigate to `/app/backfill-metafields`
+- [ ] Click "Backfill all products" — wait until it completes
+- [ ] Verify by opening any product detail page in Shopify admin and checking
+      that the Konsign Inventory block shows live data (count + per-size table)
+
+After this, the metafield stays current automatically — every listing
+state change calls `syncInventory`, which writes the metafield as a side effect.
+Re-running the backfill is safe but unnecessary unless data drifts.
+
+---
+
+## 11. Pre-Launch Verification
 
 - [ ] `COOKIE_SECRET` is set (not the dev fallback)
 - [ ] `RESEND_API_KEY` is set and email delivery works

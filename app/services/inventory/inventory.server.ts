@@ -3,6 +3,7 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Variant } from "@prisma/client";
 import { LISTING_STATUS } from "~/lib/domain";
 import { logger } from "~/lib/system";
+import { syncProductSummaryMetafield } from "~/services/shopify/product-summary-metafield.server";
 
 export async function getPrimaryLocationId(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(`#graphql
@@ -162,6 +163,9 @@ export async function syncInventory({
   if (priceErrors.length > 0) {
     throw new Error(`Shopify price sync error: ${priceErrors[0].message}`);
   }
+
+  // Update Konsign summary metafield (read by the admin block extension)
+  await syncProductSummaryMetafield({ admin, productId: variant.productId });
 }
 
 /** Best-effort Shopify inventory sync — logs errors instead of throwing. */

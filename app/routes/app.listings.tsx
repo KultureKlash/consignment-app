@@ -26,8 +26,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") ?? "";
+  const statusParam = url.searchParams.get("status") ?? "";
   const tabParam = url.searchParams.get("tab") ?? "active";
-  const tab: ListingBucket = (tabParam in LISTING_BUCKETS ? tabParam : "active") as ListingBucket;
+
+  // If a specific status is passed (e.g. dashboard deep-links), filter to it and
+  // pick the tab that contains it. Otherwise use the tab param directly.
+  let tab: ListingBucket = (tabParam in LISTING_BUCKETS ? tabParam : "active") as ListingBucket;
+  let statusesFilter: readonly string[] | undefined;
+  if (statusParam && statusParam !== "all") {
+    statusesFilter = [statusParam];
+    for (const [bucket, statuses] of Object.entries(LISTING_BUCKETS) as [ListingBucket, readonly string[]][]) {
+      if (statuses.includes(statusParam)) {
+        tab = bucket;
+        break;
+      }
+    }
+  } else {
+    statusesFilter = LISTING_BUCKETS[tab];
+  }
+
   const category = url.searchParams.get("category") ?? "";
   const consignorId = url.searchParams.get("consignorId") ?? "";
   const sortBy = (url.searchParams.get("sortBy") as "date" | "price" | "status") || "date";
@@ -61,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const [result, consignors, sections, statusCounts] = await Promise.all([
     queryListings({
       search: search || undefined,
-      statuses: LISTING_BUCKETS[tab],
+      statuses: statusesFilter,
       category: category || undefined,
       consignorId: consignorId || undefined,
       sectionId: sectionId || undefined,
@@ -135,6 +152,7 @@ export default function Listings() {
     const next = new URLSearchParams(searchParams);
     if (tab === "active") next.delete("tab"); else next.set("tab", tab);
     next.delete("page");
+    next.delete("status"); // clicking a tab clears any granular status filter from a deep-link
     const qs = next.toString();
     return `/app/listings${qs ? `?${qs}` : ""}`;
   };

@@ -2,8 +2,16 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import type { Product, Variant } from "@prisma/client";
 import { resolveShopifyTaxonomyId } from "~/services/shopify/taxonomy.server";
+import { parseCategory } from "~/lib/categories";
 import { deriveProductMetafields } from "~/lib/deriveProductMetafields";
 import { logger } from "~/lib/logger.server";
+
+/** Convert our internal category ("Footwear > Sneakers" or "Sneakers") to a clean Shopify productType. */
+function toShopifyProductType(category?: string | null): string | undefined {
+  if (!category) return undefined;
+  const { main, sub } = parseCategory(category);
+  return sub || main;
+}
 import {
   reorderVariantsBySizes,
   deriveSku,
@@ -86,7 +94,7 @@ export async function createShopifyProduct(
         product: {
           title: product.title,
           ...(product.brand ? { vendor: product.brand } : {}),
-          ...(product.category ? { productType: product.category } : {}),
+          ...(toShopifyProductType(product.category) ? { productType: toShopifyProductType(product.category) } : {}),
           ...(resolvedTaxonomyId ? { category: resolvedTaxonomyId } : {}),
           status: "ACTIVE",
           productOptions: [
