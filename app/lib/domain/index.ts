@@ -5,8 +5,10 @@ export {
   INACTIVE_STATUSES,
   STATUS_LABELS,
   STATUS_COLORS_ADMIN,
+  LISTING_BUCKETS,
+  BUCKET_LABELS,
 } from "./listing-statuses";
-export type { ListingStatus } from "./listing-statuses";
+export type { ListingStatus, ListingBucket } from "./listing-statuses";
 
 export {
   ORDER_STATUS,

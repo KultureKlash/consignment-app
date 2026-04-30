@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { createListing } from "~/services/listings";
+import { createListing, queryListings } from "~/services/listings";
+import { LISTING_STATUS } from "~/lib/domain";
 
 describe("listings.server", () => {
   describe("createListing", () => {
@@ -594,6 +595,60 @@ describe("listings.server", () => {
       // But Shopify IDs were NOT set (sync failed)
       const product = await prisma.product.findFirst();
       expect(product?.shopifyProductId).toBeNull();
+    });
+  });
+
+  describe("queryListings — statuses[] filter (admin tab buckets)", () => {
+    async function seedAcrossStatuses() {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      // Create one listing per status by creating priced and unpriced + manually updating
+      const a = await createListing({ admin, sku: "A", title: "A", brand: "X", size: "9", gtin: "GA", price: 100, consignorId: consignor.id });
+      const b = await createListing({ admin, sku: "B", title: "B", brand: "X", size: "9", gtin: "GB", price: 200, consignorId: consignor.id });
+      const c = await createListing({ admin, sku: "C", title: "C", brand: "X", size: "9", gtin: "GC", price: null, consignorId: consignor.id });
+      const d = await createListing({ admin, sku: "D", title: "D", brand: "X", size: "9", gtin: "GD", price: 400, consignorId: consignor.id });
+
+      await prisma.listing.update({ where: { id: b.id }, data: { status: LISTING_STATUS.PENDING_SALE } });
+      await prisma.listing.update({ where: { id: d.id }, data: { status: LISTING_STATUS.SOLD } });
+      // c stays AWAITING_PRICE; a stays ACTIVE
+      return { active: a.id, pendingSale: b.id, awaitingPrice: c.id, sold: d.id };
+    }
+
+    it("filters by a single bucket's statuses[]", async () => {
+      await seedAcrossStatuses();
+      const result = await queryListings({
+        statuses: [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE],
+      });
+      expect(result.listings).toHaveLength(2);
+      const statuses = new Set(result.listings.map((l) => l.status));
+      expect(statuses).toEqual(new Set([LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE]));
+    });
+
+    it("statuses=[] is a no-op (returns all)", async () => {
+      await seedAcrossStatuses();
+      const result = await queryListings({ statuses: [] });
+      expect(result.listings).toHaveLength(4);
+    });
+
+    it("combines with search filter (AND, not OR)", async () => {
+      await seedAcrossStatuses();
+      const result = await queryListings({
+        statuses: [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE],
+        search: "A",
+      });
+      // Only listing A matches both filters (active + title "A")
+      expect(result.listings).toHaveLength(1);
+      expect(result.listings[0].variant.product.title).toBe("A");
+    });
+
+    it("statuses takes precedence over single status when both passed", async () => {
+      await seedAcrossStatuses();
+      const result = await queryListings({
+        status: LISTING_STATUS.SOLD,
+        statuses: [LISTING_STATUS.ACTIVE],
+      });
+      expect(result.listings).toHaveLength(1);
+      expect(result.listings[0].status).toBe(LISTING_STATUS.ACTIVE);
     });
   });
 });

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, MapPin } from "lucide-react";
 import { CATEGORIES, MAIN_CATEGORIES, parseCategory } from "~/lib/categories";
-import { LISTING_STATUS } from "~/lib/domain";
 import CustomSelect from "~/components/admin/shared/CustomSelect";
 
 type Consignor = { id: string; name: string };
@@ -11,7 +10,6 @@ type Section = { id: string; name: string };
 
 type Props = {
   search: string;
-  status: string;
   category: string;
   consignorId: string;
   sectionId?: string;
@@ -20,25 +18,8 @@ type Props = {
   onFilterChange: (params: Record<string, string>) => void;
 };
 
-const STATUS_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "Needs Price", value: LISTING_STATUS.AWAITING_PRICE },
-  { label: "Submitted", value: LISTING_STATUS.SUBMITTED },
-  { label: "Awaiting Drop-off", value: LISTING_STATUS.APPROVED },
-  { label: "Active", value: LISTING_STATUS.ACTIVE },
-  { label: "Paused", value: LISTING_STATUS.PAUSED },
-  { label: "Pending Sale", value: LISTING_STATUS.PENDING_SALE },
-  { label: "Sold", value: LISTING_STATUS.SOLD },
-  { label: "Rejected", value: LISTING_STATUS.REJECTED },
-  { label: "Deleted", value: LISTING_STATUS.CANCELLED },
-  { label: "Withdrawal", value: LISTING_STATUS.WITHDRAWAL_REQUESTED },
-  { label: "Pickup", value: LISTING_STATUS.PENDING_PICKUP },
-  { label: "Withdrawn", value: LISTING_STATUS.WITHDRAWN },
-];
-
 export default function ListingsFilter({
   search: initialSearch,
-  status,
   category,
   consignorId,
   sectionId = "",
@@ -68,7 +49,7 @@ export default function ListingsFilter({
   const subCategory = categoryParsed.sub || "";
   const subOptions = mainCategory ? (CATEGORIES[mainCategory] ?? []) : [];
 
-  const hasFilters = (status && status !== "active") || category || consignorId || sectionId || initialSearch;
+  const hasFilters = category || consignorId || sectionId || initialSearch;
 
   const consignorNames = consignors.map((c) => c.name);
   const selectedConsignorName = consignors.find((c) => c.id === consignorId)?.name ?? "";
@@ -89,16 +70,6 @@ export default function ListingsFilter({
 
       {/* Filter chips */}
       <div className="flex flex-wrap gap-1.5 items-center">
-        <CustomSelect
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(val) => onFilterChange({ status: val, page: "1" })}
-          placeholder="Status"
-          chipMode
-          chipActive={!!(status && status !== "active")}
-          onClear={() => onFilterChange({ status: "active", page: "1" })}
-        />
-
         <CustomSelect
           options={MAIN_CATEGORIES}
           value={mainCategory}
@@ -148,7 +119,7 @@ export default function ListingsFilter({
           <button
             onClick={() => {
               setSearchValue("");
-              onFilterChange({ search: "", status: "active", category: "", consignorId: "", sectionId: "", page: "1" });
+              onFilterChange({ search: "", category: "", consignorId: "", sectionId: "", page: "1" });
             }}
             className="admin-chip-trigger text-red-600 border-red-600/20 bg-red-600/5 gap-1"
           >

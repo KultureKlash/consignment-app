@@ -7,8 +7,12 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listings";
 import { handleListingAction } from "~/services/admin/listing-actions.server";
+import { LISTING_BUCKETS, type ListingBucket } from "~/lib/domain";
+import type { Prisma } from "@prisma/client";
+import { CATEGORIES } from "~/lib/categories";
 import { useListingToasts } from "~/components/admin/listings/useListingToasts";
 import ListingsFilter from "~/components/admin/ListingsFilter";
+import StatusTabs from "~/components/admin/listings/StatusTabs";
 import ListingsTable from "~/components/admin/listings";
 import type { EditApproveFields, EditProductFields } from "~/components/admin/listings";
 import Pagination from "~/components/admin/listings/Pagination";
@@ -22,7 +26,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") ?? "";
-  const status = url.searchParams.get("status") ?? "active";
+  const tabParam = url.searchParams.get("tab") ?? "active";
+  const tab: ListingBucket = (tabParam in LISTING_BUCKETS ? tabParam : "active") as ListingBucket;
   const category = url.searchParams.get("category") ?? "";
   const consignorId = url.searchParams.get("consignorId") ?? "";
   const sortBy = (url.searchParams.get("sortBy") as "date" | "price" | "status") || "date";
@@ -30,10 +35,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
   const sectionId = url.searchParams.get("sectionId") ?? "";
 
-  const [result, consignors, sections] = await Promise.all([
+  // Build the same WHERE conditions as queryListings, MINUS status — used for bucket counts
+  const countConditions: Prisma.ListingWhereInput[] = [];
+  if (search) {
+    countConditions.push({
+      OR: [
+        { consignor: { name: { contains: search, mode: "insensitive" } } },
+        { variant: { product: { title: { contains: search, mode: "insensitive" } } } },
+        { variant: { product: { sku: { contains: search, mode: "insensitive" } } } },
+      ],
+    });
+  }
+  if (category) {
+    const subcats = CATEGORIES[category];
+    if (subcats) {
+      countConditions.push({ variant: { product: { category: { in: [category, ...subcats] } } } });
+    } else {
+      countConditions.push({ variant: { product: { category } } });
+    }
+  }
+  if (consignorId) countConditions.push({ consignorId });
+  if (sectionId) countConditions.push({ variant: { product: { sectionId } } });
+  const countWhere: Prisma.ListingWhereInput = countConditions.length > 0 ? { AND: countConditions } : {};
+
+  const [result, consignors, sections, statusCounts] = await Promise.all([
     queryListings({
       search: search || undefined,
-      status: status && status !== "all" ? status : undefined,
+      statuses: LISTING_BUCKETS[tab],
       category: category || undefined,
       consignorId: consignorId || undefined,
       sectionId: sectionId || undefined,
@@ -41,9 +69,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
     prisma.consignor.findMany({ select: { id: true, name: true, storeOwned: true }, orderBy: { name: "asc" } }),
     prisma.storeSection.findMany({ select: { id: true, name: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.listing.groupBy({ by: ["status"], where: countWhere, _count: true }),
   ]);
 
-  return { ...result, consignors, sections, filters: { search, status, category, consignorId, sectionId }, sortBy, sortDir };
+  const bucketCounts: Record<ListingBucket, number> = { active: 0, action_needed: 0, sold: 0, archive: 0 };
+  for (const row of statusCounts) {
+    for (const [bucket, statuses] of Object.entries(LISTING_BUCKETS) as [ListingBucket, readonly string[]][]) {
+      if (statuses.includes(row.status)) {
+        bucketCounts[bucket] += row._count;
+        break;
+      }
+    }
+  }
+
+  return { ...result, consignors, sections, bucketCounts, filters: { search, tab, category, consignorId, sectionId }, sortBy, sortDir };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -58,7 +97,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Listings() {
-  const { listings, total, page, totalPages, consignors, sections, filters, sortBy, sortDir } = useLoaderData<typeof loader>();
+  const { listings, total, page, totalPages, consignors, sections, bucketCounts, filters, sortBy, sortDir } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const cancelFetcher = useFetcher();
@@ -92,6 +131,14 @@ export default function Listings() {
     });
   };
 
+  const buildTabUrl = (tab: ListingBucket) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "active") next.delete("tab"); else next.set("tab", tab);
+    next.delete("page");
+    const qs = next.toString();
+    return `/app/listings${qs ? `?${qs}` : ""}`;
+  };
+
   const submitCancel = (intent: string, data: Record<string, string>) =>
     cancelFetcher.submit({ intent, ...data }, { method: "POST" });
   const submitApproval = (intent: string, data: Record<string, string>) =>
@@ -123,11 +170,9 @@ export default function Listings() {
   return (
     <s-page heading="Listings">
       <s-section>
-        <div style={{ marginBottom: "8px", fontSize: "13px", color: "#6d7175" }}>
-          {total} listing{total !== 1 ? "s" : ""} total
-        </div>
+        <StatusTabs activeTab={filters.tab} bucketCounts={bucketCounts} buildTabUrl={buildTabUrl} />
         <ListingsFilter
-          search={filters.search} status={filters.status} category={filters.category}
+          search={filters.search} category={filters.category}
           consignorId={filters.consignorId} sectionId={filters.sectionId}
           consignors={consignors} sections={sections} onFilterChange={handleFilterChange}
         />

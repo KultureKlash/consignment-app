@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { LISTING_STATUS, TERMINAL_STATUSES, ACTIVE_STATUSES } from "~/lib/listing-statuses";
+import { LISTING_STATUS, TERMINAL_STATUSES, ACTIVE_STATUSES, LISTING_BUCKETS } from "~/lib/listing-statuses";
 import {
   authenticatePortal,
   createSessionCookie,
@@ -441,6 +441,15 @@ describe("Listing status constants", () => {
   it("TERMINAL and ACTIVE don't overlap", () => {
     const overlap = ACTIVE_STATUSES.filter((s) => TERMINAL_STATUSES.includes(s));
     expect(overlap).toHaveLength(0);
+  });
+
+  it("every LISTING_STATUS belongs to exactly one bucket", () => {
+    const bucketed = Object.values(LISTING_BUCKETS).flat();
+    const bucketedSet = new Set(bucketed);
+    expect(bucketed.length).toBe(bucketedSet.size); // no duplicates across buckets
+    for (const s of Object.values(LISTING_STATUS)) {
+      expect(bucketedSet.has(s)).toBe(true);
+    }
   });
 });
 

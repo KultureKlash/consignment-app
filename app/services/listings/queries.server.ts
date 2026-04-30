@@ -6,6 +6,7 @@ import { logger } from "~/lib/system";
 export type ListingFilters = {
   search?: string;
   status?: string;
+  statuses?: readonly string[];
   category?: string;
   consignorId?: string;
   sectionId?: string;
@@ -45,7 +46,9 @@ export async function queryListings(filters: ListingFilters) {
     });
   }
 
-  if (status) {
+  if (filters.statuses && filters.statuses.length > 0) {
+    conditions.push({ status: { in: [...filters.statuses] } });
+  } else if (status) {
     conditions.push({ status });
   }
 

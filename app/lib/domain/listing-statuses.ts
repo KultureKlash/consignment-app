@@ -55,6 +55,34 @@ export const STATUS_LABELS: Record<string, string> = {
   [LISTING_STATUS.WITHDRAWN]: "Withdrawn",
 };
 
+// Admin Listings page tab buckets — collapses 12 statuses into 4 task-oriented groups
+export const LISTING_BUCKETS = {
+  active: [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE],
+  action_needed: [
+    LISTING_STATUS.SUBMITTED,
+    LISTING_STATUS.AWAITING_PRICE,
+    LISTING_STATUS.APPROVED,
+    LISTING_STATUS.WITHDRAWAL_REQUESTED,
+    LISTING_STATUS.PENDING_PICKUP,
+  ],
+  sold: [LISTING_STATUS.SOLD],
+  archive: [
+    LISTING_STATUS.CANCELLED,
+    LISTING_STATUS.REJECTED,
+    LISTING_STATUS.WITHDRAWN,
+    LISTING_STATUS.PAUSED,
+  ],
+} as const;
+
+export type ListingBucket = keyof typeof LISTING_BUCKETS;
+
+export const BUCKET_LABELS: Record<ListingBucket, string> = {
+  active: "Active",
+  action_needed: "Action needed",
+  sold: "Sold",
+  archive: "Archive",
+};
+
 // Colors for admin UI
 export const STATUS_COLORS_ADMIN: Record<string, string> = {
   [LISTING_STATUS.AWAITING_PRICE]: "bg-amber-400",
