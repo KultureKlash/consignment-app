@@ -13,12 +13,14 @@ export type { ListingStatus, ListingBucket } from "./listing-statuses";
 export {
   ORDER_STATUS,
   ORDER_PAYMENT_STATUS,
+  ORDER_ITEM_STATUS,
   TRANSACTION_TYPE,
   CONSIGNOR_STATUS,
 } from "./order-statuses";
 export type {
   OrderStatus,
   OrderPaymentStatus,
+  OrderItemStatus,
   TransactionType,
   ConsignorStatus,
 } from "./order-statuses";

@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/order-statuses";
 
 export async function getConsignorPayouts(consignorId: string, opts: { storeOwned?: boolean } = {}) {
   const storeOwned = opts.storeOwned ?? false;
@@ -32,7 +32,7 @@ export async function getConsignorPayouts(consignorId: string, opts: { storeOwne
 
   // Unbatched sale transactions (not in any payout yet)
   const unbatchedTxs = await prisma.transaction.findMany({
-    where: { consignorId, type: TRANSACTION_TYPE.SALE, payoutItems: { none: {} }, orderItem: { status: "sold" } },
+    where: { consignorId, type: TRANSACTION_TYPE.SALE, payoutItems: { none: {} }, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
     orderBy: { createdAt: "desc" },
     include: {
       orderItem: {

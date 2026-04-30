@@ -17,6 +17,14 @@ export const ORDER_PAYMENT_STATUS = {
 
 export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
 
+export const ORDER_ITEM_STATUS = {
+  SOLD: "sold",
+  PENDING_SALE: "pending_sale",
+  REFUNDED: "refunded",
+} as const;
+
+export type OrderItemStatus = (typeof ORDER_ITEM_STATUS)[keyof typeof ORDER_ITEM_STATUS];
+
 export const TRANSACTION_TYPE = {
   SALE: "sale",
   REFUND: "refund",

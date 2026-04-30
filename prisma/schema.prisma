@@ -156,7 +156,7 @@ model OrderItem {
   listingId String
 
   price     Float
-  status    String   @default("sold") // "sold" | "refunded"
+  status    String   @default("sold") // "sold" | "pending_sale" | "refunded" — see ORDER_ITEM_STATUS
 
   order     Order    @relation(fields: [orderId], references: [id])
   listing   Listing  @relation(fields: [listingId], references: [id])

@@ -1,6 +1,6 @@
 import prisma from "~/db.server";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
-import { TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/order-statuses";
 
 export async function getConsignorSales(
   consignorId: string,
@@ -12,10 +12,10 @@ export async function getConsignorSales(
   const where: Record<string, any> = { consignorId, type: TRANSACTION_TYPE.SALE };
 
   // Status filter: "refunded" means the orderItem was refunded
-  if (filters.status === "refunded") {
-    where.orderItem = { status: "refunded" };
-  } else if (filters.status === "sold") {
-    where.orderItem = { status: "sold" };
+  if (filters.status === ORDER_ITEM_STATUS.REFUNDED) {
+    where.orderItem = { status: ORDER_ITEM_STATUS.REFUNDED };
+  } else if (filters.status === ORDER_ITEM_STATUS.SOLD) {
+    where.orderItem = { status: ORDER_ITEM_STATUS.SOLD };
   }
 
   // Search filter
@@ -49,11 +49,11 @@ export async function getConsignorSales(
       include: txInclude,
     }),
     prisma.transaction.aggregate({
-      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
       _sum: { consignorAmount: true, salePrice: true, cost: true },
     }),
     prisma.transaction.count({
-      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
     }),
   ]);
 
@@ -82,7 +82,7 @@ export async function getConsignorSales(
       payout: tx.consignorAmount,
       profit: tx.salePrice - tx.cost,
       date: tx.createdAt,
-      status: tx.orderItem?.status ?? "sold",
+      status: tx.orderItem?.status ?? ORDER_ITEM_STATUS.SOLD,
       payoutStatus,
     };
   });

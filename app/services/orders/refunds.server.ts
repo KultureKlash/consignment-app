@@ -2,7 +2,7 @@ import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
-import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { ORDER_STATUS, ORDER_PAYMENT_STATUS, ORDER_ITEM_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import { calculateFee } from "~/lib/fee-calc";
 
@@ -49,7 +49,7 @@ export async function cancelOrder({
 
   await prisma.$transaction(async (tx) => {
     for (const item of order.items) {
-      if (item.status === "refunded") continue;
+      if (item.status === ORDER_ITEM_STATUS.REFUNDED) continue;
 
       await refundItem(tx, { ...item, orderId: order.id }, affectedVariantIds, {
         restoreInventory: true,
@@ -124,7 +124,7 @@ export async function refundOrder({
     if (!refundLineItems) {
       // Full refund — reverse allocation: highest price first, newest first
       const refundableItems = order.items
-        .filter((item) => item.status === "sold" || item.status === "pending_sale")
+        .filter((item) => item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE)
         .sort((a, b) =>
           b.price - a.price ||
           b.listing.createdAt.getTime() - a.listing.createdAt.getTime()
@@ -143,7 +143,7 @@ export async function refundOrder({
         const matchingItems = order.items
           .filter(
             (item) =>
-              (item.status === "sold" || item.status === "pending_sale") &&
+              (item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE) &&
               item.listing.variant.shopifyVariantId === refundLine.shopifyVariantId
           )
           .sort((a, b) =>
@@ -175,9 +175,9 @@ export async function refundOrder({
     const updatedItems = await tx.orderItem.findMany({
       where: { orderId: order.id },
     });
-    const allRefunded = updatedItems.every((item) => item.status === "refunded");
+    const allRefunded = updatedItems.every((item) => item.status === ORDER_ITEM_STATUS.REFUNDED);
     const newTotal = updatedItems
-      .filter((item) => item.status === "sold" || item.status === "pending_sale")
+      .filter((item) => item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE)
       .reduce((sum, item) => sum + item.price, 0);
 
     await tx.order.update({
@@ -282,7 +282,7 @@ async function refundItem(
 
   await tx.orderItem.update({
     where: { id: item.id },
-    data: { status: "refunded" },
+    data: { status: ORDER_ITEM_STATUS.REFUNDED },
   });
 
   if (postPayout) {

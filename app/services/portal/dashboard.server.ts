@@ -3,7 +3,7 @@ import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders";
 import { buildNotifications } from "./notifications.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
-import { TRANSACTION_TYPE } from "~/lib/order-statuses";
+import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/order-statuses";
 
 interface MonthlyEarning {
   month: string;
@@ -136,7 +136,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
 
     // Recent sales: only show non-refunded items
     prisma.transaction.findMany({
-      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
+      where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: {
@@ -175,7 +175,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     // Store-owned: sum of (salePrice - cost) for sold items = total profit
     storeOwned
       ? prisma.transaction.aggregate({
-          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
+          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
           _sum: { salePrice: true, cost: true },
         })
       : Promise.resolve({ _sum: { salePrice: null, cost: null } }),
@@ -190,7 +190,7 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
     storeOwned
       ? Promise.resolve({ _sum: { salePrice: null } })
       : prisma.transaction.aggregate({
-          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } },
+          where: { consignorId, type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } },
           _sum: { salePrice: true },
         }),
   ]);

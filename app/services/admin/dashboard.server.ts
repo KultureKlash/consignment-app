@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import { fmt } from "~/lib/formatting";
 import { LISTING_STATUS } from "~/lib/domain";
-import { TRANSACTION_TYPE, ORDER_PAYMENT_STATUS } from "~/lib/domain";
+import { TRANSACTION_TYPE, ORDER_PAYMENT_STATUS, ORDER_ITEM_STATUS } from "~/lib/domain";
 
 export type FeedEvent = {
   product: string;
@@ -31,11 +31,11 @@ export async function getDashboardData() {
   startOfToday.setHours(0, 0, 0, 0);
 
   const [salesAgg, totalOrders, allOrders, consignFeesAgg, storeAgg, inventoryAgg, activeListingCount, activeProductCount, submittedCount, awaitingDropoffCount, withdrawalRequestCount, pendingPickupCount] = await Promise.all([
-    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" } }, _sum: { grossAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD } }, _sum: { grossAmount: true } }),
     prisma.order.count({ where: { paymentStatus: { in: [ORDER_PAYMENT_STATUS.PAID, "refunded"] } } }),
     prisma.order.count(),
-    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" }, consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
-    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: "sold" }, consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD }, consignor: { storeOwned: false } }, _sum: { feeAmount: true } }),
+    prisma.transaction.aggregate({ where: { type: TRANSACTION_TYPE.SALE, orderItem: { status: ORDER_ITEM_STATUS.SOLD }, consignor: { storeOwned: true } }, _sum: { grossAmount: true, cost: true } }),
     prisma.listing.aggregate({ where: { status: LISTING_STATUS.ACTIVE }, _sum: { price: true } }),
     prisma.listing.count({ where: { status: LISTING_STATUS.ACTIVE } }),
     prisma.product.count({ where: { variants: { some: { listings: { some: { status: LISTING_STATUS.ACTIVE } } } } } }),
