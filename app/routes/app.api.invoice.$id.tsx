@@ -5,6 +5,8 @@ import prisma from "~/db.server";
 export async function loader({ request, params }: LoaderFunctionArgs) {
   await authenticate.admin(request);
   const id = params.id!;
+  const url = new URL(request.url);
+  const inline = url.searchParams.get("inline") === "1";
 
   const payout = await prisma.payout.findUnique({
     where: { id },
@@ -17,11 +19,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const buffer = Buffer.from(payout.invoiceData, "base64");
   const fileName = payout.invoiceFileName ?? "invoice.pdf";
+  const disposition = inline ? "inline" : "attachment";
 
   return new Response(buffer, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Content-Disposition": `${disposition}; filename="${fileName}"`,
       "Content-Length": String(buffer.length),
     },
   });

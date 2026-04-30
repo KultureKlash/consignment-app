@@ -5,6 +5,7 @@ import { authenticatePortal } from "~/services/portal/auth.server";
 import { getConsignorPayouts } from "~/services/portal/payouts.server";
 import prisma from "~/db.server";
 import { PayoutsPage } from "~/components/portal/payouts/PayoutsPage";
+import { buildInvoiceFileName } from "~/lib/invoice-filename";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const consignor = await authenticatePortal(request);
@@ -36,14 +37,28 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const payout = await prisma.payout.findFirst({
       where: { id: payoutId, consignorId: consignor.id },
+      include: {
+        items: {
+          include: {
+            transaction: { include: { orderItem: { include: { order: { select: { orderNumber: true } } } } } },
+          },
+        },
+      },
     });
     if (!payout) return { error: "Payout not found" };
 
     const base64 = buffer.toString("base64");
+    const fileName = buildInvoiceFileName({
+      consignorName: consignor.name,
+      payoutCreatedAt: payout.createdAt,
+      orderNumbers: payout.items
+        .map((it) => it.transaction.orderItem?.order.orderNumber)
+        .filter((n): n is string => !!n),
+    });
 
     await prisma.payout.update({
       where: { id: payoutId },
-      data: { invoiceSent: true, invoiceData: base64, invoiceFileName: file.name },
+      data: { invoiceSent: true, invoiceData: base64, invoiceFileName: fileName },
     });
     return { ok: true };
   }

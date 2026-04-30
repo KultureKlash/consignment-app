@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronRight, Clock, Download, FileText, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Clock, Download, Eye, FileText, CheckCircle2, X } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
@@ -28,6 +29,7 @@ export function PendingSection({
   scrollRef,
   onDownload,
 }: PendingSectionProps) {
+  const [previewPayout, setPreviewPayout] = useState<PayoutRef | null>(null);
   const pendingPayouts = payouts.filter((p) => p.status !== PAYOUT_STATUS.PAID);
 
   return (
@@ -80,26 +82,39 @@ export function PendingSection({
                         : "Invoice Received"}
                     </span>
                     {payout.invoiceFileName && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          fetch(`/app/api/invoice/${payout.id}`)
-                            .then((r) => r.blob())
-                            .then((blob) => {
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement("a");
-                              a.href = url;
-                              a.download = payout.invoiceFileName ?? "invoice.pdf";
-                              a.click();
-                              URL.revokeObjectURL(url);
-                            });
-                        }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer border-0"
-                        title={`Download ${payout.invoiceFileName}`}
-                      >
-                        <Download size={10} />
-                        PDF
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewPayout(payout);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer border-0"
+                          title={`Preview ${payout.invoiceFileName}`}
+                        >
+                          <Eye size={10} />
+                          Preview
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fetch(`/app/api/invoice/${payout.id}`)
+                              .then((r) => r.blob())
+                              .then((blob) => {
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = payout.invoiceFileName ?? "invoice.pdf";
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              });
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer border-0"
+                          title={`Download ${payout.invoiceFileName}`}
+                        >
+                          <Download size={10} />
+                          PDF
+                        </button>
+                      </>
                     )}
                     <span className="text-sm font-bold text-[#1a1a1a] tabular-nums w-[90px] text-right">
                       ${fmt(payout.amount)}
@@ -212,6 +227,67 @@ export function PendingSection({
           })}
         </div>
       )}
+      {previewPayout && (
+        <InvoicePreviewModal
+          payout={previewPayout}
+          onClose={() => setPreviewPayout(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function InvoicePreviewModal({ payout, onClose }: { payout: PayoutRef; onClose: () => void }) {
+  const fileName = payout.invoiceFileName ?? "invoice.pdf";
+  const handleDownload = () => {
+    fetch(`/app/api/invoice/${payout.id}`)
+      .then((r) => r.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl flex flex-col w-full max-w-4xl h-[85vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText size={16} className="text-gray-500 shrink-0" />
+            <span className="text-sm font-semibold text-gray-900 truncate">{fileName}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleDownload}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer border-0"
+            >
+              <Download size={12} /> Download
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer border-0 bg-transparent"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <iframe
+          src={`/app/api/invoice/${payout.id}?inline=1`}
+          title={fileName}
+          className="flex-1 w-full border-0 bg-gray-50"
+        />
+      </div>
     </div>
   );
 }
