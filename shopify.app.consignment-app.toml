@@ -2,7 +2,7 @@
 
 client_id = "13c00c7ac71c6dd6f0af1503e061e9d1"
 name = "Kulture Konsign"
-application_url = "https://example.com"
+application_url = "https://consignment-app-cp9fjq.fly.dev"
 embedded = true
 
 [build]
@@ -32,4 +32,4 @@ api_version = "2026-04"
 scopes = "write_metaobject_definitions,write_metaobjects,write_products,read_locations,write_inventory,read_orders,read_publications,write_publications"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://consignment-app-cp9fjq.fly.dev/api/auth" ]

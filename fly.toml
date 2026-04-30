@@ -4,7 +4,7 @@
 # Logs: fly logs
 # SSH: fly ssh console
 
-app = "konsign"
+app = "consignment-app-cp9fjq"
 primary_region = "yul"
 
 [build]
