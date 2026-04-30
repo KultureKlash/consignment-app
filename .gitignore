@@ -61,3 +61,17 @@ test-results/
 # Misc
 coverage
 *.tgz
+
+# Local agent / IDE config
+.agents/
+.claude/
+
+# Data dumps & exports (never commit — may contain customer/consignor PII)
+*.sql
+*.csv
+db-export.json
+db-export-*.json
+consignor-*-report.*
+consignor-report.*
+*-export.csv
+unpriced-items.csv
