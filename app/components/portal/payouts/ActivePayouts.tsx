@@ -143,12 +143,12 @@ export function ActivePayouts({
                             {isUploading ? (
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 shrink-0">
                                 <Loader2 className="w-3 h-3 animate-spin" />
-                                Saving…
+                                Uploading…
                               </span>
                             ) : justSaved ? (
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] shrink-0">
                                 <Check className="w-3 h-3" />
-                                Saved
+                                Uploaded
                               </span>
                             ) : (
                               <>

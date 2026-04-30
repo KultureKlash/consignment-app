@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Clock, Download, Eye, FileText, CheckCircle2, X } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
@@ -239,6 +239,35 @@ export function PendingSection({
 
 function InvoicePreviewModal({ payout, onClose }: { payout: PayoutRef; onClose: () => void }) {
   const fileName = payout.invoiceFileName ?? "invoice.pdf";
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch through App Bridge session (same as the download path), then render via blob URL.
+  // A direct iframe src to /app/api/invoice/... would be a top-level cross-origin nav inside
+  // the embedded admin frame and Shopify would redirect to its login page.
+  useEffect(() => {
+    let revokeUrl: string | null = null;
+    let cancelled = false;
+    fetch(`/app/api/invoice/${payout.id}?inline=1`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        revokeUrl = url;
+        setPdfUrl(url);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message ?? "Failed to load PDF");
+      });
+    return () => {
+      cancelled = true;
+      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+    };
+  }, [payout.id]);
+
   const handleDownload = () => {
     fetch(`/app/api/invoice/${payout.id}`)
       .then((r) => r.blob())
@@ -282,11 +311,23 @@ function InvoicePreviewModal({ payout, onClose }: { payout: PayoutRef; onClose: 
             </button>
           </div>
         </div>
-        <iframe
-          src={`/app/api/invoice/${payout.id}?inline=1`}
-          title={fileName}
-          className="flex-1 w-full border-0 bg-gray-50"
-        />
+        <div className="flex-1 w-full bg-gray-50 relative">
+          {error ? (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-red-600">
+              Couldn't load PDF: {error}
+            </div>
+          ) : !pdfUrl ? (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+              Loading…
+            </div>
+          ) : (
+            <iframe
+              src={pdfUrl}
+              title={fileName}
+              className="w-full h-full border-0"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
