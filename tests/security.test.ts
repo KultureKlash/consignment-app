@@ -434,8 +434,8 @@ describe("Input validation — Zod schemas", () => {
 // ═══════════════════════════════════════════════════════════
 
 describe("Listing status constants", () => {
-  it("has all 10 statuses", () => {
-    expect(Object.keys(LISTING_STATUS)).toHaveLength(11);
+  it("has all 12 statuses", () => {
+    expect(Object.keys(LISTING_STATUS)).toHaveLength(12);
   });
 
   it("TERMINAL and ACTIVE don't overlap", () => {

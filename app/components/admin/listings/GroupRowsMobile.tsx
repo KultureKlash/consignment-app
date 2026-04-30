@@ -79,7 +79,7 @@ export function GroupRowsMobile({
                   ) : <span className="inline-block w-4 shrink-0" />
                 )}
                 <span className="font-semibold text-[13px] text-gray-900 w-7 shrink-0 text-center">{l.variant.size}</span>
-                <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">${fmt(Number(l.price))}</span>
+                <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">{l.price != null ? `$${fmt(Number(l.price))}` : <span className="text-amber-600 text-[11px]">No price</span>}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] text-gray-700 truncate">{l.consignor.name}</div>
                 </div>

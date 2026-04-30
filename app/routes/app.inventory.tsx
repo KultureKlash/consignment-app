@@ -59,6 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const quantityRaw = formData.get("quantity") as string;
         const consignorId = formData.get("consignorId") as string;
         const taxonomyId = (formData.get("shopifyCategoryId") as string ?? "").trim() || undefined;
+        const setPriceLater = formData.get("setPriceLater") === "1";
 
         const catIsFootwear = !category || category.startsWith("Footwear");
 
@@ -69,9 +70,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           return { error: "GTIN (barcode) is required for footwear", intent };
         }
 
-        const price = Number(priceRaw);
-        if (isNaN(price) || price <= 0) {
-          return { error: "Price must be greater than 0", intent };
+        let price: number | null;
+        if (setPriceLater) {
+          price = null;
+        } else {
+          price = Number(priceRaw);
+          if (isNaN(price) || price <= 0) {
+            return { error: "Price must be greater than 0", intent };
+          }
         }
 
         const quantity = parseInt(quantityRaw, 10) || 1;

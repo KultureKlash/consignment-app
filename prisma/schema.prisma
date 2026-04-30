@@ -103,9 +103,9 @@ model Listing {
   consignorId     String
   variantId       String
 
-  price           Float
+  price           Float?                // null = awaiting_price (admin created without price, consignor will set)
   cost            Float?                // acquisition cost (store-owned inventory only)
-  status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "active" | "paused" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
+  status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "awaiting_price" | "active" | "paused" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
 
   // Lifecycle timestamps
   createdAt       DateTime  @default(now())

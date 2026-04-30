@@ -239,7 +239,7 @@ export function GroupRowsDesktop({
               {l.variant.gtin || "\u2014"}
             </td>
             <td className={priceCellClass}>
-              ${fmt(Number(l.price))}
+              {l.price != null ? `$${fmt(Number(l.price))}` : <span className="text-amber-600 text-xs font-semibold">Needs price</span>}
             </td>
             <td className="admin-td">
               <div className={consignorNameClass}>{l.consignor.name}</div>
@@ -426,7 +426,7 @@ export function GroupRowsDesktop({
                       </span>
                     )}
                     <span className="font-semibold text-[13px] text-gray-900 w-7 shrink-0 text-center">{l.variant.size}</span>
-                    <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">${fmt(Number(l.price))}</span>
+                    <span className="font-bold text-[13px] tabular-nums text-gray-900 shrink-0">{l.price != null ? `$${fmt(Number(l.price))}` : <span className="text-amber-600 text-[11px]">No price</span>}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-[12px] text-gray-700 truncate leading-tight">{l.consignor.name}</div>
                       {l.variant.gtin && <div className="text-[9px] font-mono text-gray-400 truncate leading-tight">{l.variant.gtin}</div>}

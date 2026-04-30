@@ -12,7 +12,7 @@ export function EditListingModal({ listing, mode, onConfirm, onCancel, onUpdateC
 }) {
   const [size, setSize] = useState(listing.variant.size);
   const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
-  const [price, setPrice] = useState(String(fmt(Number(listing.price))));
+  const [price, setPrice] = useState(listing.price != null ? String(fmt(Number(listing.price))) : "");
   const [cost, setCost] = useState(listing.cost != null ? String(listing.cost) : "");
   const isCostOnly = mode === "cost-only";
   const isStoreOwned = listing.consignor.storeOwned ?? false;

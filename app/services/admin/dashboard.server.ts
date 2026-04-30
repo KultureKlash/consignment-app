@@ -122,7 +122,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     const product = listing.variant.product.title;
     const size = listing.variant.size;
 
-    if (listing.status === LISTING_STATUS.SOLD && listing.soldAt) {
+    if (listing.status === LISTING_STATUS.SOLD && listing.soldAt && listing.price != null) {
       events.push({
         product, size, detail: "sold for", price: `$${fmt(listing.price)}`,
         time: relativeTime(now, listing.soldAt), type: "sale",
@@ -145,7 +145,9 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
       existing.qty = (existing.qty ?? 1) + 1;
     } else {
       events.push({
-        product, size, detail: "listed at", price: `$${fmt(listing.price)}`,
+        product, size,
+        detail: listing.price != null ? "listed at" : "created (needs price)",
+        price: listing.price != null ? `$${fmt(listing.price)}` : "—",
         actor: listing.consignor.name,
         time: relativeTime(now, listing.createdAt), type: "listing",
         sortTime: listing.createdAt.getTime(),

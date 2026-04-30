@@ -201,7 +201,7 @@ function FlatRow({
         {l.variant.gtin || "\u2014"}
       </td>
       <td className="admin-td font-semibold tabular-nums">
-        ${fmt(Number(l.price))}
+        {l.price != null ? `$${fmt(Number(l.price))}` : <span className="text-amber-600 text-xs font-semibold">Needs price</span>}
       </td>
       <td className="admin-td">
         <div>{l.consignor.name}</div>
@@ -288,7 +288,7 @@ function FlatCardMobile({
                 {l.variant.product.sku ?? l.variant.product.brand ?? ""}
               </div>
             </div>
-            <span className="font-bold text-sm tabular-nums text-gray-900 shrink-0">${fmt(Number(l.price))}</span>
+            <span className="font-bold text-sm tabular-nums text-gray-900 shrink-0">{l.price != null ? `$${fmt(Number(l.price))}` : <span className="text-amber-600 text-xs">Needs price</span>}</span>
           </div>
         </div>
       </div>

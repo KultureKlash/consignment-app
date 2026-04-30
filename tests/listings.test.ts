@@ -516,6 +516,56 @@ describe("listings.server", () => {
       expect(await prisma.listing.count()).toBe(2);
     });
 
+    it("creates listing with null price → AWAITING_PRICE status, no listedAt", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        sku: "DD1391-100",
+        title: "Nike Dunk Panda",
+        brand: "Nike",
+        size: "9",
+        gtin: "TEST-GTIN-9",
+        price: null,
+        count: 2,
+        consignorId: consignor.id,
+      });
+
+      const listings = await prisma.listing.findMany();
+      expect(listings).toHaveLength(2);
+      expect(listings.every((l) => l.price === null)).toBe(true);
+      expect(listings.every((l) => l.status === "awaiting_price")).toBe(true);
+      expect(listings.every((l) => l.listedAt === null)).toBe(true);
+    });
+
+    it("creates listing with null price does NOT trigger Shopify sync", async () => {
+      const { admin, calls } = createMockAdmin();
+      const consignor = await createTestConsignor();
+
+      await createListing({
+        admin,
+        sku: "NO-PRICE-001",
+        title: "Unpriced Product",
+        brand: "TestBrand",
+        size: "9",
+        gtin: "NOPRICE-GTIN",
+        price: null,
+        consignorId: consignor.id,
+      });
+
+      // Wait for any potential background sync
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Shopify should never have been touched — no product/variant on Shopify
+      const product = await prisma.product.findFirst();
+      expect(product?.shopifyProductId).toBeNull();
+
+      // Shopify mutations should not have been invoked
+      const inventoryCalls = calls.filter((c) => c.query.includes("inventorySetQuantities") || c.query.includes("productCreate"));
+      expect(inventoryCalls.length).toBe(0);
+    });
+
     it("still creates listing when Shopify sync fails (resilient)", async () => {
       // Shopify sync wrapped in try/catch — listing creation should NOT fail
       const { admin } = createMockAdmin({ failOn: ["productCreate"] });

@@ -28,7 +28,7 @@ export async function createListing({
   category?: string;
   size: string;
   gtin?: string;
-  price: number;
+  price: number | null;
   count?: number;
   consignorId: string;
   taxonomyId?: string;
@@ -47,15 +47,24 @@ export async function createListing({
   const freshVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
 
   const now = new Date();
+  const isUnpriced = price === null;
   await prisma.listing.createMany({
     data: Array.from({ length: count }, () => ({
-      consignorId, variantId: variant.id, price, cost: cost ?? null, listedAt: now,
+      consignorId,
+      variantId: variant.id,
+      price,
+      cost: cost ?? null,
+      status: isUnpriced ? LISTING_STATUS.AWAITING_PRICE : LISTING_STATUS.ACTIVE,
+      listedAt: isUnpriced ? null : now,
     })),
   });
   const listings = await prisma.listing.findMany({
-    where: { consignorId, variantId: variant.id, listedAt: now },
+    where: { consignorId, variantId: variant.id, ...(isUnpriced ? { status: LISTING_STATUS.AWAITING_PRICE } : { listedAt: now }) },
     include: { consignor: true },
   });
+
+  // Skip Shopify sync for unpriced listings — they're not live until consignor sets price
+  if (isUnpriced) return listings[0];
 
   // Background Shopify sync with retry — don't block the response
   const backgroundSync = async () => {

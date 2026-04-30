@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useFetcher, Link, useSearchParams } from "react-router";
 import { redirect } from "react-router";
-import { Plus, Package, Search, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Package, Search, Eye, EyeOff, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal } from "~/services/submission";
+import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal, setUnpricedListingPrice, bulkSetUnpricedListingPrices } from "~/services/submission";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
@@ -82,6 +82,29 @@ export async function action({ request }: ActionFunctionArgs) {
     if (!listingId) return { error: "Missing listing ID" };
     await requestWithdrawal({ listingId, consignorId: consignor.id }); return { ok: true };
   }
+  if (intent === "set-initial-price") {
+    const raw = parseFloat(fd.get("price") as string);
+    if (!listingId || isNaN(raw) || raw <= 0 || raw > 999999.99) return { error: "Invalid price" };
+    const price = Math.round(raw * 100) / 100;
+    try {
+      await setUnpricedListingPrice({ listingId, consignorId: consignor.id, price });
+      return { ok: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to set price" };
+    }
+  }
+  if (intent === "bulk-set-initial-price") {
+    const raw = parseFloat(fd.get("price") as string);
+    const listingIds = (fd.getAll("listingIds") as string[]).filter(Boolean);
+    if (!listingIds.length || isNaN(raw) || raw <= 0 || raw > 999999.99) return { error: "Invalid input" };
+    const price = Math.round(raw * 100) / 100;
+    try {
+      const result = await bulkSetUnpricedListingPrices({ listingIds, consignorId: consignor.id, price });
+      return { ok: true, ...result };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to set prices" };
+    }
+  }
   return { error: "Invalid intent" };
 }
 
@@ -135,6 +158,24 @@ export default function PortalListings() {
       <AppHeader title="My Listings" subtitle="Track and manage your consignment items" consignorName={consignor.name} avatarColor={parentData?.consignor?.avatarColor} notifications={parentData?.notifications} />
       <div className="px-4 md:px-8 pb-8 space-y-4 md:space-y-6">
         <div className="flex items-center justify-between animate-slide-up"><div /><Link to="/portal/listings/new" className="btn-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm"><Plus className="w-4 h-4" />Submit New Listing</Link></div>
+
+        {(statusCounts[LISTING_STATUS.AWAITING_PRICE] ?? 0) > 0 && statusFilter !== LISTING_STATUS.AWAITING_PRICE && (
+          <Link
+            to={buildTabUrl(LISTING_STATUS.AWAITING_PRICE)}
+            className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-amber-400/[0.04] border border-amber-400/20 cursor-pointer transition-colors animate-slide-up no-underline"
+          >
+            <span className="w-8 h-8 rounded-full bg-amber-400/15 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4 text-amber-300" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                You have {statusCounts[LISTING_STATUS.AWAITING_PRICE]} item{statusCounts[LISTING_STATUS.AWAITING_PRICE] !== 1 ? "s" : ""} waiting on a price
+              </p>
+              <p className="text-xs text-muted-foreground">Set prices to make them live on the store</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </Link>
+        )}
 
         <StatusTabs statusFilter={statusFilter} statusCounts={statusCounts} showInactive={showInactive} buildTabUrl={buildTabUrl} />
 

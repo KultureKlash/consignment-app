@@ -96,22 +96,38 @@ export default function VariantFields() {
         <div>
           <label className="admin-field-label">Price</label>
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">
+            <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium pointer-events-none ${formFields.setPriceLater ? "text-gray-300" : "text-gray-500"}`}>
               $
             </span>
             <input
               type="number"
-              value={formFields.price}
+              value={formFields.setPriceLater ? "" : formFields.price}
               onChange={(e) => {
                 setFormFields({ ...formFields, price: e.target.value });
                 clearError("price");
               }}
-              placeholder="0.00"
+              placeholder={formFields.setPriceLater ? "Consignor will set price" : "0.00"}
               min="1"
               step="1"
-              className={`admin-input !pl-[30px]${fieldErrors.has("price") ? " !border-red-500" : ""}`}
+              disabled={formFields.setPriceLater}
+              className={`${formFields.setPriceLater ? "admin-input-disabled" : "admin-input"} !pl-[30px]${fieldErrors.has("price") ? " !border-red-500" : ""}`}
             />
           </div>
+          <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={formFields.setPriceLater}
+              onChange={(e) => {
+                setFormFields({ ...formFields, setPriceLater: e.target.checked, price: e.target.checked ? "" : formFields.price });
+                clearError("price");
+              }}
+              className="cursor-pointer"
+            />
+            <span>Set price later (consignor will input)</span>
+          </label>
+          {formFields.setPriceLater && (
+            <p className="admin-helper-text mt-1">Listing will park in "Needs Price" status — not live on Shopify until priced.</p>
+          )}
         </div>
         {selectedConsignorObj?.storeOwned && (
           <div>

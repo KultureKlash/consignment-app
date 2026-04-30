@@ -29,6 +29,7 @@ export function MobileDetailDrawer({
   const daysLabel = daysListedLabel(listing.createdAt, listing.status);
   const sku = listing.variant.gtin || product.sku || null;
   const isEditable = listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED;
+  const isAwaitingPrice = listing.status === LISTING_STATUS.AWAITING_PRICE;
 
   return createPortal(
     <div className="fixed inset-0 z-[200] md:hidden" onClick={onClose}>
@@ -76,14 +77,18 @@ export function MobileDetailDrawer({
                   <h2 className="text-base font-bold text-foreground leading-tight">{product.title}</h2>
                   <p className="text-sm text-muted-foreground mt-0.5">Size {listing.variant.size}</p>
                 </div>
-                <StatusBadge status={listing.status} />
+                {!isAwaitingPrice && <StatusBadge status={listing.status} />}
               </div>
             </div>
 
             {/* Price + lowest */}
             <div className="px-5 pb-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold tabular-nums text-foreground">${fmt(listing.price)}</span>
+                {isAwaitingPrice ? (
+                  <InlinePrice listingId={listing.id} price={null} editable={false} awaitingPrice />
+                ) : (
+                  <span className="text-2xl font-bold tabular-nums text-foreground">{listing.price != null ? `$${fmt(listing.price)}` : "—"}</span>
+                )}
                 {lowest != null && (
                   <button className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
                     Lowest Ask <span className="text-foreground font-medium">${fmt(lowest)}</span>

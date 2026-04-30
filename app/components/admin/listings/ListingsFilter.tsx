@@ -22,6 +22,7 @@ type Props = {
 
 const STATUS_OPTIONS = [
   { label: "All", value: "all" },
+  { label: "Needs Price", value: LISTING_STATUS.AWAITING_PRICE },
   { label: "Submitted", value: LISTING_STATUS.SUBMITTED },
   { label: "Awaiting Drop-off", value: LISTING_STATUS.APPROVED },
   { label: "Active", value: LISTING_STATUS.ACTIVE },

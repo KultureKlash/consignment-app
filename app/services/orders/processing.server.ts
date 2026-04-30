@@ -84,6 +84,10 @@ export async function processOrder({
       });
 
       for (const listing of listings) {
+        // ACTIVE listings always have a price (enforced by AWAITING_PRICE → ACTIVE flow)
+        if (listing.price == null) {
+          throw new Error(`Listing ${listing.id} is ACTIVE but has no price — data integrity error`);
+        }
         await tx.listing.update({
           where: { id: listing.id },
           data: { status: LISTING_STATUS.PENDING_SALE, soldAt: new Date() },

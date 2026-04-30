@@ -4,6 +4,7 @@
 export const LISTING_STATUS = {
   SUBMITTED: "submitted",
   APPROVED: "approved_awaiting_dropoff",
+  AWAITING_PRICE: "awaiting_price",
   ACTIVE: "active",
   PAUSED: "paused",
   PENDING_SALE: "pending_sale",
@@ -43,6 +44,7 @@ export const INACTIVE_STATUSES: readonly ListingStatus[] = [
 export const STATUS_LABELS: Record<string, string> = {
   [LISTING_STATUS.SUBMITTED]: "Submitted",
   [LISTING_STATUS.APPROVED]: "Approved",
+  [LISTING_STATUS.AWAITING_PRICE]: "Needs Price",
   [LISTING_STATUS.ACTIVE]: "Active",
   [LISTING_STATUS.PENDING_SALE]: "Pending Sale",
   [LISTING_STATUS.SOLD]: "Sold",
@@ -55,6 +57,7 @@ export const STATUS_LABELS: Record<string, string> = {
 
 // Colors for admin UI
 export const STATUS_COLORS_ADMIN: Record<string, string> = {
+  [LISTING_STATUS.AWAITING_PRICE]: "bg-amber-400",
   [LISTING_STATUS.ACTIVE]: "bg-primary",
   [LISTING_STATUS.PENDING_SALE]: "bg-[hsl(var(--warning))]",
   [LISTING_STATUS.SOLD]: "bg-[hsl(var(--success))]",

@@ -1,5 +1,6 @@
-import { Link } from "react-router";
-import { Plus, Package, Trash2, Pencil, ChevronDown, ChevronRight, PackageX } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useFetcher } from "react-router";
+import { Plus, Package, Trash2, Pencil, ChevronDown, ChevronRight, PackageX, DollarSign } from "lucide-react";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { fmt } from "~/lib/currency";
 import { StatusBadge } from "./StatusBadge";
@@ -20,6 +21,60 @@ interface ListingGroupProps {
   mobile?: boolean;
 }
 
+function BulkPriceModal({ count, listingIds, onClose }: { count: number; listingIds: string[]; onClose: () => void }) {
+  const fetcher = useFetcher();
+  const [price, setPrice] = useState("");
+  const isSubmitting = fetcher.state !== "idle";
+  const data = fetcher.data as { ok?: boolean; error?: string } | undefined;
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && data?.ok) onClose();
+  }, [fetcher.state, data, onClose]);
+
+  const handleApply = () => {
+    const parsed = parseFloat(price);
+    if (isNaN(parsed) || parsed <= 0) return;
+    const fd = new FormData();
+    fd.set("intent", "bulk-set-initial-price");
+    fd.set("price", parsed.toFixed(2));
+    for (const id of listingIds) fd.append("listingIds", id);
+    fetcher.submit(fd, { method: "POST" });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass-panel rounded-2xl p-6 w-[90%] max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1">Set price for all {count} item{count !== 1 ? "s" : ""}</h3>
+        <p className="text-xs text-muted-foreground mb-4">This price will be applied to every unpriced listing in this product group.</p>
+        <div className="relative mb-4">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={price}
+            onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+            onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+            autoFocus
+            placeholder="0.00"
+            className="glass-input w-full pl-7 pr-3 py-2.5 rounded-xl text-sm"
+          />
+        </div>
+        {data?.error && <p className="text-xs text-red-400 mb-3">{data.error}</p>}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer transition-colors">Cancel</button>
+          <button
+            onClick={handleApply}
+            disabled={isSubmitting || !price.trim()}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-amber-400/15 text-amber-300 hover:bg-amber-400/25 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Applying..." : `Apply to ${count}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ListingGroup({
   group,
   isOpen,
@@ -30,6 +85,8 @@ export function ListingGroup({
   onMobileDetail,
   mobile,
 }: ListingGroupProps) {
+  const unpricedListings = group.listings.filter((l) => l.status === LISTING_STATUS.AWAITING_PRICE);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   if (mobile) {
     return (
       <div>
@@ -71,12 +128,24 @@ export function ListingGroup({
             <Plus className="w-3.5 h-3.5" />
           </Link>
         </div>
+        {isOpen && unpricedListings.length >= 2 && (
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-300 bg-amber-400/10 hover:bg-amber-400/15 border-t border-amber-400/20 cursor-pointer transition-colors"
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            Set price for all {unpricedListings.length}
+          </button>
+        )}
         {isOpen && group.listings.map((listing) => (
           <div key={listing.id} onClick={() => onMobileDetail?.(listing.id)} className="flex items-center gap-2 pl-8 pr-4 py-3 bg-white/[0.02] border-t border-[rgba(255,255,255,0.04)] cursor-pointer active:bg-white/[0.06] transition-colors">
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-foreground">Size {listing.variant.size}</span>
-                <span className="shrink-0 ml-2 text-sm font-bold tabular-nums">${fmt(listing.price)}</span>
+                {listing.status === LISTING_STATUS.AWAITING_PRICE
+                  ? <span className="shrink-0 ml-2 text-xs font-semibold text-amber-300">Tap to set price</span>
+                  : <span className="shrink-0 ml-2 text-sm font-bold tabular-nums">{listing.price != null ? `$${fmt(listing.price)}` : "—"}</span>
+                }
               </div>
               <div className="flex items-center justify-between mt-1.5">
                 <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -88,6 +157,13 @@ export function ListingGroup({
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
           </div>
         ))}
+        {showBulkModal && (
+          <BulkPriceModal
+            count={unpricedListings.length}
+            listingIds={unpricedListings.map((l) => l.id)}
+            onClose={() => setShowBulkModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -133,6 +209,15 @@ export function ListingGroup({
           <Plus className="w-3.5 h-3.5" />
         </Link>
       </div>
+      {isOpen && unpricedListings.length >= 2 && (
+        <button
+          onClick={() => setShowBulkModal(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-300 bg-amber-400/10 hover:bg-amber-400/15 border-b border-amber-400/20 cursor-pointer transition-colors"
+        >
+          <DollarSign className="w-3.5 h-3.5" />
+          Set price for all {unpricedListings.length} unpriced item{unpricedListings.length !== 1 ? "s" : ""}
+        </button>
+      )}
       {isOpen && (<>
         <div className="grid grid-cols-[1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.06)] bg-white/[0.02] items-center">
           <span className="pl-6">Size</span>
@@ -146,7 +231,12 @@ export function ListingGroup({
         <div key={listing.id} className={`grid grid-cols-[1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2.5 text-sm items-center bg-white/[0.02] ${i < group.listings.length - 1 ? "border-b border-[rgba(255,255,255,0.03)]" : ""}`}>
           <span className="pl-6 text-muted-foreground">{listing.variant.size}</span>
           <div className="flex justify-center">
-            <InlinePrice listingId={listing.id} price={listing.price} editable={listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED} />
+            <InlinePrice
+              listingId={listing.id}
+              price={listing.price}
+              editable={listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED}
+              awaitingPrice={listing.status === LISTING_STATUS.AWAITING_PRICE}
+            />
           </div>
           <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
             {lowestPrices[listing.variantId] != null ? `$${fmt(lowestPrices[listing.variantId])}` : "\u2014"}
@@ -166,6 +256,11 @@ export function ListingGroup({
                 </button>
               </>
             )}
+            {listing.status === LISTING_STATUS.AWAITING_PRICE && (
+              <button onClick={() => onConfirmDelete(listing.id)} className="p-1 rounded hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400 cursor-pointer" title="Discard">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
             {listing.status === LISTING_STATUS.ACTIVE && (
               <button onClick={() => onConfirmWithdraw(listing.id)} className="p-1 rounded hover:bg-orange-500/10 transition-colors text-muted-foreground hover:text-orange-400 cursor-pointer" title="Request Withdrawal">
                 <PackageX className="w-3.5 h-3.5" />
@@ -175,6 +270,13 @@ export function ListingGroup({
         </div>
         ))}
       </>)}
+      {showBulkModal && (
+        <BulkPriceModal
+          count={unpricedListings.length}
+          listingIds={unpricedListings.map((l) => l.id)}
+          onClose={() => setShowBulkModal(false)}
+        />
+      )}
     </div>
   );
 }

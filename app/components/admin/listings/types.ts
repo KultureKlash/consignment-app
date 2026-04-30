@@ -1,6 +1,6 @@
 export type Listing = {
   id: string;
-  price: number | { toFixed: (digits: number) => string };
+  price: number | { toFixed: (digits: number) => string } | null;
   cost?: number | null;
   status: string;
   createdAt: string | Date;

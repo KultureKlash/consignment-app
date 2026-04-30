@@ -2,12 +2,13 @@ import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { compareSizes } from "~/lib/size-order";
 export { LISTING_STATUS };
 
-export const ACTIVE_STATUSES = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE];
+export const ACTIVE_STATUSES = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.AWAITING_PRICE, LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE];
 export const INACTIVE_STATUSES = [LISTING_STATUS.SOLD, LISTING_STATUS.CANCELLED, LISTING_STATUS.REJECTED, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP, LISTING_STATUS.WITHDRAWN];
 
 export const STATUS_LABELS: Record<string, string> = {
   [LISTING_STATUS.SUBMITTED]: "Submitted",
   [LISTING_STATUS.APPROVED]: "Awaiting Drop-off",
+  [LISTING_STATUS.AWAITING_PRICE]: "Needs Price",
   [LISTING_STATUS.ACTIVE]: "Active",
   [LISTING_STATUS.PENDING_SALE]: "Pending Sale",
   [LISTING_STATUS.SOLD]: "Sold",
@@ -21,6 +22,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_COLORS: Record<string, string> = {
   [LISTING_STATUS.SUBMITTED]: "bg-violet-500/15 text-violet-400",
   [LISTING_STATUS.APPROVED]: "bg-blue-400/15 text-blue-400",
+  [LISTING_STATUS.AWAITING_PRICE]: "bg-amber-400/15 text-amber-300",
   [LISTING_STATUS.ACTIVE]: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]",
   [LISTING_STATUS.PENDING_SALE]: "bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]",
   [LISTING_STATUS.SOLD]: "bg-primary/15 text-primary",
@@ -33,32 +35,33 @@ export const STATUS_COLORS: Record<string, string> = {
 
 // Status priority: lower = shown first. Active/in-process on top, final statuses at bottom.
 export const STATUS_PRIORITY: Record<string, number> = {
-  [LISTING_STATUS.ACTIVE]: 0,
-  [LISTING_STATUS.PENDING_SALE]: 1,
-  [LISTING_STATUS.SUBMITTED]: 2,
-  [LISTING_STATUS.APPROVED]: 3,
-  [LISTING_STATUS.WITHDRAWAL_REQUESTED]: 4,
-  [LISTING_STATUS.PENDING_PICKUP]: 5,
-  paused: 6,
-  [LISTING_STATUS.REJECTED]: 7,
-  [LISTING_STATUS.CANCELLED]: 8,
-  [LISTING_STATUS.SOLD]: 9,
-  [LISTING_STATUS.WITHDRAWN]: 10,
+  [LISTING_STATUS.AWAITING_PRICE]: 0,
+  [LISTING_STATUS.ACTIVE]: 1,
+  [LISTING_STATUS.PENDING_SALE]: 2,
+  [LISTING_STATUS.SUBMITTED]: 3,
+  [LISTING_STATUS.APPROVED]: 4,
+  [LISTING_STATUS.WITHDRAWAL_REQUESTED]: 5,
+  [LISTING_STATUS.PENDING_PICKUP]: 6,
+  paused: 7,
+  [LISTING_STATUS.REJECTED]: 8,
+  [LISTING_STATUS.CANCELLED]: 9,
+  [LISTING_STATUS.SOLD]: 10,
+  [LISTING_STATUS.WITHDRAWN]: 11,
 };
 
-export const NOT_YET_LISTED = new Set([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED]);
+export const NOT_YET_LISTED = new Set([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.AWAITING_PRICE]);
 
 export const TABS = [
   { key: "all", label: "All", dotColor: "" },
   { key: LISTING_STATUS.ACTIVE, label: "Active", dotColor: "bg-[hsl(var(--success))]/60 shadow-[0_0_6px_hsl(152_60%_52%/0.4)]" },
-  { key: LISTING_STATUS.SUBMITTED, label: "Pending", dotColor: "bg-amber-400/60 shadow-[0_0_6px_rgba(251,191,36,0.4)]" },
+  { key: LISTING_STATUS.SUBMITTED, label: "Pending", dotColor: "bg-violet-500/60 shadow-[0_0_6px_rgba(168,85,247,0.4)]" },
   { key: LISTING_STATUS.APPROVED, label: "Awaiting", dotColor: "bg-blue-400/60 shadow-[0_0_6px_rgba(96,165,250,0.4)]" },
   { key: "withdrawals", label: "Withdrawals", dotColor: "bg-orange-400/60 shadow-[0_0_6px_rgba(251,146,60,0.4)]" },
 ];
 
 export type ListingRow = {
   id: string;
-  price: number;
+  price: number | null;
   status: string;
   createdAt: string | Date;
   listedAt?: string | Date | null;
@@ -110,7 +113,7 @@ export function groupByProduct(listings: ListingRow[]): ProductGroup[] {
 }
 
 export function daysListedLabel(createdAt: string | Date, status: string): string {
-  if (NOT_YET_LISTED.has(status)) return "\u2014";
+  if (NOT_YET_LISTED.has(status as any)) return "\u2014";
   const d = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000));
   return d === 0 ? "Today" : `${d}d`;
 }

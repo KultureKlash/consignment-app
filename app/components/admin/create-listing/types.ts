@@ -22,6 +22,7 @@ export type FormFields = {
   price: string;
   quantity: string;
   cost: string;
+  setPriceLater: boolean;
 };
 
 export const EMPTY_FORM: FormFields = {
@@ -33,6 +34,7 @@ export const EMPTY_FORM: FormFields = {
   price: "",
   quantity: "1",
   cost: "",
+  setPriceLater: false,
 };
 
 export type { ProductResult };

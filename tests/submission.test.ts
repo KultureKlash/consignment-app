@@ -11,12 +11,15 @@ import {
   bulkApproveListing,
   bulkCheckinListing,
   updateActiveListingPrice,
+  setUnpricedListingPrice,
+  bulkSetUnpricedListingPrices,
   requestWithdrawal,
   approveWithdrawal,
   denyWithdrawal,
   completeWithdrawal,
   adminEditAndApprove,
 } from "~/services/submission";
+import { createListing } from "~/services/listings";
 
 describe("submission pipeline", () => {
   // ── Submit ──
@@ -563,6 +566,172 @@ describe("submission pipeline", () => {
       await expect(
         completeWithdrawal({ listingId: listing.id }),
       ).rejects.toThrow('Cannot complete withdrawal for listing with status "active"');
+    });
+  });
+
+  // ── Unpriced listings (admin creates without price → consignor sets price) ──
+
+  describe("setUnpricedListingPrice", () => {
+    async function createUnpricedListing(consignorId: string) {
+      const { admin } = createMockAdmin();
+      return createListing({
+        admin,
+        sku: "UNPRICED-001",
+        title: "Unpriced Item",
+        brand: "TestBrand",
+        size: "9",
+        gtin: "UNPRICED-GTIN",
+        price: null,
+        consignorId,
+      });
+    }
+
+    it("happy path: flips AWAITING_PRICE → ACTIVE, sets listedAt + price", async () => {
+      const consignor = await createTestConsignor();
+      const listing = await createUnpricedListing(consignor.id);
+      expect(listing.status).toBe("awaiting_price");
+      expect(listing.price).toBeNull();
+
+      await setUnpricedListingPrice({
+        listingId: listing.id,
+        consignorId: consignor.id,
+        price: 250,
+      });
+
+      const after = await prisma.listing.findUniqueOrThrow({ where: { id: listing.id } });
+      expect(after.status).toBe("active");
+      expect(after.price).toBe(250);
+      expect(after.listedAt).not.toBeNull();
+    });
+
+    it("rejects unauthorized consignor", async () => {
+      const owner = await createTestConsignor({ email: "owner@test.com" });
+      const other = await createTestConsignor({ email: "other@test.com" });
+      const listing = await createUnpricedListing(owner.id);
+
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: other.id, price: 100 }),
+      ).rejects.toThrow("Not authorized");
+    });
+
+    it("rejects listing that is already priced (not AWAITING_PRICE)", async () => {
+      const consignor = await createTestConsignor();
+      const { admin } = createMockAdmin();
+      const listing = await createListing({
+        admin, sku: "PRICED-001", title: "Already Priced", brand: "T", size: "9", gtin: "G",
+        price: 200, consignorId: consignor.id,
+      });
+
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: consignor.id, price: 300 }),
+      ).rejects.toThrow("already has a price");
+    });
+
+    it("rejects suspended consignor", async () => {
+      const consignor = await createTestConsignor();
+      const listing = await createUnpricedListing(consignor.id);
+      await prisma.consignor.update({ where: { id: consignor.id }, data: { status: "suspended" } });
+
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: consignor.id, price: 200 }),
+      ).rejects.toThrow("suspended");
+    });
+
+    it("rejects invalid price (zero, negative, too large)", async () => {
+      const consignor = await createTestConsignor();
+      const listing = await createUnpricedListing(consignor.id);
+
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: consignor.id, price: 0 }),
+      ).rejects.toThrow("Invalid price");
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: consignor.id, price: -10 }),
+      ).rejects.toThrow("Invalid price");
+      await expect(
+        setUnpricedListingPrice({ listingId: listing.id, consignorId: consignor.id, price: 9_999_999 }),
+      ).rejects.toThrow("Invalid price");
+    });
+  });
+
+  describe("bulkSetUnpricedListingPrices", () => {
+    async function createUnpricedBatch(consignorId: string, count: number, opts?: { size?: string; gtin?: string; sku?: string }) {
+      const { admin } = createMockAdmin();
+      const sku = opts?.sku ?? "BULK-001";
+      const size = opts?.size ?? "9";
+      const gtin = opts?.gtin ?? "BULK-GTIN-9";
+      await createListing({
+        admin, sku, title: "Bulk Unpriced", brand: "TestBrand", size, gtin,
+        price: null, count, consignorId,
+      });
+      return prisma.listing.findMany({ where: { consignorId, status: "awaiting_price" } });
+    }
+
+    it("happy path: all flip to ACTIVE at the same price", async () => {
+      const consignor = await createTestConsignor();
+      const listings = await createUnpricedBatch(consignor.id, 3);
+
+      const result = await bulkSetUnpricedListingPrices({
+        listingIds: listings.map((l) => l.id),
+        consignorId: consignor.id,
+        price: 175,
+      });
+
+      expect(result.updated).toBe(3);
+      const after = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
+      expect(after.every((l) => l.status === "active")).toBe(true);
+      expect(after.every((l) => l.price === 175)).toBe(true);
+      expect(after.every((l) => l.listedAt !== null)).toBe(true);
+    });
+
+    it("rejects when any listing belongs to another consignor (no partial application)", async () => {
+      const owner = await createTestConsignor({ email: "owner@test.com" });
+      const other = await createTestConsignor({ email: "other@test.com" });
+      const ownerListings = await createUnpricedBatch(owner.id, 2);
+      const otherListings = await createUnpricedBatch(other.id, 1, { sku: "BULK-002", gtin: "BULK-GTIN-OTHER" });
+
+      const mixed = [...ownerListings.map((l) => l.id), ...otherListings.map((l) => l.id)];
+      await expect(
+        bulkSetUnpricedListingPrices({ listingIds: mixed, consignorId: owner.id, price: 100 }),
+      ).rejects.toThrow("Not authorized");
+
+      // Owner's listings should remain AWAITING_PRICE (no partial)
+      const after = await prisma.listing.findMany({ where: { consignorId: owner.id } });
+      expect(after.every((l) => l.status === "awaiting_price")).toBe(true);
+    });
+
+    it("rejects when any listing is not AWAITING_PRICE", async () => {
+      const consignor = await createTestConsignor();
+      const unpriced = await createUnpricedBatch(consignor.id, 2);
+      const { admin } = createMockAdmin();
+      const priced = await createListing({
+        admin, sku: "PRICED-MIX", title: "Already Priced", brand: "T", size: "10", gtin: "PRICED-MIX-GTIN",
+        price: 200, consignorId: consignor.id,
+      });
+
+      await expect(
+        bulkSetUnpricedListingPrices({
+          listingIds: [...unpriced.map((l) => l.id), priced.id],
+          consignorId: consignor.id,
+          price: 100,
+        }),
+      ).rejects.toThrow("must be awaiting price");
+    });
+  });
+
+  describe("deleteSubmittedListing — extended for AWAITING_PRICE", () => {
+    it("allows consignor to discard their unpriced listing", async () => {
+      const consignor = await createTestConsignor();
+      const { admin } = createMockAdmin();
+      const listing = await createListing({
+        admin, sku: "DISCARD-001", title: "To Discard", brand: "T", size: "9", gtin: "DISCARD-GTIN",
+        price: null, consignorId: consignor.id,
+      });
+      expect(listing.status).toBe("awaiting_price");
+
+      await deleteSubmittedListing({ listingId: listing.id, consignorId: consignor.id });
+
+      const found = await prisma.listing.findUnique({ where: { id: listing.id } });
+      expect(found).toBeNull();
     });
   });
 });

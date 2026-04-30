@@ -227,14 +227,32 @@ export function CreateListingProvider({
       if (isNaN(sizeNum) || sizeNum < 1 || sizeNum > 99 || (sizeNum % 1 !== 0 && sizeNum % 1 !== 0.5)) errors.add("size");
     }
     if (isFootwearCat && !formFields.gtin.trim()) errors.add("gtin");
-    const price = Number(formFields.price);
-    if (isNaN(price) || price <= 0) errors.add("price");
+    if (!formFields.setPriceLater) {
+      const price = Number(formFields.price);
+      if (isNaN(price) || price <= 0) errors.add("price");
+    }
 
     if (errors.size > 0) { setFieldErrors(errors); shopify.toast.show("Please fill in all required fields"); return; }
 
     setFieldErrors(new Set());
     const category = mainCategory ? buildCategory(mainCategory, subCategory || undefined) : "";
-    const submitData: Record<string, string> = { intent: "create", consignorId: selectedConsignor, ...formFields, category };
+    const submitData: Record<string, string> = {
+      intent: "create",
+      consignorId: selectedConsignor,
+      sku: formFields.sku,
+      title: formFields.title,
+      brand: formFields.brand,
+      size: formFields.size,
+      gtin: formFields.gtin,
+      quantity: formFields.quantity,
+      cost: formFields.cost,
+      category,
+    };
+    if (formFields.setPriceLater) {
+      submitData.setPriceLater = "1";
+    } else {
+      submitData.price = formFields.price;
+    }
     if (shopifyCategory) submitData.shopifyCategoryId = shopifyCategory.id;
     if (imageBase64) submitData.image = imageBase64;
     if (!formFields.cost) delete submitData.cost;

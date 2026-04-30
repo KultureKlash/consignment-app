@@ -1,6 +1,6 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
+import { ensureShopifyProductAndVariant, updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS, TERMINAL_STATUSES } from "~/lib/listing-statuses";
 import { TRANSACTION_TYPE } from "~/lib/order-statuses";
@@ -125,16 +125,34 @@ export async function adminEditListing({
     await prisma.variant.update({ where: { id: listing.variantId }, data: variantUpdate });
   }
 
+  // Admin setting price on an unpriced listing → flip to ACTIVE + first-time Shopify sync
+  const isFirstTimeActivation =
+    listing.status === LISTING_STATUS.AWAITING_PRICE && price !== undefined && price > 0;
+
   const updated = await prisma.listing.update({
     where: { id: listingId },
     data: {
       ...(price !== undefined ? { price } : {}),
       ...(cost !== undefined ? { cost } : {}),
+      ...(isFirstTimeActivation ? { status: LISTING_STATUS.ACTIVE, listedAt: new Date() } : {}),
     },
     include: { consignor: true, variant: { include: { product: true } } },
   });
 
-  if (admin && [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE].includes(listing.status as any) && updated.variant.shopifyVariantId) {
+  if (admin && isFirstTimeActivation) {
+    try {
+      await ensureShopifyProductAndVariant({
+        admin,
+        product: updated.variant.product,
+        variant: updated.variant,
+        imageData: updated.variant.product.imageUrl?.startsWith("data:") ? updated.variant.product.imageUrl : undefined,
+      });
+      const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: updated.variantId } });
+      await syncInventory({ admin, variant: syncedVariant });
+    } catch (err) {
+      logger.error("Shopify sync failed after admin price activation", { error: err instanceof Error ? err.message : String(err), listingId });
+    }
+  } else if (admin && [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE].includes(listing.status as any) && updated.variant.shopifyVariantId) {
     const shopifyProductId = updated.variant.product.shopifyProductId;
     if (shopifyProductId) {
       try {

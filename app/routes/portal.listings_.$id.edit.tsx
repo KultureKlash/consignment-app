@@ -59,7 +59,7 @@ export default function PortalListingEdit() {
 
   const [size, setSize] = useState(listing.variant.size);
   const [gtin, setGtin] = useState(listing.variant.gtin ?? "");
-  const [price, setPrice] = useState(String(listing.price));
+  const [price, setPrice] = useState(listing.price != null ? String(listing.price) : "");
 
   const actionData = fetcher.data as { error?: string } | undefined;
 

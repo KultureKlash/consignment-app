@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog";
 import { syncInventory } from "~/services/inventory";
+import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { LISTING_STATUS } from "~/lib/domain";
 import { CONSIGNOR_STATUS } from "~/lib/domain";
 import { logger } from "~/lib/system";
@@ -74,10 +75,11 @@ export async function submitListing({
   }
 
   const first = listings[0];
+  // submitListing always provides a price (consignor-submitted), so first.price is non-null here
   sendSubmissionConfirmedEmail(first.consignor, {
     product: first.variant.product.title,
     size: first.variant.size,
-    price: first.price,
+    price: first.price ?? 0,
   }).catch(() => {});
 
   return first;
@@ -161,11 +163,137 @@ export async function deleteSubmittedListing({
   if (listing.consignorId !== consignorId) {
     throw new Error("Not authorized");
   }
-  if (listing.status !== LISTING_STATUS.SUBMITTED) {
-    throw new Error("Can only delete submitted listings");
+  if (listing.status !== LISTING_STATUS.SUBMITTED && listing.status !== LISTING_STATUS.AWAITING_PRICE) {
+    throw new Error("Can only delete submitted or unpriced listings");
   }
 
   await prisma.listing.delete({ where: { id: listingId } });
+}
+
+// ── Portal: Consignor sets price on an admin-created unpriced listing ──
+
+export async function setUnpricedListingPrice({
+  listingId,
+  consignorId,
+  price,
+}: {
+  listingId: string;
+  consignorId: string;
+  price: number;
+}) {
+  await requireActiveConsignor(consignorId);
+  if (price <= 0 || price > 999999.99) throw new Error("Invalid price");
+
+  const listing = await prisma.listing.findUniqueOrThrow({
+    where: { id: listingId },
+    include: { variant: { include: { product: true } } },
+  });
+
+  if (listing.consignorId !== consignorId) {
+    throw new Error("Not authorized");
+  }
+  if (listing.status !== LISTING_STATUS.AWAITING_PRICE) {
+    throw new Error("Listing already has a price");
+  }
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: { price, status: LISTING_STATUS.ACTIVE, listedAt: new Date() },
+    include: { variant: { include: { product: true } } },
+  });
+
+  // First-time Shopify sync — variant doesn't exist on Shopify yet
+  try {
+    const session = await prisma.session.findFirst({
+      where: { isOnline: false, accessToken: { not: "" } },
+      select: { shop: true },
+    });
+    if (session) {
+      const { unauthenticated } = await import("~/shopify.server");
+      const { admin } = await unauthenticated.admin(session.shop);
+      const product = await prisma.product.findUniqueOrThrow({ where: { id: listing.variant.productId } });
+      const variant = await prisma.variant.findUniqueOrThrow({ where: { id: listing.variantId } });
+      await ensureShopifyProductAndVariant({ admin, product, variant, imageData: product.imageUrl?.startsWith("data:") ? product.imageUrl : undefined });
+      const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: listing.variantId } });
+      await syncInventory({ admin, variant: syncedVariant });
+    }
+  } catch (err) {
+    logger.error("Shopify sync failed after initial price set (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  return updated;
+}
+
+// ── Portal: Bulk-set price on multiple admin-created unpriced listings ──
+
+export async function bulkSetUnpricedListingPrices({
+  listingIds,
+  consignorId,
+  price,
+}: {
+  listingIds: string[];
+  consignorId: string;
+  price: number;
+}): Promise<{ updated: number; syncErrors: string[] }> {
+  await requireActiveConsignor(consignorId);
+  if (price <= 0 || price > 999999.99) throw new Error("Invalid price");
+  if (listingIds.length === 0) throw new Error("No listings selected");
+
+  const listings = await prisma.listing.findMany({
+    where: { id: { in: listingIds } },
+    include: { variant: { include: { product: true } } },
+  });
+
+  if (listings.length !== listingIds.length) {
+    throw new Error("One or more listings not found");
+  }
+  for (const l of listings) {
+    if (l.consignorId !== consignorId) throw new Error("Not authorized");
+    if (l.status !== LISTING_STATUS.AWAITING_PRICE) {
+      throw new Error("All selected listings must be awaiting price");
+    }
+  }
+
+  const now = new Date();
+  await prisma.listing.updateMany({
+    where: { id: { in: listingIds } },
+    data: { price, status: LISTING_STATUS.ACTIVE, listedAt: now },
+  });
+
+  // Sync ONCE per unique variant — not per listing
+  const variantMap = new Map<string, typeof listings[0]["variant"]>();
+  for (const l of listings) {
+    if (!variantMap.has(l.variantId)) variantMap.set(l.variantId, l.variant);
+  }
+
+  const syncErrors: string[] = [];
+  try {
+    const session = await prisma.session.findFirst({
+      where: { isOnline: false, accessToken: { not: "" } },
+      select: { shop: true },
+    });
+    if (session) {
+      const { unauthenticated } = await import("~/shopify.server");
+      const { admin } = await unauthenticated.admin(session.shop);
+
+      for (const [variantId, variant] of variantMap) {
+        try {
+          const product = await prisma.product.findUniqueOrThrow({ where: { id: variant.productId } });
+          await ensureShopifyProductAndVariant({ admin, product, variant, imageData: product.imageUrl?.startsWith("data:") ? product.imageUrl : undefined });
+          const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+          await syncInventory({ admin, variant: syncedVariant });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          syncErrors.push(`Variant ${variantId}: ${msg}`);
+          logger.error("Shopify sync failed during bulk price set", { variantId, error: msg });
+        }
+      }
+    }
+  } catch (err) {
+    logger.error("Bulk price sync setup failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  return { updated: listings.length, syncErrors };
 }
 
 // ── Portal: Consignor updates price on an active listing ──
