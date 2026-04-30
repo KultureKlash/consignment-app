@@ -63,6 +63,23 @@ export async function action({ request }: ActionFunctionArgs) {
     return { ok: true };
   }
 
+  if (intent === "delete-invoice") {
+    const payoutId = formData.get("payoutId") as string;
+    const payout = await prisma.payout.findFirst({
+      where: { id: payoutId, consignorId: consignor.id },
+      select: { id: true, status: true },
+    });
+    if (!payout) return { error: "Payout not found" };
+    // Block deletion once admin has marked the payout paid — preserves audit trail
+    if (payout.status === "paid") return { error: "Cannot delete invoice on a paid payout" };
+
+    await prisma.payout.update({
+      where: { id: payoutId },
+      data: { invoiceSent: false, invoiceData: null, invoiceFileName: null },
+    });
+    return { ok: true };
+  }
+
   return { error: "Invalid intent" };
 }
 

@@ -143,6 +143,7 @@ input[type="number"] {
   }
   .admin-badge-submitted { @apply bg-purple-100 text-purple-700 border-purple-300; }
   .admin-badge-approved { @apply bg-teal-100 text-teal-700 border-teal-200; }
+  .admin-badge-awaiting-price { @apply bg-amber-100 text-amber-700 border-amber-300; }
   .admin-badge-active { @apply bg-green-100 text-green-700 border-green-300; }
   .admin-badge-paused { @apply bg-red-50 text-red-600 border-red-200; }
   .admin-badge-pending-sale { @apply bg-amber-50 text-amber-700 border-amber-200; }

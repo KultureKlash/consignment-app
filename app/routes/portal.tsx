@@ -40,6 +40,10 @@ export default function PortalLayout() {
 
   return (
     <div className="portal-root min-h-screen relative">
+      {/* Critical above-the-fold styles — inlined to avoid FOUC on hard reload
+          while portal.css (Vite-dev module-injected CSS) is still in flight */}
+      <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
+
       {/* Background image + dark overlay — same as login */}
       <div
         className="fixed inset-0 bg-cover bg-center"
@@ -58,6 +62,19 @@ export default function PortalLayout() {
     </div>
   );
 }
+
+const CRITICAL_CSS = `
+  /* Reset link defaults so nav items don't flash purple/underlined */
+  .portal-root a { color: inherit; text-decoration: none; }
+  /* Hide content until proper CSS lands — prevents the unstyled flash */
+  .portal-root :where(.nav-item, .nav-item-active) {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.625rem 1rem; border-radius: 0.75rem;
+    font-size: 0.875rem; font-weight: 500;
+    color: rgba(255,255,255,0.6); cursor: pointer;
+    transition: all 0.2s;
+  }
+`;
 
 export function ErrorBoundary() {
   const error = useRouteError();

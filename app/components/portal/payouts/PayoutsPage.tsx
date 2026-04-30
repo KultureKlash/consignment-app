@@ -127,6 +127,11 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
     fetcher.submit(fd, { method: "POST", encType: "multipart/form-data" });
   };
 
+  const handleDeleteInvoice = (payoutId: string) => {
+    if (!confirm("Delete this invoice? You'll need to upload a new one.")) return;
+    fetcher.submit({ intent: "delete-invoice", payoutId }, { method: "POST" });
+  };
+
   const handleTogglePayout = (id: string) => {
     setExpandedPayout(expandedPayout === id ? null : id);
   };
@@ -183,6 +188,7 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
           onTogglePayout={handleTogglePayout}
           isSubmitting={isSubmitting}
           onUploadInvoice={handleUploadInvoice}
+          onDeleteInvoice={handleDeleteInvoice}
         />
 
         {/* Payout History (paid) */}

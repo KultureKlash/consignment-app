@@ -11,6 +11,7 @@ export const sectionTitleClass = "admin-card-title";
 const BADGE_CLASSES: Record<string, string> = {
   [LISTING_STATUS.SUBMITTED]: "admin-badge-submitted",
   [LISTING_STATUS.APPROVED]: "admin-badge-approved",
+  [LISTING_STATUS.AWAITING_PRICE]: "admin-badge-awaiting-price",
   [LISTING_STATUS.ACTIVE]: "admin-badge-active",
   [LISTING_STATUS.PAUSED]: "admin-badge-paused",
   [LISTING_STATUS.PENDING_SALE]: "admin-badge-pending-sale",
@@ -44,6 +45,7 @@ export function statusLabel(status: string): string {
   const labels: Record<string, string> = {
     [LISTING_STATUS.SUBMITTED]: "submitted",
     [LISTING_STATUS.APPROVED]: "awaiting drop-off",
+    [LISTING_STATUS.AWAITING_PRICE]: "needs price",
     [LISTING_STATUS.ACTIVE]: "active",
     [LISTING_STATUS.PAUSED]: "paused",
     [LISTING_STATUS.PENDING_SALE]: "pending",
@@ -54,7 +56,8 @@ export function statusLabel(status: string): string {
     [LISTING_STATUS.PENDING_PICKUP]: "pickup",
     [LISTING_STATUS.WITHDRAWN]: "withdrawn",
   };
-  return labels[status] ?? status;
+  // Defensive: if a future status is added without a label, format it as "needs label" instead of raw "needs_label"
+  return labels[status] ?? status.replace(/_/g, " ");
 }
 
 // ── Types ──
