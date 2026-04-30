@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFetcher, useRouteLoaderData } from "react-router";
 import { DollarSign } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
@@ -25,6 +25,23 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
   const [showUnbatched, setShowUnbatched] = useState(false);
   const isSubmitting = ["loading", "submitting"].includes(fetcher.state);
+
+  // Per-payout upload feedback: which one is uploading + briefly flash success after
+  const [activePayoutId, setActivePayoutId] = useState<string | null>(null);
+  const [recentlySavedId, setRecentlySavedId] = useState<string | null>(null);
+  const lastFetcherStateRef = useRef(fetcher.state);
+  useEffect(() => {
+    const wasBusy = ["loading", "submitting"].includes(lastFetcherStateRef.current);
+    const nowIdle = fetcher.state === "idle";
+    if (wasBusy && nowIdle && activePayoutId && (fetcher.data as any)?.ok) {
+      setRecentlySavedId(activePayoutId);
+      setActivePayoutId(null);
+      const t = setTimeout(() => setRecentlySavedId(null), 2000);
+      return () => clearTimeout(t);
+    }
+    if (wasBusy && nowIdle) setActivePayoutId(null);
+    lastFetcherStateRef.current = fetcher.state;
+  }, [fetcher.state, fetcher.data, activePayoutId]);
 
   if (storeOwned) {
     return (
@@ -124,11 +141,13 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
     fd.append("intent", "upload-invoice");
     fd.append("payoutId", payoutId);
     fd.append("invoice", file);
+    setActivePayoutId(payoutId);
     fetcher.submit(fd, { method: "POST", encType: "multipart/form-data" });
   };
 
   const handleDeleteInvoice = (payoutId: string) => {
     if (!confirm("Delete this invoice? You'll need to upload a new one.")) return;
+    setActivePayoutId(payoutId);
     fetcher.submit({ intent: "delete-invoice", payoutId }, { method: "POST" });
   };
 
@@ -189,6 +208,8 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
           isSubmitting={isSubmitting}
           onUploadInvoice={handleUploadInvoice}
           onDeleteInvoice={handleDeleteInvoice}
+          uploadingPayoutId={activePayoutId}
+          recentlySavedPayoutId={recentlySavedId}
         />
 
         {/* Payout History (paid) */}

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Clock, CheckCircle2, Upload, FileText, Trash2, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, CheckCircle2, Upload, FileText, Trash2, RefreshCw, Loader2, Check } from "lucide-react";
 import { InfoTip } from "~/components/portal/InfoTip";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
@@ -31,6 +31,8 @@ interface ActivePayoutsProps {
   isSubmitting: boolean;
   onUploadInvoice: (payoutId: string, file: File) => void;
   onDeleteInvoice: (payoutId: string) => void;
+  uploadingPayoutId: string | null;
+  recentlySavedPayoutId: string | null;
 }
 
 export function ActivePayouts({
@@ -42,6 +44,8 @@ export function ActivePayouts({
   isSubmitting,
   onUploadInvoice,
   onDeleteInvoice,
+  uploadingPayoutId,
+  recentlySavedPayoutId,
 }: ActivePayoutsProps) {
   if (payouts.length === 0) return null;
 
@@ -87,61 +91,103 @@ export function ActivePayouts({
               </button>
               {isOpen && (
                 <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
-                  {!isIndividual && payout.status === PAYOUT_STATUS.PENDING && !payout.invoiceSent && (
-                    <div className="px-6 md:px-10 py-4 border-b border-[rgba(255,255,255,0.06)]">
-                      <label className="flex flex-col items-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed border-[rgba(255,255,255,0.12)] hover:border-blue-400/40 hover:bg-white/[0.03] transition-all cursor-pointer">
-                        <Upload className="w-5 h-5 text-blue-400" />
-                        <span className="text-xs font-semibold text-muted-foreground">Upload Invoice (PDF)</span>
-                        <span className="text-[10px] text-muted-foreground/60">Max 5MB</span>
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          className="hidden"
-                          disabled={isSubmitting}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            onUploadInvoice(payout.id, file);
-                          }}
-                        />
-                      </label>
-                    </div>
-                  )}
-                  {!isIndividual && payout.invoiceSent && payout.invoiceFileName && (
-                    <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{payout.invoiceFileName}</span>
-                      <label
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-                        title="Replace this invoice"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Replace
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          className="hidden"
-                          disabled={isSubmitting}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            onUploadInvoice(payout.id, file);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteInvoice(payout.id)}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                        title="Delete this invoice"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Delete
-                      </button>
-                    </div>
-                  )}
+                  {(() => {
+                    const isUploading = uploadingPayoutId === payout.id;
+                    const justSaved = recentlySavedPayoutId === payout.id;
+                    return (
+                      <>
+                        {!isIndividual && payout.status === PAYOUT_STATUS.PENDING && !payout.invoiceSent && (
+                          <div className="px-6 md:px-10 py-4 border-b border-[rgba(255,255,255,0.06)]">
+                            <label className={`flex flex-col items-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed transition-all ${
+                              isUploading
+                                ? "border-blue-400/40 bg-white/[0.03] cursor-wait"
+                                : justSaved
+                                ? "border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/[0.05] cursor-default"
+                                : "border-[rgba(255,255,255,0.12)] hover:border-blue-400/40 hover:bg-white/[0.03] cursor-pointer"
+                            }`}>
+                              {isUploading ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                                  <span className="text-xs font-semibold text-muted-foreground">Uploading…</span>
+                                </>
+                              ) : justSaved ? (
+                                <>
+                                  <Check className="w-5 h-5 text-[hsl(var(--success))]" />
+                                  <span className="text-xs font-semibold text-[hsl(var(--success))]">Uploaded</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-blue-400" />
+                                  <span className="text-xs font-semibold text-muted-foreground">Upload Invoice (PDF)</span>
+                                  <span className="text-[10px] text-muted-foreground/60">Max 5MB</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                disabled={isSubmitting || isUploading}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  onUploadInvoice(payout.id, file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        )}
+                        {!isIndividual && payout.invoiceSent && payout.invoiceFileName && (
+                          <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{payout.invoiceFileName}</span>
+                            {isUploading ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 shrink-0">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Saving…
+                              </span>
+                            ) : justSaved ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] shrink-0">
+                                <Check className="w-3 h-3" />
+                                Saved
+                              </span>
+                            ) : (
+                              <>
+                                <label
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                                  title="Replace this invoice"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                  Replace
+                                  <input
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    disabled={isSubmitting}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      onUploadInvoice(payout.id, file);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteInvoice(payout.id)}
+                                  disabled={isSubmitting}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                                  title="Delete this invoice"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-10 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.04)]">
                     <span>Product</span>
                     <span className="text-right">Sale</span>
