@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generate Konsign Icon</title>
+  <style>
+    body { background: #222; color: #eee; font-family: system-ui, sans-serif; padding: 40px; text-align: center; }
+    canvas { display: block; margin: 30px auto; max-width: 400px; border: 1px solid #444; border-radius: 12px; }
+    button { padding: 12px 24px; font-size: 14px; background: #4f46e5; color: white; border: 0; border-radius: 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Konsign App Icon</h1>
+  <p>1200 × 1200 PNG — preview below. Use the button to download.</p>
+  <canvas id="c" width="1200" height="1200"></canvas>
+  <button id="dl">Download PNG</button>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const W = 1200, H = 1200;
+    const R = 240; // corner radius
+
+    // Background — dark gradient
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#1a1a1a");
+    bg.addColorStop(1, "#0a0a0a");
+    ctx.fillStyle = bg;
+    roundRect(0, 0, W, H, R);
+    ctx.fill();
+
+    // Inner subtle border (~5% from edge)
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 4;
+    roundRect(60, 60, W - 120, H - 120, 200);
+    ctx.stroke();
+
+    // The K
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 780px Inter, system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("K", W / 2, H / 2 + 20); // slight optical adjustment
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    document.getElementById("dl").addEventListener("click", () => {
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "konsign-app-icon.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    });
+  </script>
+</body>
+</html>

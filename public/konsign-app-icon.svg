@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200">
+  <!-- Background — dark with subtle gradient like the portal -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded outer square -->
+  <rect x="0" y="0" width="1200" height="1200" rx="240" ry="240" fill="url(#bg)"/>
+
+  <!-- Subtle inner border glow -->
+  <rect x="60" y="60" width="1080" height="1080" rx="200" ry="200"
+        fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+
+  <!-- The K -->
+  <text x="600" y="600"
+        font-family="Inter, system-ui, -apple-system, sans-serif"
+        font-size="780"
+        font-weight="900"
+        fill="#ffffff"
+        text-anchor="middle"
+        dominant-baseline="central"
+        letter-spacing="-30"
+        filter="url(#glow)">K</text>
+</svg>
