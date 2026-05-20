@@ -68,6 +68,7 @@ coverage
 
 # Data dumps & exports (never commit — may contain customer/consignor PII)
 *.sql
+!prisma/migrations/**/*.sql
 *.csv
 db-export.json
 db-export-*.json
