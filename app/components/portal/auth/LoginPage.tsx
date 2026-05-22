@@ -11,8 +11,12 @@ export function LoginPage() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  const [email, setEmail] = useState("");
-  const [step, setStep] = useState<"email" | "verify">("email");
+  // Initialize directly from action data so SSR renders the right step
+  // immediately (no JS-hydration dependency for the email → verify transition)
+  const [email, setEmail] = useState(actionData?.email ?? "");
+  const [step, setStep] = useState<"email" | "verify">(
+    actionData?.step === "verify" ? "verify" : "email"
+  );
   const codeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
