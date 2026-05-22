@@ -45,8 +45,8 @@ export default async function handleRequest(
     responseHeaders.set(
       "Content-Security-Policy",
       isProd
-        ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-        : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.shopify.com; font-src 'self'; connect-src 'self' ws://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.shopify.com https://fonts.googleapis.com; img-src 'self' data: blob: https://cdn.shopify.com https://*.shopifycdn.com; font-src 'self' data: https://cdn.shopify.com https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://cdn.shopify.com https://fonts.googleapis.com; img-src 'self' data: blob: https://cdn.shopify.com https://*.shopifycdn.com; font-src 'self' data: https://cdn.shopify.com https://fonts.gstatic.com; connect-src 'self' ws://localhost:* http://localhost:*; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     );
     responseHeaders.set("Cross-Origin-Resource-Policy", "same-origin");
     responseHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
