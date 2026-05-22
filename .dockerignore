@@ -1,3 +1,41 @@
-.cache
-build
-node_modules
+# Whitelist approach: exclude everything, then explicitly include only what
+# the Docker build needs. Prevents any stray files (data dumps, reports,
+# IDE folders, etc.) from bloating the context or breaking the build.
+
+# Exclude everything by default
+**
+
+# But include these (the only files needed to build + run the app):
+!app/**
+!prisma/schema.prisma
+!prisma/migrations/**
+!public/**
+!extensions/**
+
+!package.json
+!package-lock.json
+!tsconfig.json
+!vite.config.ts
+!react-router.config.ts
+!shopify.app.toml
+!shopify.app.consignment-app.toml
+!shopify.web.toml
+!Dockerfile
+!fly.toml
+
+# Re-exclude things that might sneak in via nested paths
+**/node_modules
+**/build
+**/.cache
+**/.react-router
+**/.shopify
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+**/*.test.ts
+**/*.test.tsx
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
