@@ -165,7 +165,13 @@ const KEYWORD_RULES: Array<{
     main: "Footwear", sub: "Sandals" },
 
   // ── Generic apparel (ordered specific → generic) ──
-  { keywords: ["jersey"],
+  // T-Shirts check FIRST so "cotton jersey" fabric notation in a T-shirt
+  // title doesn't get matched as a sports Jersey
+  { keywords: ["tee", "t-shirt", "tshirt"],
+    main: "Apparel", sub: "T-Shirts" },
+  // Use "sports jersey" or standalone "jersey " to avoid matching
+  // fabric mentions like "cotton jersey"
+  { keywords: ["sports jersey", "soccer jersey", "basketball jersey", "football jersey", "hockey jersey", "baseball jersey"],
     main: "Apparel", sub: "Jerseys" },
   { keywords: ["polo"],
     main: "Apparel", sub: "Polos" },
@@ -197,8 +203,6 @@ const KEYWORD_RULES: Array<{
     main: "Apparel", sub: "Pants" },
   { keywords: ["short"],
     main: "Apparel", sub: "Shorts" },
-  { keywords: ["tee", "t-shirt", "tshirt"],
-    main: "Apparel", sub: "T-Shirts" },
   { keywords: ["tracksuit", "track suit", "outfit set"],
     main: "Apparel", sub: "Tracksuits" },
   { keywords: ["shirt"],

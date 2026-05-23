@@ -14,9 +14,10 @@ const TAXONOMY_SEARCH_TERMS: Record<string, string> = {
   "Sneakers": "sneakers",
   "Slides": "sandals",
   "Boots": "boots",
-  // Apparel
-  "T-Shirts": "t-shirts",
-  "Long Sleeves": "t-shirts",
+  // Apparel — using more specific search terms to avoid hitting
+  // "Baby & Toddler T-Shirts" (which is the first match for plain "t-shirts")
+  "T-Shirts": "tees shirts tops",
+  "Long Sleeves": "tees shirts tops",
   "Hoodies": "hoodies",
   "Sweatshirts": "sweatshirts",
   "Sweaters": "sweaters clothing",
@@ -28,8 +29,8 @@ const TAXONOMY_SEARCH_TERMS: Record<string, string> = {
   "Pants": "pants",
   "Sweatpants": "pants",
   "Shorts": "shorts",
-  "Jerseys": "t-shirts",
-  "Polos": "t-shirts",
+  "Jerseys": "tees shirts tops",
+  "Polos": "polo shirts",
   "Tracksuits": "outerwear",
   // Accessories
   "Handbags": "handbags",
