@@ -329,7 +329,7 @@ All services are organized into domain folders with barrel exports (`index.ts`).
 
 | Service | Purpose |
 |---------|---------|
-| `email.server.ts` | 7 email templates — OTP, item sold, payout ready, withdrawal approved, submission confirmed, rejected, suspended |
+| `email.server.ts` | 8 email templates — OTP, item sold, payout ready, payout paid, withdrawal approved, submission confirmed, rejected, suspended |
 | `index.ts` | Barrel export |
 
 ### OTP (`app/services/otp/`)

@@ -222,7 +222,7 @@ app/
     admin/             — Dashboard stats, listing-actions dispatcher, payouts
     catalog/           — Product/variant find-or-create
     consignors/        — CRUD, suspension
-    email/             — 7 transactional email templates
+    email/             — 8 transactional email templates
     inventory/         — Shopify inventory sync
     listings/          — mutations + queries
     orders/            — processing, refunds, balance, queries

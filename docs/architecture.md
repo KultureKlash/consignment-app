@@ -180,7 +180,7 @@ app/
     admin/                       — Admin dashboard, listing-actions dispatcher, payouts
     catalog/                     — Product/variant find-or-create
     consignors/                  — Consignor CRUD, suspension
-    email/                       — 7 transactional email templates (Resend)
+    email/                       — 8 transactional email templates (Resend)
     inventory/                   — Shopify inventory sync
     listings/                    — Listing mutations + queries
     orders/                      — Order processing, refunds, balance
@@ -258,7 +258,7 @@ app/services/
   admin/         — Dashboard stats, listing-actions dispatcher, payouts
   catalog/       — Product/variant find-or-create
   consignors/    — Consignor CRUD, suspension
-  email/         — 7 transactional email templates (Resend)
+  email/         — 8 transactional email templates (Resend)
   inventory/     — Shopify inventory sync
   listings/      — mutations.server.ts (create/cancel), queries.server.ts (search/filter)
   orders/        — processing.server.ts, refunds.server.ts, balance.server.ts, queries.server.ts
