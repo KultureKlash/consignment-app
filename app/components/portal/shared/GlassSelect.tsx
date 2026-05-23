@@ -68,7 +68,7 @@ export function GlassSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(!open)}
-        className={`glass-input w-full py-2.5 rounded-xl text-sm text-left cursor-pointer flex items-center transition-colors ${
+        className={`glass-input relative w-full py-2.5 rounded-xl text-sm text-left cursor-pointer flex items-center transition-colors ${
           disabled ? "opacity-50 cursor-not-allowed" : ""
         } ${icon ? "pl-10" : "pl-3"} pr-10`}
       >
