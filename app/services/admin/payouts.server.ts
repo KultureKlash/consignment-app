@@ -1,7 +1,8 @@
 import prisma from "~/db.server";
-import { sendPayoutReadyEmail } from "~/services/email";
+import { sendPayoutReadyEmail, sendPayoutPaidEmail } from "~/services/email";
 import { PAYOUT_STATUS } from "~/lib/domain";
 import { TRANSACTION_TYPE } from "~/lib/domain";
+import { computeTax } from "~/lib/tax";
 
 /**
  * Get all data needed for the payouts admin page:
@@ -222,7 +223,7 @@ export async function markInvoiced(payoutId: string) {
 export async function markPaid(payoutId: string) {
   const payout = await prisma.payout.findUniqueOrThrow({
     where: { id: payoutId },
-    include: { consignor: true },
+    include: { consignor: true, items: true },
   });
 
   const isIndividual = payout.consignor.taxStatus !== "business";
@@ -233,11 +234,22 @@ export async function markPaid(payoutId: string) {
     throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be ${expected})`);
   }
 
-  return prisma.payout.update({
+  const updated = await prisma.payout.update({
     where: { id: payoutId },
     data: { status: PAYOUT_STATUS.PAID },
     include: { consignor: true },
   });
+
+  // Confirmation email (best-effort — don't block the status change if delivery fails)
+  const tax = computeTax(payout.amount, payout.consignor);
+  sendPayoutPaidEmail(payout.consignor, {
+    amount: payout.amount,
+    itemCount: payout.items.length,
+    totalWithTax: tax.isTaxable ? tax.total : undefined,
+    isTaxable: tax.isTaxable,
+  }).catch(() => {});
+
+  return updated;
 }
 
 /**

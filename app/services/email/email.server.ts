@@ -104,6 +104,28 @@ export async function sendPayoutReadyEmail(
   `));
 }
 
+// ── Payout Paid ──
+
+export async function sendPayoutPaidEmail(
+  consignor: { email: string; notificationPrefs?: string | null },
+  payout: { amount: number; itemCount: number; totalWithTax?: number; isTaxable?: boolean },
+): Promise<void> {
+  const displayAmount = payout.isTaxable && payout.totalWithTax ? payout.totalWithTax : payout.amount;
+  const taxLine = payout.isTaxable && payout.totalWithTax
+    ? `<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">$${fmt(payout.amount)} + tax = $${fmt(payout.totalWithTax)}</p>`
+    : "";
+
+  await sendIfEnabled(consignor, `Payment sent — $${fmt(displayAmount)}`, wrap("Payment Sent", `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your payout has been paid. Funds should arrive in your account shortly depending on your payment method.</p>
+    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
+      <p style="margin: 0; font-size: 22px; font-weight: 700; color: #047857;">$${fmt(displayAmount)} paid</p>
+      <p style="margin: 4px 0 0; font-size: 13px; color: #6b7280;">${payout.itemCount} item${payout.itemCount !== 1 ? "s" : ""}</p>
+      ${taxLine}
+    </div>
+    <p style="font-size: 13px; color: #6b7280; margin: 0;">You can view the full statement in your consignor portal under <strong>Payouts</strong>.</p>
+  `));
+}
+
 // ── Withdrawal Approved ──
 
 export async function sendWithdrawalApprovedEmail(
