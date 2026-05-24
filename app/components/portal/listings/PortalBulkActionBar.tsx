@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useFetcher } from "react-router";
 import { PackageX, X } from "lucide-react";
+import { WITHDRAWAL_FEE_PER_ITEM } from "~/lib/finance";
+import { fmt } from "~/lib/currency";
 
 interface PortalBulkActionBarProps {
   selectedIds: Set<string>;
@@ -12,6 +14,7 @@ export function PortalBulkActionBar({ selectedIds, onClear }: PortalBulkActionBa
   const [confirming, setConfirming] = useState(false);
   const count = selectedIds.size;
   const isSubmitting = fetcher.state !== "idle";
+  const pickupFee = count * WITHDRAWAL_FEE_PER_ITEM;
 
   if (count === 0) return null;
 
@@ -65,9 +68,17 @@ export function PortalBulkActionBar({ selectedIds, onClear }: PortalBulkActionBa
             <h3 className="text-base font-semibold mb-2">
               Withdraw {count} item{count !== 1 ? "s" : ""}?
             </h3>
-            <p className="text-xs text-muted-foreground mb-5">
+            <p className="text-xs text-muted-foreground mb-3">
               {count === 1 ? "This item" : "These items"} will be taken off sale immediately. An admin will review the request and you'll be emailed when {count === 1 ? "it's" : "they're"} ready for pickup.
             </p>
+            <div className="mb-5 px-3 py-2.5 rounded-xl bg-amber-400/10 border border-amber-400/20">
+              <p className="text-xs font-semibold text-amber-200">
+                {count} item{count !== 1 ? "s" : ""} × ${fmt(WITHDRAWAL_FEE_PER_ITEM)} = ${fmt(pickupFee)} due at pickup
+              </p>
+              <p className="text-[11px] text-amber-200/70 mt-0.5">
+                Pay at the counter — card or cash.
+              </p>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirming(false)}

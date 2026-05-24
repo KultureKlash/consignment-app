@@ -1,5 +1,6 @@
 import { logger } from "~/lib/system";
 import { fmt } from "~/lib/formatting";
+import { WITHDRAWAL_FEE_PER_ITEM } from "~/lib/finance";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
@@ -182,7 +183,11 @@ export async function sendWithdrawalApprovedEmail(
     <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
       ${itemsHtml}
     </div>
-    <p style="font-size: 14px; color: #111827; font-weight: 500; margin: 0;">Please come pick up your ${count === 1 ? "item" : "items"} at the store.</p>
+    <p style="font-size: 14px; color: #111827; font-weight: 500; margin: 0 0 12px;">Please come pick up your ${count === 1 ? "item" : "items"} at the store.</p>
+    <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 16px; margin: 0;">
+      <p style="margin: 0; font-size: 13px; font-weight: 600; color: #92400e;">Pickup fee: ${count} item${count !== 1 ? "s" : ""} × $${fmt(WITHDRAWAL_FEE_PER_ITEM)} = $${fmt(count * WITHDRAWAL_FEE_PER_ITEM)}</p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #92400e;">Pay at the counter — card or cash.</p>
+    </div>
   `));
 }
 

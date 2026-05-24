@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { calculateFee } from "~/lib/fee-calc";
+import { WITHDRAWAL_FEE_PER_ITEM } from "~/lib/finance";
 
 describe("calculateFee", () => {
   it("calculates 15% fee correctly", () => {
@@ -47,5 +48,13 @@ describe("calculateFee", () => {
         expect(feeAmount + consignorAmount).toBeCloseTo(amount, 2);
       }
     }
+  });
+});
+
+describe("WITHDRAWAL_FEE_PER_ITEM", () => {
+  // Sanity check — flags accidental changes in code review.
+  // Shown to consignors in the request-withdrawal modal + approved email.
+  it("is $2 per item", () => {
+    expect(WITHDRAWAL_FEE_PER_ITEM).toBe(2);
   });
 });
