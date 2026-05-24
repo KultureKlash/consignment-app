@@ -80,6 +80,7 @@ export async function submitListing({
     product: first.variant.product.title,
     size: first.variant.size,
     price: first.price ?? 0,
+    quantity: listings.length,
   }).catch(() => {});
 
   return first;

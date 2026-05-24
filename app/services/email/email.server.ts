@@ -274,15 +274,30 @@ export async function sendListingLiveEmail(
 
 export async function sendSubmissionConfirmedEmail(
   consignor: { email: string; notificationPrefs?: string | null },
-  item: { product: string; size: string; price: number },
+  item: { product: string; size: string; price: number; quantity?: number },
 ): Promise<void> {
-  await sendIfEnabled(consignor, `Listing submitted — awaiting review`, wrap("Submission Received", `
-    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your listing has been submitted and is awaiting admin review.</p>
+  const qty = item.quantity ?? 1;
+  const subject = qty > 1
+    ? `${qty} listings submitted — awaiting review`
+    : `Listing submitted — awaiting review`;
+  const title = qty > 1 ? `${qty} Submissions Received` : "Submission Received";
+  const introCopy = qty > 1
+    ? `Your ${qty} listings have been submitted and are awaiting admin review.`
+    : "Your listing has been submitted and is awaiting admin review.";
+  const sizeLine = qty > 1
+    ? `${qty} × Size ${item.size} — $${fmt(item.price)} each`
+    : `Size ${item.size} — $${fmt(item.price)}`;
+  const closingCopy = qty > 1
+    ? "We'll notify you once they're approved or if we need any changes."
+    : "We'll notify you once it's approved or if we need any changes.";
+
+  await sendIfEnabled(consignor, subject, wrap(title, `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">${introCopy}</p>
     <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
       <p style="margin: 0 0 4px; font-weight: 600; color: #111827;">${item.product}</p>
-      <p style="margin: 0; font-size: 13px; color: #6b7280;">Size ${item.size} — $${fmt(item.price)}</p>
+      <p style="margin: 0; font-size: 13px; color: #6b7280;">${sizeLine}</p>
     </div>
-    <p style="font-size: 13px; color: #6b7280; margin: 0;">We'll notify you once it's approved or if we need any changes.</p>
+    <p style="font-size: 13px; color: #6b7280; margin: 0;">${closingCopy}</p>
   `));
 }
 
