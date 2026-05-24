@@ -136,10 +136,10 @@ export function ActivePayouts({
                             </label>
                           </div>
                         )}
-                        {!isIndividual && payout.invoiceSent && payout.invoiceFileName && (
+                        {!isIndividual && payout.invoiceSent && payout.status !== PAYOUT_STATUS.PAID && (
                           <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
                             <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                            <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{payout.invoiceFileName}</span>
+                            <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{payout.invoiceFileName ?? "Invoice uploaded"}</span>
                             {isUploading ? (
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 shrink-0">
                                 <Loader2 className="w-3 h-3 animate-spin" />

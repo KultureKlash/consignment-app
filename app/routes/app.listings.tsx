@@ -7,7 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { queryListings } from "~/services/listings";
 import { handleListingAction } from "~/services/admin/listing-actions.server";
-import { LISTING_BUCKETS, type ListingBucket } from "~/lib/domain";
+import { LISTING_BUCKETS, LISTING_STATUS, type ListingBucket } from "~/lib/domain";
 import type { Prisma } from "@prisma/client";
 import { CATEGORIES } from "~/lib/categories";
 import { useListingToasts } from "~/components/admin/listings/useListingToasts";
@@ -133,6 +133,24 @@ export default function Listings() {
 
   useEffect(() => { setSelectedIds(new Set()); }, [listings]);
 
+  const SELECTABLE_STATUSES_SET = new Set<string>([
+    LISTING_STATUS.SUBMITTED,
+    LISTING_STATUS.APPROVED,
+    LISTING_STATUS.ACTIVE,
+    LISTING_STATUS.WITHDRAWAL_REQUESTED,
+    LISTING_STATUS.PENDING_PICKUP,
+  ]);
+  const selectableVisibleIds = listings.filter((l) => SELECTABLE_STATUSES_SET.has(l.status)).map((l) => l.id);
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const allSelected = selectableVisibleIds.length > 0 && selectableVisibleIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) { for (const id of selectableVisibleIds) next.delete(id); }
+      else { for (const id of selectableVisibleIds) next.add(id); }
+      return next;
+    });
+  };
+
   useListingToasts(shopify, { cancel: cancelFetcher, add: addFetcher, approval: approvalFetcher }, {
     clearSelection: () => setSelectedIds(new Set()),
     closeQuickAdd: () => setQuickAdd(null),
@@ -200,9 +218,13 @@ export default function Listings() {
           approvalLoading={approvalLoading}
           cancelLoading={cancelLoading}
           onClearSelection={() => setSelectedIds(new Set())}
+          onSelectAllVisible={toggleSelectAllVisible}
           onBulkApprove={() => submitApproval("bulk-approve", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCancel={() => submitCancel("bulk-delete", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkApproveWithdrawal={() => submitApproval("bulk-approve-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkDenyWithdrawal={() => submitApproval("bulk-deny-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkCompleteWithdrawal={() => submitApproval("bulk-complete-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
         />
         <ListingsTable
           listings={listings} grouped

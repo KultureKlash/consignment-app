@@ -35,6 +35,10 @@ export async function adminEditProduct({
       ...(brand !== undefined ? { brand: brand || null } : {}),
       ...(category !== undefined ? { category: category || null } : {}),
       ...(sku !== undefined ? { sku: sku || null } : {}),
+      // Always persist the (already-resized) base64 locally so archived/no-Shopify
+      // products still show the new image. Shopify upload below will overwrite this
+      // with the CDN URL if/when sync succeeds.
+      ...(imageData ? { imageUrl: imageData } : {}),
     },
   });
 

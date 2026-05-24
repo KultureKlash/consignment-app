@@ -5,13 +5,13 @@ import { redirect } from "react-router";
 import { Plus, Package, Search, Eye, EyeOff, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal, setUnpricedListingPrice, bulkSetUnpricedListingPrices } from "~/services/submission";
+import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal, setUnpricedListingPrice, bulkSetUnpricedListingPrices, bulkRequestWithdrawal } from "~/services/submission";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import {
   ACTIVE_STATUSES, groupByProduct, ListingGroup, MobileDetailDrawer,
-  ConfirmModal, useInfiniteScroll, StatusTabs,
+  ConfirmModal, useInfiniteScroll, StatusTabs, PortalBulkActionBar,
 } from "~/components/portal/listings";
 import type { ListingRow } from "~/components/portal/listings";
 
@@ -46,7 +46,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   for (const l of allListings) { const pid = l.variant.product.id; const list = groupMap.get(pid) || []; list.push(l); groupMap.set(pid, list); }
   const totalGroups = groupMap.size;
   const totalPages = Math.max(1, Math.ceil(totalGroups / PAGE_SIZE));
-  const pageKeys = [...groupMap.keys()].slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  let orderedKeys = [...groupMap.keys()];
+  // On the withdrawals tab, surface in-progress requests (withdrawal_requested + pending_pickup) ahead of completed ones.
+  if (statusFilter === "withdrawals") {
+    const isInProgress = (pid: string) =>
+      (groupMap.get(pid) ?? []).some((l) => l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED || l.status === LISTING_STATUS.PENDING_PICKUP);
+    orderedKeys = orderedKeys.sort((a, b) => Number(!isInProgress(a)) - Number(!isInProgress(b)));
+  }
+  const pageKeys = orderedKeys.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const listings = pageKeys.flatMap((k) => groupMap.get(k) || []);
   // Status counts for tabs
   const counts = await prisma.listing.groupBy({ by: ["status"], where: { consignorId: consignor.id }, _count: true });
@@ -105,6 +112,17 @@ export async function action({ request }: ActionFunctionArgs) {
       return { error: err instanceof Error ? err.message : "Failed to set prices" };
     }
   }
+  if (intent === "bulk-request-withdrawal") {
+    const listingIds = (fd.get("listingIds") as string ?? "").split(",").filter(Boolean);
+    if (!listingIds.length) return { error: "No items selected" };
+    if (listingIds.length > 200) return { error: "Cannot withdraw more than 200 items at once" };
+    try {
+      const result = await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds });
+      return { ok: true, ...result };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to request withdrawal" };
+    }
+  }
   return { error: "Invalid intent" };
 }
 
@@ -121,10 +139,42 @@ export default function PortalListings() {
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [mobileDetail, setMobileDetail] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleGroup = (productId: string) => {
     setExpandedGroups((prev) => { const next = new Set(prev); if (next.has(productId)) next.delete(productId); else next.add(productId); return next; });
   };
+
+  const toggleSelect = (listingId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(listingId)) next.delete(listingId); else next.add(listingId);
+      return next;
+    });
+  };
+
+  const toggleSelectGroup = (ids: string[], select: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (select) { for (const id of ids) next.add(id); }
+      else { for (const id of ids) next.delete(id); }
+      return next;
+    });
+  };
+
+  const allActiveVisibleIds = listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).map((l) => l.id);
+  const allVisibleSelected = allActiveVisibleIds.length > 0 && allActiveVisibleIds.every((id) => selectedIds.has(id));
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) { for (const id of allActiveVisibleIds) next.delete(id); }
+      else { for (const id of allActiveVisibleIds) next.add(id); }
+      return next;
+    });
+  };
+
+  // Clear selection when the underlying listings change (e.g. after a successful bulk action)
+  useEffect(() => { setSelectedIds(new Set()); }, [listings]);
 
   useEffect(() => { setSearchValue(initialSearch); }, [initialSearch]);
   useEffect(() => {
@@ -192,6 +242,22 @@ export default function PortalListings() {
           <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Search by product name, size, or SKU" className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm" />
         </div>
 
+        {allActiveVisibleIds.length > 0 && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground animate-slide-up" style={{ animationDelay: "180ms" }}>
+            <span>
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : `${allActiveVisibleIds.length} active item${allActiveVisibleIds.length !== 1 ? "s" : ""}`}
+            </span>
+            <button
+              onClick={toggleSelectAllVisible}
+              className="text-orange-300 hover:text-orange-200 font-semibold cursor-pointer transition-colors"
+            >
+              {allVisibleSelected ? "Unselect all" : `Select all ${allActiveVisibleIds.length}`}
+            </button>
+          </div>
+        )}
+
         {listings.length === 0 ? (
           <div className="glass-panel rounded-2xl p-12 text-center animate-slide-up" style={{ animationDelay: "160ms" }}>
             <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
@@ -202,12 +268,12 @@ export default function PortalListings() {
           <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "160ms" }}>
             <div className="hidden md:block">
               {serverGroups.map((group) => (
-                <ListingGroup key={group.productId} group={group} isOpen={expandedGroups.has(group.productId)} onToggle={() => toggleGroup(group.productId)} lowestPrices={lowestPrices} onConfirmDelete={setConfirmDelete} onConfirmWithdraw={setConfirmWithdraw} />
+                <ListingGroup key={group.productId} group={group} isOpen={expandedGroups.has(group.productId)} onToggle={() => toggleGroup(group.productId)} lowestPrices={lowestPrices} onConfirmDelete={setConfirmDelete} onConfirmWithdraw={setConfirmWithdraw} selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleSelectGroup={toggleSelectGroup} />
               ))}
             </div>
             <div className="md:hidden divide-y divide-[rgba(255,255,255,0.06)]">
               {mobileGroups.map((group) => (
-                <ListingGroup key={group.productId} group={group} isOpen={expandedGroups.has(group.productId)} onToggle={() => toggleGroup(group.productId)} lowestPrices={lowestPrices} onConfirmDelete={setConfirmDelete} onConfirmWithdraw={setConfirmWithdraw} onMobileDetail={setMobileDetail} mobile />
+                <ListingGroup key={group.productId} group={group} isOpen={expandedGroups.has(group.productId)} onToggle={() => toggleGroup(group.productId)} lowestPrices={lowestPrices} onConfirmDelete={setConfirmDelete} onConfirmWithdraw={setConfirmWithdraw} onMobileDetail={setMobileDetail} mobile selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleSelectGroup={toggleSelectGroup} />
               ))}
             </div>
           </div>
@@ -231,6 +297,7 @@ export default function PortalListings() {
       {confirmDelete && <ConfirmModal title="Delete Listing?" message="This will permanently remove this submitted listing. This cannot be undone." confirmLabel="Delete" confirmClassName="bg-red-500/15 text-red-400 hover:bg-red-500/25" onConfirm={() => handleDelete(confirmDelete)} onCancel={() => setConfirmDelete(null)} />}
       {confirmWithdraw && <ConfirmModal title="Withdraw Listing?" message="This will remove the item from the store immediately. An admin will process your withdrawal request." confirmLabel="Withdraw" confirmClassName="bg-orange-500/15 text-orange-400 hover:bg-orange-500/25" onConfirm={() => handleWithdraw(confirmWithdraw)} onCancel={() => setConfirmWithdraw(null)} />}
       {mobileDetailListing && <MobileDetailDrawer listing={mobileDetailListing} lowestPrices={lowestPrices} onClose={() => setMobileDetail(null)} onConfirmDelete={setConfirmDelete} onConfirmWithdraw={setConfirmWithdraw} />}
+      <PortalBulkActionBar selectedIds={selectedIds} onClear={() => setSelectedIds(new Set())} />
     </div>
   );
 }

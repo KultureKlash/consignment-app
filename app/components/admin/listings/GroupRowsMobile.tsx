@@ -70,7 +70,7 @@ export function GroupRowsMobile({
             </label>
           )}
           {sortedListings.map((l, i) => {
-            const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
+            const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
             return (
               <div key={l.id} className={`px-3 py-1.5 flex items-center gap-1.5 bg-white ${i < sortedListings.length - 1 ? "border-t border-gray-100" : ""}`}>
                 {hasSelection && (

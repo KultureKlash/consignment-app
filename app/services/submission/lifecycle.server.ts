@@ -88,10 +88,10 @@ export async function approveWithdrawal({
   // listing.variant already loaded via include above
   await safeSyncInventory({ admin, variant: listing.variant, context: "withdrawal approval" });
 
-  sendWithdrawalApprovedEmail(updated.consignor, {
+  sendWithdrawalApprovedEmail(updated.consignor, [{
     product: updated.variant.product.title,
     size: updated.variant.size,
-  }).catch(() => {});
+  }]).catch(() => {});
 
   return updated;
 }

@@ -161,6 +161,14 @@ export async function creditOrder({
   if (order.paymentStatus === ORDER_PAYMENT_STATUS.PAID) return order;
   if (order.status === ORDER_STATUS.CANCELLED) return order;
 
+  // Group sold items by consignor so we can send ONE email per consignor per order
+  // (instead of N emails for N items in the same purchase).
+  type SoldBucket = {
+    consignor: typeof order.items[0]["listing"]["consignor"];
+    items: Array<{ product: string; size: string; salePrice: number; payoutAmount: number }>;
+  };
+  const soldByConsignor = new Map<string, SoldBucket>();
+
   await prisma.$transaction(async (tx) => {
     for (const item of order.items) {
       if (item.transactions.some((t) => t.type === TRANSACTION_TYPE.SALE)) continue;
@@ -189,12 +197,21 @@ export async function creditOrder({
         data: { status: LISTING_STATUS.SOLD },
       });
 
-      sendItemSoldEmail(item.listing.consignor, {
+      const soldItem = {
         product: item.listing.variant.product.title,
         size: item.listing.variant.size,
         salePrice: item.price,
         payoutAmount: consignorAmount,
-      }).catch(() => {});
+      };
+      const bucket = soldByConsignor.get(item.listing.consignorId);
+      if (bucket) {
+        bucket.items.push(soldItem);
+      } else {
+        soldByConsignor.set(item.listing.consignorId, {
+          consignor: item.listing.consignor,
+          items: [soldItem],
+        });
+      }
     }
 
     await tx.order.update({
@@ -202,6 +219,11 @@ export async function creditOrder({
       data: { paymentStatus: ORDER_PAYMENT_STATUS.PAID },
     });
   });
+
+  // Send consolidated emails AFTER the DB transaction commits (one per consignor)
+  for (const { consignor, items } of soldByConsignor.values()) {
+    sendItemSoldEmail(consignor, items).catch(() => {});
+  }
 
   return order;
 }

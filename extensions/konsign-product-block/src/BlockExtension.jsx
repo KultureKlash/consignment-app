@@ -120,37 +120,56 @@ function Extension() {
           </s-banner>
         )}
 
-        {/* By-size table */}
+        {/* By-size table — one row per active listing, sorted by price asc */}
         {variants.length > 0 && (
           <s-table variant="auto">
             <s-table-header-row>
               <s-table-header><s-text color="subdued">Size</s-text></s-table-header>
-              <s-table-header><s-text color="subdued">Listings</s-text></s-table-header>
-              <s-table-header><s-text color="subdued">Lowest</s-text></s-table-header>
+              <s-table-header><s-text color="subdued">Price</s-text></s-table-header>
               <s-table-header><s-text color="subdued">Owner</s-text></s-table-header>
             </s-table-header-row>
             <s-table-body>
-              {variants.map((v) => (
-                <s-table-row key={v.variantId}>
-                  <s-table-cell>
-                    <s-text type="strong">{v.size}</s-text>
-                  </s-table-cell>
-                  <s-table-cell>
-                    <s-text>{v.activeCount}</s-text>
-                    {v.needsPrice > 0 && (
-                      <s-text color="subdued"> +{v.needsPrice}</s-text>
-                    )}
-                  </s-table-cell>
-                  <s-table-cell>
-                    <s-text>
-                      {v.lowestPrice != null ? `$${v.lowestPrice.toFixed(2)}` : "—"}
-                    </s-text>
-                  </s-table-cell>
-                  <s-table-cell>
-                    <s-text color="subdued">{v.lowestOwner ?? "—"}</s-text>
-                  </s-table-cell>
-                </s-table-row>
-              ))}
+              {variants.flatMap((v) => {
+                // Fallback for old metafields that don't have activePrices yet
+                const prices = (v.activePrices && v.activePrices.length > 0)
+                  ? v.activePrices
+                  : (v.lowestPrice != null ? [{ price: v.lowestPrice, owner: v.lowestOwner ?? "—" }] : []);
+
+                const rows = prices.map((p, i) => (
+                  <s-table-row key={`${v.variantId}-${i}`}>
+                    <s-table-cell>
+                      {i === 0
+                        ? <s-text type="strong">{v.size}</s-text>
+                        : <s-text color="subdued"> </s-text>
+                      }
+                    </s-table-cell>
+                    <s-table-cell>
+                      <s-text type={i === 0 ? "strong" : undefined}>${p.price.toFixed(2)}</s-text>
+                    </s-table-cell>
+                    <s-table-cell>
+                      <s-text color="subdued">{p.owner}</s-text>
+                    </s-table-cell>
+                  </s-table-row>
+                ));
+
+                if (v.needsPrice > 0) {
+                  rows.push(
+                    <s-table-row key={`${v.variantId}-needs-price`}>
+                      <s-table-cell>
+                        {prices.length === 0 ? <s-text type="strong">{v.size}</s-text> : <s-text color="subdued"> </s-text>}
+                      </s-table-cell>
+                      <s-table-cell>
+                        <s-text color="subdued">awaiting price ({v.needsPrice})</s-text>
+                      </s-table-cell>
+                      <s-table-cell>
+                        <s-text color="subdued">—</s-text>
+                      </s-table-cell>
+                    </s-table-row>,
+                  );
+                }
+
+                return rows;
+              })}
             </s-table-body>
           </s-table>
         )}

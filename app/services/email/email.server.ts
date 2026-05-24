@@ -72,20 +72,48 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   `));
 }
 
-// ── Item Sold ──
+// ── Item(s) Sold ──
+// Always sends (bypasses email prefs) — material business event the consignor must know about.
+// Accepts an array so a multi-item order sends ONE consolidated email per consignor.
 
 export async function sendItemSoldEmail(
   consignor: { email: string; notificationPrefs?: string | null },
-  item: { product: string; size: string; salePrice: number; payoutAmount: number },
+  items: Array<{ product: string; size: string; salePrice: number; payoutAmount: number }>,
 ): Promise<void> {
-  await sendIfEnabled(consignor, `Your item sold — $${fmt(item.payoutAmount)} earned`, wrap("Item Sold! 🎉", `
-    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Great news — one of your items just sold.</p>
-    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
-      <p style="margin: 0 0 4px; font-weight: 600; color: #111827;">${item.product}</p>
-      <p style="margin: 0; font-size: 13px; color: #6b7280;">Size ${item.size} — Sold for $${fmt(item.salePrice)}</p>
-      <p style="margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #16a34a;">Your payout: $${fmt(item.payoutAmount)}</p>
+  if (items.length === 0) return;
+
+  const count = items.length;
+  const totalPayout = items.reduce((sum, i) => sum + i.payoutAmount, 0);
+
+  const subject = count === 1
+    ? `Your item sold — $${fmt(items[0].payoutAmount)} earned`
+    : `${count} items sold — $${fmt(totalPayout)} earned`;
+
+  const itemsHtml = items.map((item) => `
+    <div style="padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+      <div style="font-weight: 600; color: #111827;">${item.product}</div>
+      <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+        <span style="font-size: 13px; color: #6b7280;">Size ${item.size} — sold for $${fmt(item.salePrice)}</span>
+        <span style="font-size: 13px; font-weight: 700; color: #16a34a;">+$${fmt(item.payoutAmount)}</span>
+      </div>
     </div>
-  `));
+  `).join("");
+
+  const totalLine = count > 1
+    ? `<p style="margin: 12px 0 0; font-size: 18px; font-weight: 700; color: #16a34a; text-align: right;">Total payout: $${fmt(totalPayout)}</p>`
+    : "";
+
+  try {
+    await sendEmail(consignor.email, subject, wrap(count === 1 ? "Item Sold! 🎉" : `${count} Items Sold! 🎉`, `
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Great news — ${count === 1 ? "one of your items" : `${count} of your items`} just sold.</p>
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 6px 16px; margin: 0 0 16px;">
+        ${itemsHtml}
+        ${totalLine}
+      </div>
+    `));
+  } catch (err) {
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Item sold", error: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 // ── Payout Ready ──
@@ -105,6 +133,7 @@ export async function sendPayoutReadyEmail(
 }
 
 // ── Payout Paid ──
+// Always sends (bypasses email prefs) — proof of payment is needed for tax/legal records.
 
 export async function sendPayoutPaidEmail(
   consignor: { email: string; notificationPrefs?: string | null },
@@ -115,30 +144,70 @@ export async function sendPayoutPaidEmail(
     ? `<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">$${fmt(payout.amount)} + tax = $${fmt(payout.totalWithTax)}</p>`
     : "";
 
-  await sendIfEnabled(consignor, `Payment sent — $${fmt(displayAmount)}`, wrap("Payment Sent", `
-    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your payout has been paid. Funds should arrive in your account shortly depending on your payment method.</p>
-    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
-      <p style="margin: 0; font-size: 22px; font-weight: 700; color: #047857;">$${fmt(displayAmount)} paid</p>
-      <p style="margin: 4px 0 0; font-size: 13px; color: #6b7280;">${payout.itemCount} item${payout.itemCount !== 1 ? "s" : ""}</p>
-      ${taxLine}
-    </div>
-    <p style="font-size: 13px; color: #6b7280; margin: 0;">You can view the full statement in your consignor portal under <strong>Payouts</strong>.</p>
-  `));
+  try {
+    await sendEmail(consignor.email, `Payment sent — $${fmt(displayAmount)}`, wrap("Payment Sent", `
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your payout has been paid. Funds should arrive in your account shortly depending on your payment method.</p>
+      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
+        <p style="margin: 0; font-size: 22px; font-weight: 700; color: #047857;">$${fmt(displayAmount)} paid</p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #6b7280;">${payout.itemCount} item${payout.itemCount !== 1 ? "s" : ""}</p>
+        ${taxLine}
+      </div>
+      <p style="font-size: 13px; color: #6b7280; margin: 0;">You can view the full statement in your consignor portal under <strong>Payouts</strong>.</p>
+    `));
+  } catch (err) {
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Payment sent", error: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 // ── Withdrawal Approved ──
 
 export async function sendWithdrawalApprovedEmail(
   consignor: { email: string; notificationPrefs?: string | null },
-  item: { product: string; size: string },
+  items: Array<{ product: string; size: string }>,
 ): Promise<void> {
-  await sendIfEnabled(consignor, `Withdrawal approved — ready for pickup`, wrap("Withdrawal Approved", `
-    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your withdrawal request has been approved.</p>
-    <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 12px; padding: 16px; margin: 0 0 16px;">
-      <p style="margin: 0 0 4px; font-weight: 600; color: #111827;">${item.product}</p>
-      <p style="margin: 0; font-size: 13px; color: #6b7280;">Size ${item.size}</p>
+  const count = items.length;
+  const subject = count === 1
+    ? `Withdrawal approved — ready for pickup`
+    : `${count} withdrawals approved — ready for pickup`;
+
+  const itemsHtml = items.map((item) => `
+    <div style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+      <span style="font-weight: 600; color: #111827;">${item.product}</span>
+      <span style="font-size: 13px; color: #6b7280;"> — Size ${item.size}</span>
     </div>
-    <p style="font-size: 14px; color: #111827; font-weight: 500; margin: 0;">Please come pick up your item at the store.</p>
+  `).join("");
+
+  await sendIfEnabled(consignor, subject, wrap(count === 1 ? "Withdrawal Approved" : `${count} Withdrawals Approved`, `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Your withdrawal request${count === 1 ? " has" : "s have"} been approved.</p>
+    <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
+      ${itemsHtml}
+    </div>
+    <p style="font-size: 14px; color: #111827; font-weight: 500; margin: 0;">Please come pick up your ${count === 1 ? "item" : "items"} at the store.</p>
+  `));
+}
+
+// ── Withdrawal Denied ──
+
+export async function sendWithdrawalDeniedEmail(
+  consignor: { email: string; notificationPrefs?: string | null },
+  items: Array<{ product: string; size: string }>,
+): Promise<void> {
+  const count = items.length;
+  const subject = `Update on your withdrawal request${count === 1 ? "" : "s"}`;
+
+  const itemsHtml = items.map((item) => `
+    <div style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+      <span style="font-weight: 600; color: #111827;">${item.product}</span>
+      <span style="font-size: 13px; color: #6b7280;"> — Size ${item.size}</span>
+    </div>
+  `).join("");
+
+  await sendIfEnabled(consignor, subject, wrap(count === 1 ? "Withdrawal Update" : "Withdrawal Updates", `
+    <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">We weren't able to approve your withdrawal request${count === 1 ? "" : "s"} at this time. ${count === 1 ? "It remains" : "They remain"} active for sale.</p>
+    <div style="background: #fef3f2; border: 1px solid #fecaca; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
+      ${itemsHtml}
+    </div>
+    <p style="font-size: 13px; color: #6b7280; margin: 0;">Reach out if you have any questions.</p>
   `));
 }
 

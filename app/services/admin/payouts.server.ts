@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import { sendPayoutReadyEmail, sendPayoutPaidEmail } from "~/services/email";
 import { PAYOUT_STATUS } from "~/lib/domain";
-import { TRANSACTION_TYPE } from "~/lib/domain";
+import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/domain";
 import { computeTax } from "~/lib/tax";
 
 /**
@@ -11,12 +11,14 @@ import { computeTax } from "~/lib/tax";
  * - Summary stats
  */
 export async function getPayoutsPageData() {
-  // Unpaid sale transactions: type=sale, not linked to any PayoutItem
+  // Unpaid sale transactions: type=sale, not linked to any PayoutItem,
+  // AND the order item hasn't been refunded (refunded sales are owed nothing).
   const unpaidTxs = await prisma.transaction.findMany({
     where: {
       type: TRANSACTION_TYPE.SALE,
       payoutItems: { none: {} },
       consignor: { storeOwned: false },
+      orderItem: { status: { not: ORDER_ITEM_STATUS.REFUNDED } },
     },
     include: {
       consignor: true,
@@ -120,7 +122,7 @@ export async function createPayout({
 
   const transactions = await prisma.transaction.findMany({
     where: { id: { in: transactionIds } },
-    include: { payoutItems: true },
+    include: { payoutItems: true, orderItem: true },
   });
 
   // Validate all exist
@@ -139,6 +141,13 @@ export async function createPayout({
   for (const tx of transactions) {
     if (tx.payoutItems.length > 0) {
       throw new Error(`Transaction ${tx.id} is already included in a payout`);
+    }
+  }
+
+  // Validate none have been refunded — refunded items are owed nothing
+  for (const tx of transactions) {
+    if (tx.orderItem?.status === ORDER_ITEM_STATUS.REFUNDED) {
+      throw new Error(`Transaction ${tx.id} cannot be paid out — the order item was refunded`);
     }
   }
 

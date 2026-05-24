@@ -13,6 +13,8 @@ export type ProductSummary = {
     lowestPrice: number | null;
     lowestOwner: string | null;
     needsPrice: number;
+    /** Every active listing for this variant, sorted price asc then createdAt asc. */
+    activePrices: Array<{ price: number; owner: string }>;
   }>;
   actions: {
     awaitingPrice: number;
@@ -59,6 +61,10 @@ export async function buildProductSummary(productId: string): Promise<ProductSum
       const active = v.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE);
       const lowestActive = active[0];
       const needsPrice = v.listings.filter((l) => l.status === LISTING_STATUS.AWAITING_PRICE).length;
+      // listings are pre-sorted ASC by orderBy above
+      const activePrices = active
+        .filter((l) => l.price != null)
+        .map((l) => ({ price: l.price as number, owner: l.consignor.name }));
       return {
         variantId: v.id,
         size: v.size,
@@ -66,6 +72,7 @@ export async function buildProductSummary(productId: string): Promise<ProductSum
         lowestPrice: lowestActive?.price ?? null,
         lowestOwner: lowestActive?.consignor.name ?? null,
         needsPrice,
+        activePrices,
       };
     })
     .filter((v) => v.activeCount > 0 || v.needsPrice > 0);

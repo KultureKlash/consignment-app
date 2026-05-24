@@ -29,17 +29,28 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
   // Per-payout upload feedback: which one is uploading + briefly flash success after
   const [activePayoutId, setActivePayoutId] = useState<string | null>(null);
   const [recentlySavedId, setRecentlySavedId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const lastFetcherStateRef = useRef(fetcher.state);
   useEffect(() => {
     const wasBusy = ["loading", "submitting"].includes(lastFetcherStateRef.current);
     const nowIdle = fetcher.state === "idle";
-    if (wasBusy && nowIdle && activePayoutId && (fetcher.data as any)?.ok) {
-      setRecentlySavedId(activePayoutId);
+    if (wasBusy && nowIdle && activePayoutId) {
+      const data = fetcher.data as { ok?: boolean; error?: string } | undefined;
+      if (data?.ok) {
+        setRecentlySavedId(activePayoutId);
+        setActivePayoutId(null);
+        setUploadError(null);
+        const t = setTimeout(() => setRecentlySavedId(null), 2000);
+        return () => clearTimeout(t);
+      }
+      if (data?.error) {
+        setUploadError(data.error);
+        setActivePayoutId(null);
+        const t = setTimeout(() => setUploadError(null), 5000);
+        return () => clearTimeout(t);
+      }
       setActivePayoutId(null);
-      const t = setTimeout(() => setRecentlySavedId(null), 2000);
-      return () => clearTimeout(t);
     }
-    if (wasBusy && nowIdle) setActivePayoutId(null);
     lastFetcherStateRef.current = fetcher.state;
   }, [fetcher.state, fetcher.data, activePayoutId]);
 
@@ -197,6 +208,13 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
           expanded={showUnbatched}
           onToggle={() => setShowUnbatched(!showUnbatched)}
         />
+
+        {/* Upload error banner — auto-dismisses */}
+        {uploadError && (
+          <div className="glass-panel rounded-2xl px-4 py-3 border border-red-500/30 bg-red-500/10 text-sm text-red-300 animate-slide-up">
+            {uploadError}
+          </div>
+        )}
 
         {/* Active Payouts (pending + invoiced) */}
         <ActivePayouts

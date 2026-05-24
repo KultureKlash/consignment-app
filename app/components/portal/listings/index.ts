@@ -17,3 +17,4 @@ export {
 export type { ListingRow, ProductGroup } from "./listingHelpers";
 export { useInfiniteScroll } from "./useInfiniteScroll";
 export { StatusTabs } from "./StatusTabs";
+export { PortalBulkActionBar } from "./PortalBulkActionBar";

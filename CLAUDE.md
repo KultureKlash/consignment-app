@@ -64,7 +64,7 @@ import { createListing } from "~/services/listings/mutations.server"; // bad
 
 ## Working rules (how I want you to work)
 
-1. **Tests before commit.** Run `npm run build && npx vitest run` before every commit. Currently ~407 tests passing.
+1. **Tests before commit.** Run `npm run build && npx vitest run` before every commit. Currently ~418 tests passing.
 2. **Feature branches only.** Never commit directly to `main`.
 3. **Mobile responsive.** All portal pages must work on mobile.
 4. **Read first.** Search ALL files before claiming something doesn't exist. Don't assume from memory.

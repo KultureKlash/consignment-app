@@ -9,6 +9,9 @@ import {
   adminEditProduct,
   bulkApproveListing,
   bulkCheckinListing,
+  bulkApproveWithdrawal,
+  bulkDenyWithdrawal,
+  bulkCompleteWithdrawal,
   approveWithdrawal,
   denyWithdrawal,
   completeWithdrawal,
@@ -127,6 +130,27 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
     if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
     const result = await bulkCheckinListing({ admin, listingIds: ids });
     return { activated: result.activated, syncErrors: result.errors, intent };
+  }
+
+  if (intent === "bulk-approve-withdrawal") {
+    const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
+    const result = await bulkApproveWithdrawal({ admin, listingIds: ids });
+    return { approved: result.approved, skipped: result.skipped, intent };
+  }
+
+  if (intent === "bulk-deny-withdrawal") {
+    const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
+    const result = await bulkDenyWithdrawal({ admin, listingIds: ids });
+    return { denied: result.denied, skipped: result.skipped, intent };
+  }
+
+  if (intent === "bulk-complete-withdrawal") {
+    const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
+    const result = await bulkCompleteWithdrawal({ admin, listingIds: ids });
+    return { completed: result.completed, skipped: result.skipped, intent };
   }
 
   if (intent === "approve-withdrawal") {

@@ -19,6 +19,12 @@ interface ListingGroupProps {
   onMobileDetail?: (listingId: string) => void;
   /** Whether to render the mobile variant (true) or desktop variant (false) */
   mobile?: boolean;
+  /** Bulk-selection: set of selected listing IDs (only ACTIVE rows render a checkbox) */
+  selectedIds?: Set<string>;
+  /** Bulk-selection: toggle handler */
+  onToggleSelect?: (listingId: string) => void;
+  /** Bulk-selection: toggle every ACTIVE listing in this group */
+  onToggleSelectGroup?: (listingIds: string[], select: boolean) => void;
 }
 
 function BulkPriceModal({ count, listingIds, onClose }: { count: number; listingIds: string[]; onClose: () => void }) {
@@ -84,8 +90,15 @@ export function ListingGroup({
   onConfirmWithdraw,
   onMobileDetail,
   mobile,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectGroup,
 }: ListingGroupProps) {
   const unpricedListings = group.listings.filter((l) => l.status === LISTING_STATUS.AWAITING_PRICE);
+  const activeListings = group.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE);
+  const activeIds = activeListings.map((l) => l.id);
+  const selectedInGroup = selectedIds ? activeIds.filter((id) => selectedIds.has(id)).length : 0;
+  const allSelectedInGroup = activeIds.length > 0 && selectedInGroup === activeIds.length;
   const [showBulkModal, setShowBulkModal] = useState(false);
   if (mobile) {
     return (
@@ -137,26 +150,50 @@ export function ListingGroup({
             Set price for all {unpricedListings.length}
           </button>
         )}
-        {isOpen && group.listings.map((listing) => (
-          <div key={listing.id} onClick={() => onMobileDetail?.(listing.id)} className="flex items-center gap-2 pl-8 pr-4 py-3 bg-white/[0.02] border-t border-[rgba(255,255,255,0.04)] cursor-pointer active:bg-white/[0.06] transition-colors">
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-foreground">Size {listing.variant.size}</span>
-                {listing.status === LISTING_STATUS.AWAITING_PRICE
-                  ? <span className="shrink-0 ml-2 text-xs font-semibold text-amber-300">Tap to set price</span>
-                  : <span className="shrink-0 ml-2 text-sm font-bold tabular-nums">{listing.price != null ? `$${fmt(listing.price)}` : "—"}</span>
-                }
+        {isOpen && activeListings.length >= 2 && onToggleSelectGroup && (
+          <button
+            onClick={() => onToggleSelectGroup(activeIds, !allSelectedInGroup)}
+            className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold border-t border-orange-400/20 cursor-pointer transition-colors ${allSelectedInGroup ? "text-orange-200 bg-orange-400/15 hover:bg-orange-400/20" : "text-orange-300 bg-orange-400/10 hover:bg-orange-400/15"}`}
+          >
+            {allSelectedInGroup ? `Unselect all ${activeListings.length}` : `Select all ${activeListings.length} active`}
+          </button>
+        )}
+        {isOpen && group.listings.map((listing) => {
+          const selectable = listing.status === LISTING_STATUS.ACTIVE && onToggleSelect;
+          const isSelected = !!(selectable && selectedIds?.has(listing.id));
+          return (
+            <div key={listing.id} onClick={() => onMobileDetail?.(listing.id)} className={`flex items-center gap-2 pl-3 pr-4 py-3 bg-white/[0.02] border-t border-[rgba(255,255,255,0.04)] cursor-pointer active:bg-white/[0.06] transition-colors ${isSelected ? "bg-orange-400/[0.06]" : ""}`}>
+              {selectable ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleSelect!(listing.id); }}
+                  className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${isSelected ? "bg-orange-400/30 border-orange-400/60" : "border-white/20 hover:border-white/40"}`}
+                  aria-label={isSelected ? "Unselect" : "Select for batch withdrawal"}
+                  aria-pressed={isSelected}
+                >
+                  {isSelected && <span className="block w-2 h-2 rounded-sm bg-orange-300" />}
+                </button>
+              ) : (
+                <span className="w-5 shrink-0" aria-hidden />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">Size {listing.variant.size}</span>
+                  {listing.status === LISTING_STATUS.AWAITING_PRICE
+                    ? <span className="shrink-0 ml-2 text-xs font-semibold text-amber-300">Tap to set price</span>
+                    : <span className="shrink-0 ml-2 text-sm font-bold tabular-nums">{listing.price != null ? `$${fmt(listing.price)}` : "—"}</span>
+                  }
+                </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
+                  </span>
+                  <StatusBadge status={listing.status} />
+                </div>
               </div>
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
-                </span>
-                <StatusBadge status={listing.status} />
-              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
-          </div>
-        ))}
+          );
+        })}
         {showBulkModal && (
           <BulkPriceModal
             count={unpricedListings.length}
@@ -218,57 +255,82 @@ export function ListingGroup({
           Set price for all {unpricedListings.length} unpriced item{unpricedListings.length !== 1 ? "s" : ""}
         </button>
       )}
+      {isOpen && activeListings.length >= 2 && onToggleSelectGroup && (
+        <button
+          onClick={() => onToggleSelectGroup(activeIds, !allSelectedInGroup)}
+          className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold border-b border-orange-400/20 cursor-pointer transition-colors ${allSelectedInGroup ? "text-orange-200 bg-orange-400/15 hover:bg-orange-400/20" : "text-orange-300 bg-orange-400/10 hover:bg-orange-400/15"}`}
+        >
+          {allSelectedInGroup ? `Unselect all ${activeListings.length}` : `Select all ${activeListings.length} active item${activeListings.length !== 1 ? "s" : ""}`}
+        </button>
+      )}
       {isOpen && (<>
-        <div className="grid grid-cols-[1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.06)] bg-white/[0.02] items-center">
-          <span className="pl-6">Size</span>
+        <div className="grid grid-cols-[28px_1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.06)] bg-white/[0.02] items-center">
+          <span />
+          <span className="pl-2">Size</span>
           <span className="flex justify-center items-center gap-1">Your Price <InfoTip text="Click on a price to modify it" /></span>
           <span className="flex justify-center">Lowest</span>
           <span className="flex justify-center">Status</span>
           <span className="flex justify-center">Listed</span>
           <span className="w-14" />
         </div>
-        {group.listings.map((listing, i) => (
-        <div key={listing.id} className={`grid grid-cols-[1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2.5 text-sm items-center bg-white/[0.02] ${i < group.listings.length - 1 ? "border-b border-[rgba(255,255,255,0.03)]" : ""}`}>
-          <span className="pl-6 text-muted-foreground">{listing.variant.size}</span>
-          <div className="flex justify-center">
-            <InlinePrice
-              listingId={listing.id}
-              price={listing.price}
-              editable={listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED}
-              awaitingPrice={listing.status === LISTING_STATUS.AWAITING_PRICE}
-            />
-          </div>
-          <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
-            {lowestPrices[listing.variantId] != null ? `$${fmt(lowestPrices[listing.variantId])}` : "\u2014"}
-          </span>
-          <div className="flex justify-center"><StatusBadge status={listing.status} /></div>
-          <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
-            {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
-          </span>
-          <div className="w-14 flex justify-center gap-1">
-            {listing.status === LISTING_STATUS.SUBMITTED && (
-              <>
-                <Link to={`/portal/listings/${listing.id}/edit`} className="p-1 rounded hover:bg-white/[0.08] transition-colors text-muted-foreground hover:text-foreground" title="Edit">
-                  <Pencil className="w-3.5 h-3.5" />
-                </Link>
-                <button onClick={() => onConfirmDelete(listing.id)} className="p-1 rounded hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400 cursor-pointer" title="Delete">
+        {group.listings.map((listing, i) => {
+          const selectable = listing.status === LISTING_STATUS.ACTIVE && onToggleSelect;
+          const isSelected = !!(selectable && selectedIds?.has(listing.id));
+          return (
+          <div key={listing.id} className={`grid grid-cols-[28px_1fr_1.5fr_1.5fr_1.5fr_1fr_auto] px-6 py-2.5 text-sm items-center bg-white/[0.02] ${isSelected ? "bg-orange-400/[0.06]" : ""} ${i < group.listings.length - 1 ? "border-b border-[rgba(255,255,255,0.03)]" : ""}`}>
+            {selectable ? (
+              <button
+                onClick={() => onToggleSelect!(listing.id)}
+                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${isSelected ? "bg-orange-400/30 border-orange-400/60" : "border-white/20 hover:border-white/40"}`}
+                aria-label={isSelected ? "Unselect" : "Select for batch withdrawal"}
+                aria-pressed={isSelected}
+              >
+                {isSelected && <span className="block w-1.5 h-1.5 rounded-sm bg-orange-300" />}
+              </button>
+            ) : (
+              <span />
+            )}
+            <span className="pl-2 text-muted-foreground">{listing.variant.size}</span>
+            <div className="flex justify-center">
+              <InlinePrice
+                listingId={listing.id}
+                price={listing.price}
+                editable={listing.status === LISTING_STATUS.ACTIVE || listing.status === LISTING_STATUS.APPROVED}
+                awaitingPrice={listing.status === LISTING_STATUS.AWAITING_PRICE}
+              />
+            </div>
+            <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
+              {lowestPrices[listing.variantId] != null ? `$${fmt(lowestPrices[listing.variantId])}` : "\u2014"}
+            </span>
+            <div className="flex justify-center"><StatusBadge status={listing.status} /></div>
+            <span className="flex justify-center text-xs text-muted-foreground tabular-nums">
+              {daysListedLabel(listing.listedAt ?? listing.createdAt, listing.status)}
+            </span>
+            <div className="w-14 flex justify-center gap-1">
+              {listing.status === LISTING_STATUS.SUBMITTED && (
+                <>
+                  <Link to={`/portal/listings/${listing.id}/edit`} className="p-1 rounded hover:bg-white/[0.08] transition-colors text-muted-foreground hover:text-foreground" title="Edit">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Link>
+                  <button onClick={() => onConfirmDelete(listing.id)} className="p-1 rounded hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400 cursor-pointer" title="Delete">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
+              {listing.status === LISTING_STATUS.AWAITING_PRICE && (
+                <button onClick={() => onConfirmDelete(listing.id)} className="p-1 rounded hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400 cursor-pointer" title="Discard">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
-              </>
-            )}
-            {listing.status === LISTING_STATUS.AWAITING_PRICE && (
-              <button onClick={() => onConfirmDelete(listing.id)} className="p-1 rounded hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400 cursor-pointer" title="Discard">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {listing.status === LISTING_STATUS.ACTIVE && (
-              <button onClick={() => onConfirmWithdraw(listing.id)} className="p-1 rounded hover:bg-orange-500/10 transition-colors text-muted-foreground hover:text-orange-400 cursor-pointer" title="Request Withdrawal">
-                <PackageX className="w-3.5 h-3.5" />
-              </button>
-            )}
+              )}
+              {listing.status === LISTING_STATUS.ACTIVE && (
+                <button onClick={() => onConfirmWithdraw(listing.id)} className="p-1 rounded hover:bg-orange-500/10 transition-colors text-muted-foreground hover:text-orange-400 cursor-pointer" title="Request Withdrawal">
+                  <PackageX className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        ))}
+          );
+        })}
       </>)}
       {showBulkModal && (
         <BulkPriceModal

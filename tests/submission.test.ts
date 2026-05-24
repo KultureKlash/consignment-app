@@ -10,6 +10,10 @@ import {
   checkinListing,
   bulkApproveListing,
   bulkCheckinListing,
+  bulkRequestWithdrawal,
+  bulkApproveWithdrawal,
+  bulkDenyWithdrawal,
+  bulkCompleteWithdrawal,
   updateActiveListingPrice,
   setUnpricedListingPrice,
   bulkSetUnpricedListingPrices,
@@ -566,6 +570,218 @@ describe("submission pipeline", () => {
       await expect(
         completeWithdrawal({ listingId: listing.id }),
       ).rejects.toThrow('Cannot complete withdrawal for listing with status "active"');
+    });
+  });
+
+  // ── Bulk Withdrawal Lifecycle ──
+
+  /**
+   * Helper: create N active listings under one consignor, ready for withdrawal flow tests.
+   * Returns the listing rows.
+   */
+  async function createActiveListings(
+    consignorId: string,
+    items: Array<{ title: string; size: string; price: number; gtin?: string }>,
+  ) {
+    const { admin } = createMockAdmin();
+    const created = [];
+    for (const item of items) {
+      const l = await submitListing({ consignorId, title: item.title, size: item.size, price: item.price, gtin: item.gtin });
+      await approveListing({ listingId: l.id });
+      await checkinListing({ admin, listingId: l.id });
+      created.push(l);
+    }
+    return created;
+  }
+
+  describe("bulkRequestWithdrawal", () => {
+    it("flips all active listings to withdrawal_requested in one call", async () => {
+      const consignor = await createTestConsignor();
+      const [l1, l2, l3] = await createActiveListings(consignor.id, [
+        { title: "BR A", size: "9", price: 100, gtin: "9991111111111" },
+        { title: "BR B", size: "10", price: 200, gtin: "9992222222222" },
+        { title: "BR C", size: "11", price: 300, gtin: "9993333333333" },
+      ]);
+
+      const result = await bulkRequestWithdrawal({
+        consignorId: consignor.id,
+        listingIds: [l1.id, l2.id, l3.id],
+      });
+      expect(result.requested).toBe(3);
+      expect(result.skipped).toBe(0);
+
+      const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id, l3.id] } } });
+      expect(fresh.every((l) => l.status === "withdrawal_requested")).toBe(true);
+      expect(fresh.every((l) => l.withdrawnAt !== null)).toBe(true);
+    });
+
+    it("filters out listings that are not ACTIVE (no-op for them)", async () => {
+      const consignor = await createTestConsignor();
+      // One active, one still submitted
+      const [active] = await createActiveListings(consignor.id, [
+        { title: "Mixed 1", size: "9", price: 100, gtin: "8881111111111" },
+      ]);
+      const submitted = await submitListing({ consignorId: consignor.id, title: "Mixed 2", size: "10", price: 200 });
+
+      const result = await bulkRequestWithdrawal({
+        consignorId: consignor.id,
+        listingIds: [active.id, submitted.id],
+      });
+      expect(result.requested).toBe(1);
+      expect(result.skipped).toBe(1);
+
+      const stillSubmitted = await prisma.listing.findUniqueOrThrow({ where: { id: submitted.id } });
+      expect(stillSubmitted.status).toBe("submitted");
+    });
+
+    it("IDOR guard: silently ignores listings owned by another consignor", async () => {
+      const consignor1 = await createTestConsignor();
+      const consignor2 = await createTestConsignor();
+      const [mine] = await createActiveListings(consignor1.id, [
+        { title: "Mine", size: "9", price: 100, gtin: "7771111111111" },
+      ]);
+      const [theirs] = await createActiveListings(consignor2.id, [
+        { title: "Theirs", size: "10", price: 200, gtin: "7772222222222" },
+      ]);
+
+      // consignor1 tries to withdraw both their own AND someone else's listing
+      const result = await bulkRequestWithdrawal({
+        consignorId: consignor1.id,
+        listingIds: [mine.id, theirs.id],
+      });
+      expect(result.requested).toBe(1);
+      expect(result.skipped).toBe(1);
+
+      // theirs.id MUST still be active — IDOR attempt failed
+      const stolenAttempt = await prisma.listing.findUniqueOrThrow({ where: { id: theirs.id } });
+      expect(stolenAttempt.status).toBe("active");
+    });
+
+    it("rejects suspended consignor", async () => {
+      const consignor = await createTestConsignor();
+      const [l1] = await createActiveListings(consignor.id, [
+        { title: "Suspended Test", size: "9", price: 100, gtin: "6661111111111" },
+      ]);
+      await prisma.consignor.update({ where: { id: consignor.id }, data: { status: "suspended" } });
+
+      await expect(
+        bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: [l1.id] }),
+      ).rejects.toThrow("suspended");
+    });
+  });
+
+  describe("bulkApproveWithdrawal", () => {
+    it("flips all withdrawal_requested listings to pending_pickup", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const listings = await createActiveListings(consignor.id, [
+        { title: "BAW A", size: "9", price: 100, gtin: "5551111111111" },
+        { title: "BAW B", size: "10", price: 200, gtin: "5552222222222" },
+      ]);
+      const ids = listings.map((l) => l.id);
+      await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
+
+      const result = await bulkApproveWithdrawal({ admin, listingIds: ids });
+      expect(result.approved).toBe(2);
+
+      const fresh = await prisma.listing.findMany({ where: { id: { in: ids } } });
+      expect(fresh.every((l) => l.status === "pending_pickup")).toBe(true);
+      expect(fresh.every((l) => l.withdrawalApprovedAt !== null)).toBe(true);
+    });
+
+    it("skips listings that are not withdrawal_requested", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const [active] = await createActiveListings(consignor.id, [
+        { title: "Still Active", size: "9", price: 100, gtin: "4441111111111" },
+      ]);
+
+      const result = await bulkApproveWithdrawal({ admin, listingIds: [active.id] });
+      expect(result.approved).toBe(0);
+      expect(result.skipped).toBe(1);
+
+      const fresh = await prisma.listing.findUniqueOrThrow({ where: { id: active.id } });
+      expect(fresh.status).toBe("active");
+    });
+
+    it("handles multi-consignor batch (returns count across consignors)", async () => {
+      const { admin } = createMockAdmin();
+      const consignor1 = await createTestConsignor();
+      const consignor2 = await createTestConsignor();
+      const [a] = await createActiveListings(consignor1.id, [
+        { title: "Consignor1 Item", size: "9", price: 100, gtin: "3331111111111" },
+      ]);
+      const [b] = await createActiveListings(consignor2.id, [
+        { title: "Consignor2 Item", size: "10", price: 200, gtin: "3332222222222" },
+      ]);
+      await bulkRequestWithdrawal({ consignorId: consignor1.id, listingIds: [a.id] });
+      await bulkRequestWithdrawal({ consignorId: consignor2.id, listingIds: [b.id] });
+
+      const result = await bulkApproveWithdrawal({ admin, listingIds: [a.id, b.id] });
+      expect(result.approved).toBe(2);
+    });
+  });
+
+  describe("bulkDenyWithdrawal", () => {
+    it("reverts withdrawal_requested listings back to active", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const listings = await createActiveListings(consignor.id, [
+        { title: "BDW A", size: "9", price: 100, gtin: "2221111111111" },
+        { title: "BDW B", size: "10", price: 200, gtin: "2222222222222" },
+      ]);
+      const ids = listings.map((l) => l.id);
+      await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
+
+      const result = await bulkDenyWithdrawal({ admin, listingIds: ids });
+      expect(result.denied).toBe(2);
+
+      const fresh = await prisma.listing.findMany({ where: { id: { in: ids } } });
+      expect(fresh.every((l) => l.status === "active")).toBe(true);
+    });
+
+    it("skips listings not in withdrawal_requested state", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const [active] = await createActiveListings(consignor.id, [
+        { title: "Already Active", size: "9", price: 100, gtin: "1111111111111" },
+      ]);
+
+      const result = await bulkDenyWithdrawal({ admin, listingIds: [active.id] });
+      expect(result.denied).toBe(0);
+      expect(result.skipped).toBe(1);
+    });
+  });
+
+  describe("bulkCompleteWithdrawal", () => {
+    it("flips pending_pickup listings to withdrawn", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const listings = await createActiveListings(consignor.id, [
+        { title: "BCW A", size: "9", price: 100, gtin: "0001111111111" },
+        { title: "BCW B", size: "10", price: 200, gtin: "0002222222222" },
+      ]);
+      const ids = listings.map((l) => l.id);
+      await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
+      await bulkApproveWithdrawal({ admin, listingIds: ids });
+
+      const result = await bulkCompleteWithdrawal({ admin, listingIds: ids });
+      expect(result.completed).toBe(2);
+
+      const fresh = await prisma.listing.findMany({ where: { id: { in: ids } } });
+      expect(fresh.every((l) => l.status === "withdrawn")).toBe(true);
+    });
+
+    it("skips listings not in pending_pickup state", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const [active] = await createActiveListings(consignor.id, [
+        { title: "Not Pending", size: "9", price: 100, gtin: "0011111111111" },
+      ]);
+
+      const result = await bulkCompleteWithdrawal({ admin, listingIds: [active.id] });
+      expect(result.completed).toBe(0);
+      expect(result.skipped).toBe(1);
     });
   });
 

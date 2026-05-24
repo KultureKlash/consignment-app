@@ -1,14 +1,26 @@
 import { LISTING_STATUS } from "~/lib/domain";
 
+const SELECTABLE_STATUSES = [
+  LISTING_STATUS.SUBMITTED,
+  LISTING_STATUS.APPROVED,
+  LISTING_STATUS.ACTIVE,
+  LISTING_STATUS.WITHDRAWAL_REQUESTED,
+  LISTING_STATUS.PENDING_PICKUP,
+] as string[];
+
 interface BulkActionBarProps {
   selectedIds: Set<string>;
   listings: Array<{ id: string; status: string }>;
   approvalLoading: boolean;
   cancelLoading: boolean;
   onClearSelection: () => void;
+  onSelectAllVisible: () => void;
   onBulkApprove: () => void;
   onBulkCheckin: () => void;
   onBulkCancel: () => void;
+  onBulkApproveWithdrawal: () => void;
+  onBulkDenyWithdrawal: () => void;
+  onBulkCompleteWithdrawal: () => void;
 }
 
 export default function BulkActionBar({
@@ -17,11 +29,33 @@ export default function BulkActionBar({
   approvalLoading,
   cancelLoading,
   onClearSelection,
+  onSelectAllVisible,
   onBulkApprove,
   onBulkCheckin,
   onBulkCancel,
+  onBulkApproveWithdrawal,
+  onBulkDenyWithdrawal,
+  onBulkCompleteWithdrawal,
 }: BulkActionBarProps) {
-  if (selectedIds.size === 0) return null;
+  const withdrawalRequestedCount = listings.filter((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.WITHDRAWAL_REQUESTED).length;
+  const pendingPickupCount = listings.filter((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.PENDING_PICKUP).length;
+  const selectableIds = listings.filter((l) => SELECTABLE_STATUSES.includes(l.status)).map((l) => l.id);
+  const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+
+  if (selectedIds.size === 0) {
+    // Pre-selection hint: only render if there's something selectable on the page
+    if (selectableIds.length === 0) return null;
+    return (
+      <div className="flex items-center justify-end pl-4 pr-2 py-1.5 mb-3 text-xs">
+        <button
+          onClick={onSelectAllVisible}
+          className="text-gray-500 hover:text-gray-700 font-semibold cursor-pointer transition-colors"
+        >
+          Select all {selectableIds.length} on page
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between pl-4 pr-2 py-2 bg-white border border-gray-200/60 rounded-[10px] mb-3 shadow-sm gap-2">
@@ -29,6 +63,12 @@ export default function BulkActionBar({
         <span className="text-[13px] font-semibold text-gray-900">
           {selectedIds.size} selected
         </span>
+        <button
+          onClick={onSelectAllVisible}
+          className="text-xs text-gray-500 cursor-pointer font-semibold hover:text-gray-700 transition-colors"
+        >
+          {allVisibleSelected ? "Unselect all" : `Select all ${selectableIds.length}`}
+        </button>
         <span
           onClick={onClearSelection}
           className="text-xs text-gray-400 cursor-pointer font-medium hover:text-gray-500 transition-colors"
@@ -62,6 +102,33 @@ export default function BulkActionBar({
             disabled={cancelLoading}
             bg="bg-red-900"
             bgHover="hover:bg-red-800"
+          />
+        )}
+        {withdrawalRequestedCount > 0 && (
+          <>
+            <BulkActionButton
+              label={approvalLoading ? "Approving..." : `Approve withdrawals (${withdrawalRequestedCount})`}
+              onClick={onBulkApproveWithdrawal}
+              disabled={approvalLoading}
+              bg="bg-amber-600"
+              bgHover="hover:bg-amber-700"
+            />
+            <BulkActionButton
+              label={approvalLoading ? "Denying..." : `Deny withdrawals (${withdrawalRequestedCount})`}
+              onClick={onBulkDenyWithdrawal}
+              disabled={approvalLoading}
+              bg="bg-gray-700"
+              bgHover="hover:bg-gray-800"
+            />
+          </>
+        )}
+        {pendingPickupCount > 0 && (
+          <BulkActionButton
+            label={approvalLoading ? "Marking..." : `Mark picked up (${pendingPickupCount})`}
+            onClick={onBulkCompleteWithdrawal}
+            disabled={approvalLoading}
+            bg="bg-cyan-700"
+            bgHover="hover:bg-cyan-800"
           />
         )}
       </div>

@@ -66,7 +66,7 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
   })();
   const [notifPrefs, setNotifPrefs] = useState({
     inApp: parsedPrefs?.inApp !== false,
-    email: parsedPrefs?.email === true,
+    email: parsedPrefs?.email !== false,
   });
 
   const hasChanges =
@@ -287,7 +287,7 @@ export function ProfilePage({ consignor, notifications }: ProfilePageProps) {
           <div className="border-t border-white/[0.06]">
             {([
               { key: "inApp" as const, label: "In-App Notifications", desc: "Sale updates and alerts", icon: Bell },
-              { key: "email" as const, label: "Email Notifications", desc: "Important updates via email", icon: Mail },
+              { key: "email" as const, label: "Email Notifications", desc: "Listing & withdrawal updates (sales and payments always send)", icon: Mail },
             ]).map((item, i) => (
               <button
                 key={item.key}

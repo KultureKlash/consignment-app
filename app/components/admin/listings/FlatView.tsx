@@ -158,7 +158,7 @@ function FlatRow({
   isSelected: boolean;
   onToggle: () => void;
 }) {
-  const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
+  const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
   return (
     <tr className={flatRowClass}>
       {hasSelection && (
@@ -250,7 +250,7 @@ function FlatCardMobile({
   isSelected: boolean;
   onToggle: () => void;
 }) {
-  const isSelectable = [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status);
+  const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
   return (
     <div className="px-3 py-3 border-b border-gray-100 bg-white">
       {/* Top: product image + title + size + price */}

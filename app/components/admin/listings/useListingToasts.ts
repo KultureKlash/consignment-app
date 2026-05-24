@@ -90,6 +90,18 @@ export function useListingToasts(
           : msg,
       );
       callbacks?.clearSelection?.();
+    } else if (intent === "bulk-approve-withdrawal") {
+      const count = data.approved as number;
+      shopify.toast.show(`Approved ${count} withdrawal${count !== 1 ? "s" : ""} — pending pickup`);
+      callbacks?.clearSelection?.();
+    } else if (intent === "bulk-deny-withdrawal") {
+      const count = data.denied as number;
+      shopify.toast.show(`Denied ${count} withdrawal${count !== 1 ? "s" : ""}`);
+      callbacks?.clearSelection?.();
+    } else if (intent === "bulk-complete-withdrawal") {
+      const count = data.completed as number;
+      shopify.toast.show(`Marked ${count} withdrawal${count !== 1 ? "s" : ""} as picked up`);
+      callbacks?.clearSelection?.();
     }
   }, [fetchers.approval.data, shopify]);
 }

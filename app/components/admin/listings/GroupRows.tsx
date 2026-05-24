@@ -44,7 +44,7 @@ export function GroupRows({
       })
     : group.listings;
 
-  const groupSelectableIds = group.listings.filter((l) => [LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE].includes(l.status)).map((l) => l.id);
+  const groupSelectableIds = group.listings.filter((l) => ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status)).map((l) => l.id);
   const allGroupSelected = hasSelection && groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedIds?.has(id));
 
   const scrollRef = useCallback((node: HTMLTableRowElement | null) => {
