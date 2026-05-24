@@ -63,8 +63,19 @@ export async function createListing({
     include: { consignor: true },
   });
 
-  // Skip Shopify sync for unpriced listings — they're not live until consignor sets price
-  if (isUnpriced) return listings[0];
+  // Skip Shopify sync for unpriced listings — they're not live until consignor sets price.
+  // BUT still persist the imageData on the Product so it shows in the admin + consignor
+  // portal while the listing is in AWAITING_PRICE. Same pattern submitListing uses —
+  // ensureShopifyProductAndVariant picks the base64 image up later when consignor sets price.
+  if (isUnpriced) {
+    if (imageData && !product.imageUrl) {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { imageUrl: imageData },
+      });
+    }
+    return listings[0];
+  }
 
   // Background Shopify sync with retry — don't block the response
   const backgroundSync = async () => {
