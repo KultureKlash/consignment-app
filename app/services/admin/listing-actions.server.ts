@@ -141,8 +141,9 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "bulk-deny-withdrawal") {
     const ids = (formData.get("listingIds") as string).split(",").filter(Boolean);
+    const reason = (formData.get("reason") as string | null)?.trim() || undefined;
     if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
-    const result = await bulkDenyWithdrawal({ admin, listingIds: ids });
+    const result = await bulkDenyWithdrawal({ admin, listingIds: ids, reason });
     return { denied: result.denied, skipped: result.skipped, intent };
   }
 
@@ -161,7 +162,8 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
 
   if (intent === "deny-withdrawal") {
     const listingId = formData.get("listingId") as string;
-    await denyWithdrawal({ admin, listingId });
+    const reason = (formData.get("reason") as string | null)?.trim() || undefined;
+    await denyWithdrawal({ admin, listingId, reason });
     return { intent };
   }
 

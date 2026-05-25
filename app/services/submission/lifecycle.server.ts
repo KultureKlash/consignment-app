@@ -5,7 +5,7 @@ import { safeSyncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ensureVariantBarcode } from "~/services/catalog";
 import { logger } from "~/lib/logger.server";
-import { sendWithdrawalApprovedEmail, sendListingLiveEmail } from "~/services/email";
+import { sendWithdrawalApprovedEmail, sendWithdrawalDeniedEmail, sendListingLiveEmail } from "~/services/email";
 
 // ── Admin: Check-in listing (consignor dropoff) → goes live on Shopify ──
 
@@ -101,9 +101,11 @@ export async function approveWithdrawal({
 export async function denyWithdrawal({
   admin,
   listingId,
+  reason,
 }: {
   admin: AdminApiContext;
   listingId: string;
+  reason?: string;
 }) {
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
@@ -121,6 +123,12 @@ export async function denyWithdrawal({
   });
 
   await safeSyncInventory({ admin, variant: listing.variant, context: "withdrawal denied" });
+
+  sendWithdrawalDeniedEmail(
+    updated.consignor,
+    [{ product: updated.variant.product.title, size: updated.variant.size }],
+    reason,
+  ).catch(() => {});
 
   return updated;
 }

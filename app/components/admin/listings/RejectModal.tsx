@@ -1,8 +1,21 @@
-export function RejectModal({ onConfirm, onCancel, reason, setReason }: {
+export function RejectModal({
+  onConfirm,
+  onCancel,
+  reason,
+  setReason,
+  title = "Reject Listing",
+  description = "Provide a reason for rejection. The consignor will see this.",
+  placeholder = "e.g. Item condition doesn't meet our standards...",
+  confirmLabel = "Reject Listing",
+}: {
   onConfirm: () => void;
   onCancel: () => void;
   reason: string;
   setReason: (r: string) => void;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  confirmLabel?: string;
 }) {
   return (
     <div
@@ -13,14 +26,14 @@ export function RejectModal({ onConfirm, onCancel, reason, setReason }: {
         onClick={(e) => e.stopPropagation()}
         className="admin-modal max-w-[420px] p-6"
       >
-        <h3 className="text-[15px] font-semibold mt-0 mb-1">Reject Listing</h3>
+        <h3 className="text-[15px] font-semibold mt-0 mb-1">{title}</h3>
         <p className="text-[13px] text-gray-500 mt-0 mb-4">
-          Provide a reason for rejection. The consignor will see this.
+          {description}
         </p>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="e.g. Item condition doesn't meet our standards..."
+          placeholder={placeholder}
           className="admin-textarea"
           autoFocus
         />
@@ -38,7 +51,7 @@ export function RejectModal({ onConfirm, onCancel, reason, setReason }: {
               !reason.trim() ? "bg-red-300 cursor-not-allowed" : "bg-red-600 cursor-pointer hover:bg-red-700"
             }`}
           >
-            Reject Listing
+            {confirmLabel}
           </button>
         </div>
       </div>

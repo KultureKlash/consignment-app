@@ -238,9 +238,11 @@ export async function bulkApproveWithdrawal({
 export async function bulkDenyWithdrawal({
   admin,
   listingIds,
+  reason,
 }: {
   admin: AdminApiContext;
   listingIds: string[];
+  reason?: string;
 }): Promise<{ denied: number; skipped: number }> {
   const eligible = await prisma.listing.findMany({
     where: { id: { in: listingIds }, status: LISTING_STATUS.WITHDRAWAL_REQUESTED },
@@ -266,7 +268,7 @@ export async function bulkDenyWithdrawal({
 
   const byConsignor = groupByConsignor(denied);
   for (const { consignor, items } of byConsignor.values()) {
-    sendWithdrawalDeniedEmail(consignor, items).catch(() => {});
+    sendWithdrawalDeniedEmail(consignor, items, reason).catch(() => {});
   }
 
   return { denied: denied.length, skipped: listingIds.length - denied.length };

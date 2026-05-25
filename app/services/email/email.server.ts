@@ -196,6 +196,7 @@ export async function sendWithdrawalApprovedEmail(
 export async function sendWithdrawalDeniedEmail(
   consignor: { email: string; notificationPrefs?: string | null },
   items: Array<{ product: string; size: string }>,
+  reason?: string,
 ): Promise<void> {
   const count = items.length;
   const subject = `Update on your withdrawal request${count === 1 ? "" : "s"}`;
@@ -207,11 +208,16 @@ export async function sendWithdrawalDeniedEmail(
     </div>
   `).join("");
 
+  const reasonBlock = reason && reason.trim()
+    ? `<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;"><p style="margin: 0; font-size: 13px; color: #92400e;"><strong>Reason:</strong> ${reason.trim()}</p></div>`
+    : "";
+
   await sendIfEnabled(consignor, subject, wrap(count === 1 ? "Withdrawal Update" : "Withdrawal Updates", `
     <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">We weren't able to approve your withdrawal request${count === 1 ? "" : "s"} at this time. ${count === 1 ? "It remains" : "They remain"} active for sale.</p>
     <div style="background: #fef3f2; border: 1px solid #fecaca; border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;">
       ${itemsHtml}
     </div>
+    ${reasonBlock}
     <p style="font-size: 13px; color: #6b7280; margin: 0;">Reach out if you have any questions.</p>
   `));
 }

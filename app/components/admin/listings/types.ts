@@ -60,7 +60,7 @@ export type Props = {
   onReject?: (listingId: string, reason: string) => void;
   onCheckin?: (listingId: string) => void;
   onApproveWithdrawal?: (listingId: string) => void;
-  onDenyWithdrawal?: (listingId: string) => void;
+  onDenyWithdrawal?: (listingId: string, reason?: string) => void;
   onCompleteWithdrawal?: (listingId: string) => void;
   onRetrySync?: (listingId: string) => void;
   syncingListingId?: string;

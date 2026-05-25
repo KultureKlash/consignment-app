@@ -18,6 +18,7 @@ import type { EditApproveFields, EditProductFields } from "~/components/admin/li
 import Pagination from "~/components/admin/listings/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
 import BulkActionBar from "~/components/admin/BulkActionBar";
+import { RejectModal } from "~/components/admin/listings/RejectModal";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -125,6 +126,8 @@ export default function Listings() {
   const shopify = useAppBridge();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [quickAdd, setQuickAdd] = useState<{ productId: string; anchorEl: HTMLElement } | null>(null);
+  const [bulkDenyModalOpen, setBulkDenyModalOpen] = useState(false);
+  const [bulkDenyReason, setBulkDenyReason] = useState("");
 
   const isNavigating = navigation.state === "loading";
   const cancelLoading = ["loading", "submitting"].includes(cancelFetcher.state);
@@ -223,7 +226,7 @@ export default function Listings() {
           onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCancel={() => submitCancel("bulk-delete", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkApproveWithdrawal={() => submitApproval("bulk-approve-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
-          onBulkDenyWithdrawal={() => submitApproval("bulk-deny-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkDenyWithdrawal={() => { setBulkDenyModalOpen(true); setBulkDenyReason(""); }}
           onBulkCompleteWithdrawal={() => submitApproval("bulk-complete-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
         />
         <ListingsTable
@@ -234,7 +237,7 @@ export default function Listings() {
           onReject={(id, reason) => submitApproval("reject", { listingId: id, reason })}
           onCheckin={(id) => submitApproval("checkin", { listingId: id })}
           onApproveWithdrawal={(id) => submitApproval("approve-withdrawal", { listingId: id })}
-          onDenyWithdrawal={(id) => submitApproval("deny-withdrawal", { listingId: id })}
+          onDenyWithdrawal={(id, reason) => submitApproval("deny-withdrawal", { listingId: id, ...(reason ? { reason } : {}) })}
           onCompleteWithdrawal={(id) => submitApproval("complete-withdrawal", { listingId: id })}
           onRetrySync={(id) => syncFetcher.submit({ intent: "retry-sync", listingId: id }, { method: "POST" })}
           syncingListingId={syncFetcher.state !== "idle" ? (syncFetcher.formData?.get("listingId") as string) : undefined}
@@ -271,6 +274,24 @@ export default function Listings() {
         )}
         <Pagination page={page} totalPages={totalPages} onPageChange={(p) => handleFilterChange({ page: String(p) })} total={total} limit={25} />
       </s-section>
+      {bulkDenyModalOpen && (
+        <RejectModal
+          title={`Deny ${selectedIds.size} withdrawal request${selectedIds.size === 1 ? "" : "s"}`}
+          description="Provide a reason. The consignor(s) will see this in their email. Same reason will be applied to all selected requests."
+          placeholder="e.g. Item is part of a pending sale, please retry next week..."
+          confirmLabel="Deny Withdrawals"
+          reason={bulkDenyReason}
+          setReason={setBulkDenyReason}
+          onCancel={() => setBulkDenyModalOpen(false)}
+          onConfirm={() => {
+            const trimmed = bulkDenyReason.trim();
+            if (!trimmed) return;
+            submitApproval("bulk-deny-withdrawal", { listingIds: Array.from(selectedIds).join(","), reason: trimmed });
+            setBulkDenyModalOpen(false);
+            setBulkDenyReason("");
+          }}
+        />
+      )}
     </s-page>
   );
 }

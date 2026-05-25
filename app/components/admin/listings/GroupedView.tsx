@@ -62,6 +62,8 @@ export function GroupedView({
 }: GroupedViewProps) {
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [denyWithdrawalModal, setDenyWithdrawalModal] = useState<string | null>(null);
+  const [denyWithdrawalReason, setDenyWithdrawalReason] = useState("");
   const [editModal, setEditModal] = useState<Listing | null>(null);
   const [editProductModal, setEditProductModal] = useState<ProductGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -109,6 +111,14 @@ export function GroupedView({
     }
   };
 
+  const handleDenyWithdrawalConfirm = () => {
+    if (denyWithdrawalModal && denyWithdrawalReason.trim() && onDenyWithdrawal) {
+      onDenyWithdrawal(denyWithdrawalModal, denyWithdrawalReason.trim());
+      setDenyWithdrawalModal(null);
+      setDenyWithdrawalReason("");
+    }
+  };
+
   const groups = groupByProduct(listings);
 
   const actionsValue: ListingActions = {
@@ -118,7 +128,7 @@ export function GroupedView({
     onReject: onReject ? (id: string) => { setRejectModal(id); setRejectReason(""); } : undefined,
     onCheckin,
     onApproveWithdrawal,
-    onDenyWithdrawal,
+    onDenyWithdrawal: onDenyWithdrawal ? (id: string) => { setDenyWithdrawalModal(id); setDenyWithdrawalReason(""); } : undefined,
     onCompleteWithdrawal,
     onRetrySync,
     syncingListingId,
@@ -171,6 +181,18 @@ export function GroupedView({
         </div>
       </div>
       {rejectModal && <RejectModal onConfirm={handleRejectConfirm} onCancel={() => setRejectModal(null)} reason={rejectReason} setReason={setRejectReason} />}
+      {denyWithdrawalModal && (
+        <RejectModal
+          onConfirm={handleDenyWithdrawalConfirm}
+          onCancel={() => setDenyWithdrawalModal(null)}
+          reason={denyWithdrawalReason}
+          setReason={setDenyWithdrawalReason}
+          title="Deny Withdrawal Request"
+          description="Provide a reason for denying this withdrawal. The consignor will see this in their email."
+          placeholder="e.g. Item is part of a pending sale, please retry next week..."
+          confirmLabel="Deny Withdrawal"
+        />
+      )}
       {editModal && (onEditApprove || onAdminEdit) && (
         <EditListingModal
           listing={editModal}
