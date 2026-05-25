@@ -27,15 +27,15 @@ export function ProductSearchGrid({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search by product name or SKU..."
-            className="glass-input w-full pl-9 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
+            placeholder="Search by product name or SKU"
+            className="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm"
             autoFocus
           />
         </div>
         <button
           type="button"
           onClick={onManualMode}
-          className="shrink-0 flex items-center gap-1.5 px-4 py-3.5 rounded-2xl text-xs font-semibold text-primary bg-white/[0.06] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.1] transition-colors cursor-pointer"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-primary bg-white/[0.06] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.1] transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           Add manually
