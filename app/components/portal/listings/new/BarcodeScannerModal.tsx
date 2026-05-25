@@ -148,15 +148,28 @@ export function BarcodeScannerModal({ onScan, onCancel }: Props) {
           )}
           {!loading && !error && (
             <>
-              {/* Reticle overlay — visual guide for the scan target zone. */}
-              <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-32 border-2 border-primary/60 rounded-xl" />
-              <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-32 border-y-2 border-primary/30" />
+              {/* Dim outside-reticle area + corner brackets — psychological guide
+                  only. ZXing scans the whole video frame so the user doesn't
+                  actually need to fill the box; they just point in its
+                  direction. Smaller reticle reads as 'modern' and discourages
+                  the bring-the-phone-too-close instinct. */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="relative w-[70%] aspect-[16/7]">
+                  {/* 4 corner brackets */}
+                  <span className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-white/80 rounded-tl-md" />
+                  <span className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-white/80 rounded-tr-md" />
+                  <span className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-white/80 rounded-bl-md" />
+                  <span className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-white/80 rounded-br-md" />
+                  {/* Scan-line sweep */}
+                  <span className="absolute left-2 right-2 top-1/2 h-px bg-primary/80 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                </div>
+              </div>
             </>
           )}
         </div>
 
         <div className="px-4 py-3 text-[11px] text-muted-foreground border-t border-[rgba(255,255,255,0.08)]">
-          Align the barcode inside the box. It'll auto-fill once detected.
+          Point at the barcode. Hold the phone where the camera focuses cleanly — it'll auto-fill.
         </div>
       </div>
     </div>

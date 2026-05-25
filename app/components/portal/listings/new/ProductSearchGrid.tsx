@@ -22,13 +22,13 @@ export function ProductSearchGrid({
     <div className="animate-slide-up space-y-5">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/60 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by product name or SKU..."
-            className="glass-input w-full pl-11 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
+            className="glass-input w-full pl-9 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
             autoFocus
           />
         </div>
