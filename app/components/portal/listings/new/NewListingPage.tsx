@@ -315,6 +315,11 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           <input type="hidden" name="subCategory" value={subCategory} />
           <input type="hidden" name="sku" value={sku} />
           {imageData && <input type="hidden" name="imageData" value={imageData} />}
+          {/* When the consignor explicitly picked an existing product (either via
+              search results or the "Add another" + button), attach to it
+              directly — skips dedup, which would otherwise fire a "this product
+              already exists" modal on something the user just confirmed. */}
+          {selectedProduct && <input type="hidden" name="useExistingProductId" value={selectedProduct.id} />}
 
           {/* Step 1: Product Search — full page card grid */}
           {showSearch && (
