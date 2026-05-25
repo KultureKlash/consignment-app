@@ -23,16 +23,49 @@ export function BarcodeScannerModal({ onScan, onCancel }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
+        const [zxingBrowser, zxingLibrary] = await Promise.all([
+          import("@zxing/browser"),
+          import("@zxing/library"),
+        ]);
+        const { BrowserMultiFormatReader } = zxingBrowser;
+        const { DecodeHintType, BarcodeFormat } = zxingLibrary;
         if (cancelled) return;
-        const reader = new BrowserMultiFormatReader();
+
+        // Hint ZXing about the formats we actually expect (EAN/UPC/Code128 cover
+        // virtually every product barcode). Fewer formats per frame = faster
+        // decode = phone can pick up the barcode from farther away.
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.CODE_39,
+          BarcodeFormat.ITF,
+        ]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const reader = new BrowserMultiFormatReader(hints);
         readerRef.current = reader as unknown as { reset: () => void };
 
         const video = videoRef.current;
         if (!video) return;
 
-        // Prefer the back camera ("environment") for barcode scanning.
-        const constraints = { video: { facingMode: { ideal: "environment" } } };
+        // Higher resolution = ZXing can read smaller (farther-away) barcodes.
+        // Critical for iPhone: the main camera struggles to focus closer than
+        // ~10cm. Requesting 1920×1080 means the user can hold the phone at a
+        // comfortable distance (~20-30cm) and the barcode is still big enough
+        // in the frame to decode. `focusMode: continuous` keeps autofocus on
+        // while panning around.
+        const constraints: MediaStreamConstraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: "continuous" }] as unknown as MediaTrackConstraintSet[],
+          },
+        };
         await reader.decodeFromConstraints(constraints, video, (result, err, controls) => {
           if (cancelled) {
             controls.stop();
