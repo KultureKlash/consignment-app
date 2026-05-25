@@ -30,6 +30,7 @@ export async function submitListing({
   count = 1,
   imageData,
   useExistingProductId,
+  forceCreate,
 }: {
   consignorId: string;
   sku?: string | null;
@@ -44,6 +45,11 @@ export async function submitListing({
   /** When set, skip dedup detection and attach this submission to the named product.
    *  Used after the consignor explicitly confirms an existing product in the dedup modal. */
   useExistingProductId?: string;
+  /** When true, skip the fuzzy-similarity check and create a new product anyway.
+   *  Used after the consignor confirms 'this is genuinely new' in the dedup modal.
+   *  Hard blocks (GTIN already in catalog, exact title+brand match) are still
+   *  enforced — those are unambiguous and overriding them creates real corruption. */
+  forceCreate?: boolean;
 }) {
   await requireActiveConsignor(consignorId);
 
@@ -52,7 +58,11 @@ export async function submitListing({
     product = await prisma.product.findUniqueOrThrow({ where: { id: useExistingProductId } });
   } else {
     const dup = await detectDuplicateProduct({ title, brand, sku, gtin });
-    if (dup.kind !== "none") throw new DuplicateError(dup);
+    // GTIN and exact-title matches are non-negotiable — overriding either creates
+    // real catalog corruption (or hits the DB unique constraint). Only the
+    // fuzzy 'similar' kind can be force-bypassed.
+    if (dup.kind === "gtin" || dup.kind === "exact-title") throw new DuplicateError(dup);
+    if (dup.kind === "similar" && !forceCreate) throw new DuplicateError(dup);
     product = await findOrCreateProduct({ sku, title, brand, category });
   }
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });

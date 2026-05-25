@@ -135,15 +135,24 @@ function SimilarView({
             key={c.id}
             onClick={() => onUseExisting(c.id)}
             disabled={isSubmitting}
-            className="w-full text-left px-3 py-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer transition-colors disabled:opacity-50"
+            className="w-full text-left px-3 py-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer transition-colors disabled:opacity-50 flex items-center gap-3"
           >
-            <div className="text-[13px] font-semibold text-gray-900">{c.title}</div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5">
-              {c.brand && <span>{c.brand}</span>}
-              {c.sku && <span>· SKU {c.sku}</span>}
-              {c.activeVariantCount > 0 && (
-                <span>· {c.activeVariantCount} active variant{c.activeVariantCount === 1 ? "" : "s"}</span>
-              )}
+            {c.imageUrl ? (
+              <img src={c.imageUrl} alt="" className="w-12 h-12 rounded-md object-cover border border-gray-200 shrink-0 bg-white" />
+            ) : (
+              <div className="w-12 h-12 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 text-gray-400 text-[10px]">
+                no image
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold text-gray-900 truncate">{c.title}</div>
+              <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5 truncate">
+                {c.brand && <span>{c.brand}</span>}
+                {c.sku && <span>· SKU {c.sku}</span>}
+                {c.activeVariantCount > 0 && (
+                  <span>· {c.activeVariantCount} active</span>
+                )}
+              </div>
             </div>
           </button>
         ))}
@@ -155,7 +164,7 @@ function SimilarView({
           disabled={isSubmitting}
           className="px-4 py-2 text-[13px] font-semibold rounded-lg border-0 text-white bg-amber-600 cursor-pointer hover:bg-amber-700 font-[inherit] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? "Submitting..." : "Override — create new"}
+          {isSubmitting ? "Submitting..." : "Create new product"}
         </button>
       </div>
     </>

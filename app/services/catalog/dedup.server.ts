@@ -10,6 +10,7 @@ export type DuplicateCandidate = {
   title: string;
   brand: string | null;
   sku: string | null;
+  imageUrl: string | null;
   activeVariantCount: number;
 };
 
@@ -107,11 +108,15 @@ async function enrichCandidate(product: Product): Promise<DuplicateCandidate> {
       listings: { some: { status: LISTING_STATUS.ACTIVE } },
     },
   });
+  // Skip base64 data URLs — they bloat the JSON response on the wire
+  // (CDN URLs from Shopify are fine to pass through).
+  const imageUrl = product.imageUrl?.startsWith("data:") ? null : product.imageUrl ?? null;
   return {
     id: product.id,
     title: product.title,
     brand: product.brand,
     sku: product.sku,
+    imageUrl,
     activeVariantCount,
   };
 }

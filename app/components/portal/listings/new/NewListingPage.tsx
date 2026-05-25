@@ -79,7 +79,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     if (actionData?.error === "duplicate-product") setDismissedDuplicate(false);
   }, [actionData]);
 
-  const handleUseExisting = (productId: string) => {
+  const buildResubmitFormData = () => {
     const fd = new FormData();
     fd.set("title", title);
     fd.set("brand", brand);
@@ -91,7 +91,18 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
     fd.set("price", price);
     fd.set("quantity", quantity);
     if (imageData) fd.set("imageData", imageData);
+    return fd;
+  };
+
+  const handleUseExisting = (productId: string) => {
+    const fd = buildResubmitFormData();
     fd.set("useExistingProductId", productId);
+    fetcher.submit(fd, { method: "POST" });
+  };
+
+  const handleForceCreate = () => {
+    const fd = buildResubmitFormData();
+    fd.set("forceCreate", "1");
     fetcher.submit(fd, { method: "POST" });
   };
 
@@ -372,6 +383,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           match={duplicateMatch}
           isSubmitting={isSubmitting}
           onUseExisting={handleUseExisting}
+          onForceCreate={handleForceCreate}
           onCancel={() => setDismissedDuplicate(true)}
         />
       )}

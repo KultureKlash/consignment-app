@@ -6,14 +6,17 @@ type Props = {
   isSubmitting?: boolean;
   /** Re-submit attaching to the named existing product. */
   onUseExisting: (productId: string) => void;
+  /** Re-submit creating new (force-bypass the similar-match check). Only applies
+   *  to the similar case; GTIN + exact-title cases stay hard-blocked. */
+  onForceCreate?: () => void;
   onCancel: () => void;
 };
 
 /** Polymorphic modal — branches on `match.kind`. Used after submitListing throws
- *  DuplicateError. Consignor side: no "create anyway" escape on the similar case;
- *  the consignor must either pick an existing product or close the modal and edit
- *  their input. */
-export function DuplicateMatchModal({ match, isSubmitting, onUseExisting, onCancel }: Props) {
+ *  DuplicateError. On the similar case, the consignor can pick a candidate OR
+ *  click "Submit anyway" to confirm theirs is genuinely new. GTIN and exact-
+ *  title cases stay hard-blocked. */
+export function DuplicateMatchModal({ match, isSubmitting, onUseExisting, onForceCreate, onCancel }: Props) {
   if (match.kind === "none") return null;
 
   return (
@@ -46,6 +49,7 @@ export function DuplicateMatchModal({ match, isSubmitting, onUseExisting, onCanc
             candidates={match.candidates}
             isSubmitting={isSubmitting}
             onUseExisting={onUseExisting}
+            onForceCreate={onForceCreate}
             onCancel={onCancel}
           />
         )}
@@ -152,11 +156,13 @@ function SimilarView({
   candidates,
   isSubmitting,
   onUseExisting,
+  onForceCreate,
   onCancel,
 }: {
   candidates: Extract<DuplicateMatch, { kind: "similar" }>["candidates"];
   isSubmitting?: boolean;
   onUseExisting: (productId: string) => void;
+  onForceCreate?: () => void;
   onCancel: () => void;
 }) {
   return (
@@ -166,31 +172,51 @@ function SimilarView({
         <h3 className="text-base font-semibold">Possible duplicate</h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        We found {candidates.length === 1 ? "a similar product" : `${candidates.length} similar products`} in the catalog. Please pick the matching one to avoid creating a duplicate.
+        We found {candidates.length === 1 ? "a similar product" : `${candidates.length} similar products`} in the catalog. Pick the matching one to avoid creating a duplicate.
       </p>
-      <div className="mb-5 space-y-2 max-h-72 overflow-y-auto">
+      <div className="mb-4 space-y-2 max-h-72 overflow-y-auto">
         {candidates.map((c) => (
           <button
             key={c.id}
             onClick={() => onUseExisting(c.id)}
             disabled={isSubmitting}
-            className="w-full text-left px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-left px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
           >
-            <div className="text-sm font-semibold text-foreground">{c.title}</div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-              {c.brand && <span>{c.brand}</span>}
-              {c.sku && <span>· SKU {c.sku}</span>}
-              {c.activeVariantCount > 0 && <span>· {c.activeVariantCount} active variant{c.activeVariantCount === 1 ? "" : "s"}</span>}
+            {c.imageUrl ? (
+              <img src={c.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/[0.08] shrink-0 bg-white/[0.02]" />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
+                <Package className="w-4 h-4 text-muted-foreground/60" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-foreground truncate">{c.title}</div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 truncate">
+                {c.brand && <span>{c.brand}</span>}
+                {c.sku && <span>· SKU {c.sku}</span>}
+                {c.activeVariantCount > 0 && <span>· {c.activeVariantCount} active</span>}
+              </div>
             </div>
           </button>
         ))}
       </div>
-      <button
-        onClick={onCancel}
-        className="w-full py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer transition-colors"
-      >
-        Back — edit my submission
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={onCancel}
+          className="w-full py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer transition-colors"
+        >
+          Back
+        </button>
+        {onForceCreate && (
+          <button
+            onClick={onForceCreate}
+            disabled={isSubmitting}
+            className="w-full py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit anyway
+          </button>
+        )}
+      </div>
     </>
   );
 }

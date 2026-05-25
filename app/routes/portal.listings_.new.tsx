@@ -68,6 +68,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const useExistingProductId = (form.get("useExistingProductId") as string | null)?.trim() || undefined;
+    const forceCreate = form.get("forceCreate") === "1";
 
     await submitListing({
       consignorId: consignor.id,
@@ -81,6 +82,7 @@ export async function action({ request }: ActionFunctionArgs) {
       count: data.quantity,
       imageData,
       useExistingProductId,
+      forceCreate,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {
