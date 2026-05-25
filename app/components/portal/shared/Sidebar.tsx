@@ -76,6 +76,7 @@ export function BottomTabBar() {
           <NavLink
             key={item.to}
             to={item.to}
+            prefetch="intent"
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"

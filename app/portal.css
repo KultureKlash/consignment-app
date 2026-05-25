@@ -245,7 +245,7 @@ input[type="number"] {
     animation: glow-pulse 3s ease-in-out infinite;
   }
   .animate-slide-up {
-    animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   .animate-fade-in {
     animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -279,14 +279,18 @@ input[type="number"] {
   50% { box-shadow: 0 0 25px -3px hsl(var(--glow) / 0.35); }
 }
 
+/* No filter: blur() in these keyframes — it's stunning on desktop but
+   iOS Safari has to Gaussian-blur each frame, which makes route-change
+   cascades (Sales has 9 of these, Dashboard has 6) feel laggy on phones.
+   Opacity + translateY + scale alone read as a smooth slide-up. */
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); filter: blur(4px); }
-  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; filter: blur(4px); }
-  to { opacity: 1; filter: blur(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* DayPicker dark theme for portal */
