@@ -3,6 +3,7 @@ export {
   updateSubmittedListing,
   deleteSubmittedListing,
   updateActiveListingPrice,
+  bulkUpdateActiveListingPrice,
   setUnpricedListingPrice,
   bulkSetUnpricedListingPrices,
   requestWithdrawal,

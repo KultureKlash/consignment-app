@@ -5,7 +5,7 @@ import { redirect } from "react-router";
 import { Plus, Package, Search, Eye, EyeOff, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import { AppHeader } from "~/components/portal/AppHeader";
 import { authenticatePortal } from "~/services/portal/auth.server";
-import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal, setUnpricedListingPrice, bulkSetUnpricedListingPrices, bulkRequestWithdrawal } from "~/services/submission";
+import { deleteSubmittedListing, updateActiveListingPrice, requestWithdrawal, setUnpricedListingPrice, bulkSetUnpricedListingPrices, bulkUpdateActiveListingPrice, bulkRequestWithdrawal } from "~/services/submission";
 import prisma from "~/db.server";
 import type { loader as portalLoader } from "./portal";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
@@ -121,6 +121,20 @@ export async function action({ request }: ActionFunctionArgs) {
       return { ok: true, ...result };
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Failed to request withdrawal" };
+    }
+  }
+  if (intent === "bulk-update-price") {
+    const listingIds = (fd.get("listingIds") as string ?? "").split(",").filter(Boolean);
+    const raw = parseFloat(fd.get("price") as string);
+    if (!listingIds.length) return { error: "No items selected" };
+    if (listingIds.length > 200) return { error: "Cannot update more than 200 items at once" };
+    if (isNaN(raw) || raw <= 0 || raw > 999999.99) return { error: "Invalid price" };
+    const price = Math.round(raw * 100) / 100;
+    try {
+      const result = await bulkUpdateActiveListingPrice({ consignorId: consignor.id, listingIds, price });
+      return { ok: true, ...result };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to update prices" };
     }
   }
   return { error: "Invalid intent" };

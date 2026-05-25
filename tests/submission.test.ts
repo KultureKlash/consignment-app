@@ -14,6 +14,7 @@ import {
   bulkApproveWithdrawal,
   bulkDenyWithdrawal,
   bulkCompleteWithdrawal,
+  bulkUpdateActiveListingPrice,
   updateActiveListingPrice,
   setUnpricedListingPrice,
   bulkSetUnpricedListingPrices,
@@ -750,6 +751,60 @@ describe("submission pipeline", () => {
       const result = await bulkDenyWithdrawal({ admin, listingIds: [active.id] });
       expect(result.denied).toBe(0);
       expect(result.skipped).toBe(1);
+    });
+  });
+
+  describe("bulkUpdateActiveListingPrice", () => {
+    it("updates price on all active listings owned by consignor", async () => {
+      const consignor = await createTestConsignor();
+      const [l1, l2, l3] = await createActiveListings(consignor.id, [
+        { title: "BUP A", size: "9", price: 100, gtin: "1234561111111" },
+        { title: "BUP B", size: "10", price: 200, gtin: "1234562222222" },
+        { title: "BUP C", size: "11", price: 300, gtin: "1234563333333" },
+      ]);
+
+      const result = await bulkUpdateActiveListingPrice({
+        consignorId: consignor.id,
+        listingIds: [l1.id, l2.id, l3.id],
+        price: 1500,
+      });
+      expect(result.updated).toBe(3);
+      expect(result.skipped).toBe(0);
+
+      const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id, l3.id] } } });
+      expect(fresh.every((l) => l.price === 1500)).toBe(true);
+    });
+
+    it("IDOR guard: silently filters out listings owned by another consignor", async () => {
+      const consignor1 = await createTestConsignor();
+      const consignor2 = await createTestConsignor();
+      const [mine] = await createActiveListings(consignor1.id, [
+        { title: "Mine", size: "9", price: 100, gtin: "8765431111111" },
+      ]);
+      const [theirs] = await createActiveListings(consignor2.id, [
+        { title: "Theirs", size: "10", price: 200, gtin: "8765432222222" },
+      ]);
+
+      const result = await bulkUpdateActiveListingPrice({
+        consignorId: consignor1.id,
+        listingIds: [mine.id, theirs.id],
+        price: 999,
+      });
+      expect(result.updated).toBe(1);
+      expect(result.skipped).toBe(1);
+
+      const stolenAttempt = await prisma.listing.findUniqueOrThrow({ where: { id: theirs.id } });
+      expect(stolenAttempt.price).toBe(200); // unchanged
+    });
+
+    it("rejects invalid price", async () => {
+      const consignor = await createTestConsignor();
+      await expect(
+        bulkUpdateActiveListingPrice({ consignorId: consignor.id, listingIds: [], price: 0 }),
+      ).rejects.toThrow("Invalid price");
+      await expect(
+        bulkUpdateActiveListingPrice({ consignorId: consignor.id, listingIds: [], price: 1_000_000 }),
+      ).rejects.toThrow("Invalid price");
     });
   });
 

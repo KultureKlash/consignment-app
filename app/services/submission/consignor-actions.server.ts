@@ -350,6 +350,64 @@ export async function updateActiveListingPrice({
   return updated;
 }
 
+// ── Portal: Consignor bulk-updates price on N active listings ──
+
+export async function bulkUpdateActiveListingPrice({
+  consignorId,
+  listingIds,
+  price,
+}: {
+  consignorId: string;
+  listingIds: string[];
+  price: number;
+}): Promise<{ updated: number; skipped: number }> {
+  await requireActiveConsignor(consignorId);
+  if (price <= 0 || price > 999999.99) throw new Error("Invalid price");
+
+  // IDOR guard + status filter: only ACTIVE listings owned by this consignor
+  const eligible = await prisma.listing.findMany({
+    where: {
+      id: { in: listingIds },
+      consignorId,
+      status: { in: [LISTING_STATUS.ACTIVE, LISTING_STATUS.APPROVED] },
+    },
+    include: { variant: true },
+  });
+
+  if (eligible.length === 0) {
+    return { updated: 0, skipped: listingIds.length };
+  }
+
+  const eligibleIds = eligible.map((l) => l.id);
+  await prisma.listing.updateMany({
+    where: { id: { in: eligibleIds } },
+    data: { price },
+  });
+
+  // Shopify reflects the lowest active price per variant — sync once per unique variant.
+  try {
+    const session = await prisma.session.findFirst({
+      where: { isOnline: false, accessToken: { not: "" } },
+      select: { shop: true },
+    });
+    if (session) {
+      const { unauthenticated } = await import("~/shopify.server");
+      const { admin } = await unauthenticated.admin(session.shop);
+      const seen = new Set<string>();
+      for (const l of eligible) {
+        if (seen.has(l.variantId)) continue;
+        seen.add(l.variantId);
+        const variant = await prisma.variant.findUniqueOrThrow({ where: { id: l.variantId } });
+        await syncInventory({ admin, variant });
+      }
+    }
+  } catch (err) {
+    logger.error("Shopify price sync failed during bulk update (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  return { updated: eligible.length, skipped: listingIds.length - eligible.length };
+}
+
 // ── Portal: Consignor requests withdrawal of an active listing ──
 
 export async function requestWithdrawal({
