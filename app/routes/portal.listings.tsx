@@ -252,8 +252,8 @@ export default function PortalListings() {
         </button>
 
         <div className="relative animate-slide-up" style={{ animationDelay: "160ms" }}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Search by product name, size, or SKU" className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
+          <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Search by product name, size, or SKU" className="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm" />
         </div>
 
         {allActiveVisibleIds.length > 0 && (

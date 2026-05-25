@@ -209,7 +209,7 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search product or order #..."
-              className="glass-input w-full pl-10 pr-3 py-2.5 rounded-xl text-sm"
+              className="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm"
             />
           </div>
           <DateRangePicker

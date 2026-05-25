@@ -28,7 +28,7 @@ export function ProductSearchGrid({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by product name or SKU..."
-            className="glass-input w-full pl-12 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
+            className="glass-input w-full pl-11 pr-4 py-3.5 rounded-2xl text-[15px] font-medium"
             autoFocus
           />
         </div>
