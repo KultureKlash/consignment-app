@@ -176,17 +176,6 @@ export default function PortalListings() {
     });
   };
 
-  const allActiveVisibleIds = listings.filter((l) => l.status === LISTING_STATUS.ACTIVE).map((l) => l.id);
-  const allVisibleSelected = allActiveVisibleIds.length > 0 && allActiveVisibleIds.every((id) => selectedIds.has(id));
-  const toggleSelectAllVisible = () => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (allVisibleSelected) { for (const id of allActiveVisibleIds) next.delete(id); }
-      else { for (const id of allActiveVisibleIds) next.add(id); }
-      return next;
-    });
-  };
-
   // Clear selection when the underlying listings change (e.g. after a successful bulk action)
   useEffect(() => { setSelectedIds(new Set()); }, [listings]);
 
@@ -255,22 +244,6 @@ export default function PortalListings() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
           <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Search by product name, size, or SKU" className="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm" />
         </div>
-
-        {allActiveVisibleIds.length > 0 && (
-          <div className="flex items-center justify-between text-xs text-muted-foreground animate-slide-up" style={{ animationDelay: "180ms" }}>
-            <span>
-              {selectedIds.size > 0
-                ? `${selectedIds.size} selected`
-                : `${allActiveVisibleIds.length} active item${allActiveVisibleIds.length !== 1 ? "s" : ""}`}
-            </span>
-            <button
-              onClick={toggleSelectAllVisible}
-              className="text-orange-300 hover:text-orange-200 font-semibold cursor-pointer transition-colors"
-            >
-              {allVisibleSelected ? "Unselect all" : `Select all ${allActiveVisibleIds.length}`}
-            </button>
-          </div>
-        )}
 
         {listings.length === 0 ? (
           <div className="glass-panel rounded-2xl p-12 text-center animate-slide-up" style={{ animationDelay: "160ms" }}>
