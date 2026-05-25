@@ -29,6 +29,80 @@ import { createListing } from "~/services/listings";
 describe("submission pipeline", () => {
   // ── Submit ──
 
+  describe("submitListing — dedup integration", () => {
+    it("throws DuplicateError when GTIN already exists on another variant", async () => {
+      const { DuplicateError } = await import("~/services/catalog");
+      const consignor = await createTestConsignor();
+      await submitListing({
+        consignorId: consignor.id,
+        title: "Original GTIN Owner",
+        size: "9",
+        gtin: "5555000055551",
+        price: 100,
+      });
+
+      // Different consignor tries to submit a totally different product but with the same GTIN.
+      const other = await createTestConsignor();
+      await expect(
+        submitListing({
+          consignorId: other.id,
+          title: "Totally Different Product",
+          size: "10",
+          gtin: "5555000055551",
+          price: 150,
+        }),
+      ).rejects.toThrow(DuplicateError);
+    });
+
+    it("throws DuplicateError when title+brand exactly match an existing product", async () => {
+      const { DuplicateError } = await import("~/services/catalog");
+      const consignor = await createTestConsignor();
+      await submitListing({
+        consignorId: consignor.id,
+        title: "Yves Saint Laurent Court Classic SL/10",
+        brand: "YSL",
+        size: "9",
+        price: 400,
+      });
+
+      await expect(
+        submitListing({
+          consignorId: consignor.id,
+          title: "yves saint laurent court classic sl/10", // lowercase
+          brand: "ysl",
+          size: "10",
+          price: 420,
+        }),
+      ).rejects.toThrow(DuplicateError);
+    });
+
+    it("attaches to existing product when useExistingProductId is provided (bypasses dedup)", async () => {
+      const consignor = await createTestConsignor();
+      const first = await submitListing({
+        consignorId: consignor.id,
+        title: "Maison Margiela Replica Sneaker",
+        brand: "Margiela",
+        size: "9",
+        price: 350,
+      });
+
+      const productId = first.variant.product.id;
+
+      // Re-submit a different size, explicitly attaching to the same product. Should succeed.
+      const second = await submitListing({
+        consignorId: consignor.id,
+        title: "Maison Margiela Replica Sneaker",
+        brand: "Margiela",
+        size: "10",
+        price: 360,
+        useExistingProductId: productId,
+      });
+
+      expect(second.variant.product.id).toBe(productId);
+      expect(second.variant.size).toBe("10");
+    });
+  });
+
   describe("submitListing", () => {
     it("creates a listing with status=submitted and submittedAt", async () => {
       const consignor = await createTestConsignor();
@@ -327,8 +401,8 @@ describe("submission pipeline", () => {
   describe("bulkApproveListing", () => {
     it("approves multiple submitted listings", async () => {
       const consignor = await createTestConsignor();
-      const l1 = await submitListing({ consignorId: consignor.id, title: "Bulk A", size: "9", price: 100 });
-      const l2 = await submitListing({ consignorId: consignor.id, title: "Bulk B", size: "10", price: 200 });
+      const l1 = await submitListing({ consignorId: consignor.id, title: "Adidas Samba Vintage", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: consignor.id, title: "Nike Cortez Forrest", size: "10", price: 200 });
 
       const result = await bulkApproveListing({ listingIds: [l1.id, l2.id] });
       expect(result.approved).toBe(2);
@@ -351,8 +425,8 @@ describe("submission pipeline", () => {
     it("activates multiple approved listings", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
-      const l1 = await submitListing({ consignorId: consignor.id, title: "Act A", size: "9", gtin: "1111111111111", price: 100 });
-      const l2 = await submitListing({ consignorId: consignor.id, title: "Act B", size: "10", gtin: "2222222222222", price: 200 });
+      const l1 = await submitListing({ consignorId: consignor.id, title: "Reebok Club Classic Vintage", size: "9", gtin: "1111111111111", price: 100 });
+      const l2 = await submitListing({ consignorId: consignor.id, title: "Puma Suede Mostro Heritage", size: "10", gtin: "2222222222222", price: 200 });
       await approveListing({ listingId: l1.id });
       await approveListing({ listingId: l2.id });
 
@@ -599,9 +673,9 @@ describe("submission pipeline", () => {
     it("flips all active listings to withdrawal_requested in one call", async () => {
       const consignor = await createTestConsignor();
       const [l1, l2, l3] = await createActiveListings(consignor.id, [
-        { title: "BR A", size: "9", price: 100, gtin: "9991111111111" },
-        { title: "BR B", size: "10", price: 200, gtin: "9992222222222" },
-        { title: "BR C", size: "11", price: 300, gtin: "9993333333333" },
+        { title: "Saucony ProGrid Triumph", size: "9", price: 100, gtin: "9991111111111" },
+        { title: "Hoka Bondi Cloudwalker", size: "10", price: 200, gtin: "9992222222222" },
+        { title: "Brooks Ghost Glide", size: "11", price: 300, gtin: "9993333333333" },
       ]);
 
       const result = await bulkRequestWithdrawal({
@@ -676,8 +750,8 @@ describe("submission pipeline", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
       const listings = await createActiveListings(consignor.id, [
-        { title: "BAW A", size: "9", price: 100, gtin: "5551111111111" },
-        { title: "BAW B", size: "10", price: 200, gtin: "5552222222222" },
+        { title: "Allbirds Wool Lounger", size: "9", price: 100, gtin: "5551111111111" },
+        { title: "Reigning Champ Court", size: "10", price: 200, gtin: "5552222222222" },
       ]);
       const ids = listings.map((l) => l.id);
       await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
@@ -728,8 +802,8 @@ describe("submission pipeline", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
       const listings = await createActiveListings(consignor.id, [
-        { title: "BDW A", size: "9", price: 100, gtin: "2221111111111" },
-        { title: "BDW B", size: "10", price: 200, gtin: "2222222222222" },
+        { title: "Common Projects Achilles", size: "9", price: 100, gtin: "2221111111111" },
+        { title: "ECCO Soft Premium", size: "10", price: 200, gtin: "2222222222222" },
       ]);
       const ids = listings.map((l) => l.id);
       await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
@@ -758,9 +832,9 @@ describe("submission pipeline", () => {
     it("updates price on all active listings owned by consignor", async () => {
       const consignor = await createTestConsignor();
       const [l1, l2, l3] = await createActiveListings(consignor.id, [
-        { title: "BUP A", size: "9", price: 100, gtin: "1234561111111" },
-        { title: "BUP B", size: "10", price: 200, gtin: "1234562222222" },
-        { title: "BUP C", size: "11", price: 300, gtin: "1234563333333" },
+        { title: "Lacoste Court Master", size: "9", price: 100, gtin: "1234561111111" },
+        { title: "Sperry Topsider Classic", size: "10", price: 200, gtin: "1234562222222" },
+        { title: "Clarks Wallabee Original", size: "11", price: 300, gtin: "1234563333333" },
       ]);
 
       const result = await bulkUpdateActiveListingPrice({
@@ -813,8 +887,8 @@ describe("submission pipeline", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
       const listings = await createActiveListings(consignor.id, [
-        { title: "BCW A", size: "9", price: 100, gtin: "0001111111111" },
-        { title: "BCW B", size: "10", price: 200, gtin: "0002222222222" },
+        { title: "Diadora N9000 Heritage", size: "9", price: 100, gtin: "0001111111111" },
+        { title: "Mephisto Match Suede", size: "10", price: 200, gtin: "0002222222222" },
       ]);
       const ids = listings.map((l) => l.id);
       await bulkRequestWithdrawal({ consignorId: consignor.id, listingIds: ids });
@@ -930,9 +1004,11 @@ describe("submission pipeline", () => {
       const sku = opts?.sku ?? "BULK-001";
       const size = opts?.size ?? "9";
       const gtin = opts?.gtin ?? "BULK-GTIN-9";
+      // forceCreate: test fixture intentionally creates same-product listings across calls;
+      // bypassing dedup keeps the test focused on the bulk-price logic.
       await createListing({
         admin, sku, title: "Bulk Unpriced", brand: "TestBrand", size, gtin,
-        price: null, count, consignorId,
+        price: null, count, consignorId, forceCreate: true,
       });
       return prisma.listing.findMany({ where: { consignorId, status: "awaiting_price" } });
     }

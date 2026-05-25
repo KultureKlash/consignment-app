@@ -147,6 +147,8 @@ export default function QuickAddPopover({
       gtin: gtin || "",
       price,
       quantity,
+      // Quick-add is "add to this exact product" — skip dedup detection.
+      useExistingProductId: data.productId,
     });
   };
 

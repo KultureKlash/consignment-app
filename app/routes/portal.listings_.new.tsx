@@ -3,6 +3,7 @@ import { useLoaderData } from "react-router";
 import { redirect } from "react-router";
 import { authenticatePortal } from "~/services/portal/auth.server";
 import { submitListing } from "~/services/submission";
+import { DuplicateError } from "~/services/catalog";
 import { isFootwear, buildCategory } from "~/lib/categories";
 import { NewListingPage } from "~/components/portal/listings/new/NewListingPage";
 import type { ProductResult } from "~/components/portal/listings/new/NewListingPage";
@@ -66,6 +67,8 @@ export async function action({ request }: ActionFunctionArgs) {
       imageData = rawImageData;
     }
 
+    const useExistingProductId = (form.get("useExistingProductId") as string | null)?.trim() || undefined;
+
     await submitListing({
       consignorId: consignor.id,
       title: data.title,
@@ -77,9 +80,18 @@ export async function action({ request }: ActionFunctionArgs) {
       price: data.price,
       count: data.quantity,
       imageData,
+      useExistingProductId,
     });
     return redirect("/portal/listings?status=submitted");
   } catch (err) {
+    if (err instanceof DuplicateError) {
+      return {
+        error: "duplicate-product" as const,
+        duplicate: err.match,
+        // echo back so the modal can re-submit with all original fields preserved
+        submitted: Object.fromEntries(form.entries()),
+      };
+    }
     return { error: err instanceof Error ? err.message : "Failed to submit listing" };
   }
 }

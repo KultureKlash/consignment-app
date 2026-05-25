@@ -1,6 +1,6 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
-import { findOrCreateProduct, findOrCreateVariant, ensureVariantBarcode } from "~/services/catalog";
+import { findOrCreateProduct, findOrCreateVariant, ensureVariantBarcode, detectDuplicateProduct, DuplicateError } from "~/services/catalog";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/domain";
@@ -20,6 +20,8 @@ export async function createListing({
   taxonomyId,
   imageData,
   cost,
+  useExistingProductId,
+  forceCreate,
 }: {
   admin: AdminApiContext;
   sku?: string | null;
@@ -34,9 +36,22 @@ export async function createListing({
   taxonomyId?: string;
   imageData?: string;
   cost?: number;
+  /** Attach this submission to an existing product (skips dedup). */
+  useExistingProductId?: string;
+  /** Admin-only: bypass dedup detection entirely and create new. */
+  forceCreate?: boolean;
 }) {
 
-  const product = await findOrCreateProduct({ sku, title, brand, category });
+  let product;
+  if (useExistingProductId) {
+    product = await prisma.product.findUniqueOrThrow({ where: { id: useExistingProductId } });
+  } else if (forceCreate) {
+    product = await findOrCreateProduct({ sku, title, brand, category });
+  } else {
+    const dup = await detectDuplicateProduct({ title, brand, sku, gtin });
+    if (dup.kind !== "none") throw new DuplicateError(dup);
+    product = await findOrCreateProduct({ sku, title, brand, category });
+  }
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
   if (!variant.gtin && !gtin) {
@@ -60,7 +75,7 @@ export async function createListing({
   });
   const listings = await prisma.listing.findMany({
     where: { consignorId, variantId: variant.id, ...(isUnpriced ? { status: LISTING_STATUS.AWAITING_PRICE } : { listedAt: now }) },
-    include: { consignor: true },
+    include: { consignor: true, variant: { include: { product: true } } },
   });
 
   // Skip Shopify sync for unpriced listings — they're not live until consignor sets price.

@@ -56,11 +56,11 @@ describe("listings.server", () => {
       expect(listings.every((l) => l.price === 350 && l.status === "active")).toBe(true);
     });
 
-    it("reuses existing product when same sku is used", async () => {
+    it("reuses existing product when useExistingProductId is passed", async () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -80,6 +80,7 @@ describe("listings.server", () => {
         gtin: "TEST-GTIN-9",
         price: 340,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // Still 1 product and 1 variant, but 2 listings (different prices)
@@ -92,7 +93,7 @@ describe("listings.server", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -112,6 +113,7 @@ describe("listings.server", () => {
         gtin: "TEST-GTIN-10",
         price: 340,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       expect(await prisma.product.count()).toBe(1);
@@ -177,6 +179,7 @@ describe("listings.server", () => {
         price: 360,
         count: 3,
         consignorId: bob.id,
+        useExistingProductId: listing1.variant.product.id,
       });
 
       expect(listing1.consignor.name).toBe("Alice");
@@ -192,7 +195,7 @@ describe("listings.server", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -214,6 +217,7 @@ describe("listings.server", () => {
         price: 350,
         count: 3,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // 5 separate listings (no merging)
@@ -224,7 +228,7 @@ describe("listings.server", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -245,6 +249,7 @@ describe("listings.server", () => {
         price: 350,
         count: 2,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // Different prices = separate listings
@@ -256,7 +261,7 @@ describe("listings.server", () => {
       const alice = await createTestConsignor({ name: "Alice", email: "alice@test.com" });
       const bob = await createTestConsignor({ name: "Bob", email: "bob@test.com" });
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -277,6 +282,7 @@ describe("listings.server", () => {
         gtin: "TEST-GTIN-9",
         price: 350,
         consignorId: bob.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // Different consignors = separate listings
@@ -398,7 +404,7 @@ describe("listings.server", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         sku: "DD1391-100",
         title: "Nike Dunk Panda",
@@ -418,6 +424,7 @@ describe("listings.server", () => {
         gtin: "194956806653",
         price: 340,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // Still 1 variant, GTIN intact
@@ -491,7 +498,7 @@ describe("listings.server", () => {
       const { admin } = createMockAdmin();
       const consignor = await createTestConsignor();
 
-      await createListing({
+      const first = await createListing({
         admin,
         title: "Ami Paris Bucket Hat",
         brand: "Ami Paris",
@@ -509,6 +516,7 @@ describe("listings.server", () => {
         size: "O/S",
         price: 200,
         consignorId: consignor.id,
+        useExistingProductId: first.variant.product.id,
       });
 
       // Same product, same variant, 2 listings

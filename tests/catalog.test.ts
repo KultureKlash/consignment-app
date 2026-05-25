@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prisma, createTestConsignor } from "./setup";
-import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog";
+import { findOrCreateProduct, findOrCreateVariant, detectDuplicateProduct, isSimilarTitle } from "~/services/catalog";
 
 describe("catalog.server", () => {
   describe("findOrCreateProduct", () => {
@@ -172,6 +172,105 @@ describe("catalog.server", () => {
 
       const count = await prisma.variant.count();
       expect(count).toBe(2);
+    });
+  });
+
+  describe("isSimilarTitle (matcher heuristics)", () => {
+    it("matches partial subset (b30 countdown vs full Dior title)", () => {
+      expect(
+        isSimilarTitle(
+          "b30 countdown sneaker",
+          "B30 Countdown Sneaker DIOR Gray Technical Mesh and Dior Gray Technical Fabric DIOR",
+        ),
+      ).toBe(true);
+    });
+
+    it("tolerates a single typo on long words (Levenshtein 1)", () => {
+      expect(isSimilarTitle("b30 cuntdown sneaker", "B30 Countdown Sneaker DIOR")).toBe(true);
+    });
+
+    it("rejects different model numbers (Air Jordan 1 vs 4)", () => {
+      expect(isSimilarTitle("Air Jordan 1 Chicago", "Air Jordan 4 White Cement")).toBe(false);
+    });
+
+    it("matches same-number colorways (admin can override)", () => {
+      expect(isSimilarTitle("Air Jordan 1 Chicago", "Air Jordan 1 Mocha")).toBe(true);
+    });
+
+    it("rejects unrelated titles", () => {
+      expect(isSimilarTitle("Adidas Samba", "Air Jordan 1 Chicago")).toBe(false);
+    });
+
+    it("rejects when overlap is below 50%", () => {
+      expect(isSimilarTitle("totally unrelated brand model", "Air Jordan 1 Chicago Lost and Found")).toBe(false);
+    });
+  });
+
+  describe("detectDuplicateProduct", () => {
+    it("returns kind 'none' when nothing in catalog matches", async () => {
+      const result = await detectDuplicateProduct({
+        title: "Totally Unique Product XYZ123",
+        brand: "NewBrand",
+      });
+      expect(result.kind).toBe("none");
+    });
+
+    it("returns kind 'gtin' when an existing variant has the same barcode", async () => {
+      const product = await findOrCreateProduct({ title: "GTIN Owner Sneaker", brand: "TestBrand" });
+      await findOrCreateVariant({ productId: product.id, size: "10", gtin: "9999000099991" });
+
+      const result = await detectDuplicateProduct({
+        title: "Completely Different Title",
+        brand: "OtherBrand",
+        gtin: "9999000099991",
+      });
+
+      expect(result.kind).toBe("gtin");
+      if (result.kind === "gtin") {
+        expect(result.existing.product.id).toBe(product.id);
+        expect(result.existing.variant.gtin).toBe("9999000099991");
+      }
+    });
+
+    it("returns kind 'exact-title' when title+brand match case-insensitively", async () => {
+      const product = await findOrCreateProduct({ title: "B30 Countdown Sneaker DIOR", brand: "Dior" });
+
+      const result = await detectDuplicateProduct({
+        title: "b30 countdown sneaker dior", // lowercase
+        brand: "DIOR", // uppercase
+      });
+
+      expect(result.kind).toBe("exact-title");
+      if (result.kind === "exact-title") expect(result.existing.id).toBe(product.id);
+    });
+
+    it("returns kind 'similar' when title is a partial match (not exact)", async () => {
+      await findOrCreateProduct({
+        title: "B30 Countdown Sneaker DIOR Gray Technical Mesh",
+        brand: "Dior",
+      });
+
+      const result = await detectDuplicateProduct({
+        title: "b30 countdown sneaker", // subset of existing
+        brand: "Dior",
+      });
+
+      expect(result.kind).toBe("similar");
+      if (result.kind === "similar") {
+        expect(result.candidates.length).toBeGreaterThan(0);
+        expect(result.candidates[0].title).toContain("B30 Countdown Sneaker DIOR");
+      }
+    });
+
+    it("does NOT match across different model numbers (Air Jordan 1 vs 4)", async () => {
+      await findOrCreateProduct({ title: "Air Jordan 4 White Cement", brand: "Air Jordan" });
+
+      const result = await detectDuplicateProduct({
+        title: "Air Jordan 1 Chicago",
+        brand: "Air Jordan",
+      });
+
+      expect(result.kind).toBe("none");
     });
   });
 });

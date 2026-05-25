@@ -80,6 +80,12 @@ interface CreateListingState {
   isLoading: boolean;
   hasProduct: boolean;
   knownBrands: string[];
+
+  // Duplicate-detection modal state
+  duplicateMatch: import("~/services/catalog").DuplicateMatch | null;
+  dismissDuplicateModal: () => void;
+  submitUseExisting: (productId: string) => void;
+  submitForceCreate: () => void;
 }
 
 const CreateListingCtx = createContext<CreateListingState | null>(null);
@@ -256,7 +262,55 @@ export function CreateListingProvider({
     if (shopifyCategory) submitData.shopifyCategoryId = shopifyCategory.id;
     if (imageBase64) submitData.image = imageBase64;
     if (!formFields.cost) delete submitData.cost;
+    // Admin selected an existing product from search — bypass dedup (we know it's intentional).
+    if (selectedProductId && !newProductMode) submitData.useExistingProductId = selectedProductId;
     fetcher.submit(submitData, { method: "POST" });
+  };
+
+  // Re-submit with explicit dedup decision after the duplicate modal action.
+  const submitWithDedupDecision = (decision: { useExistingProductId: string } | { forceCreate: true }) => {
+    const category = mainCategory ? buildCategory(mainCategory, subCategory || undefined) : "";
+    const submitData: Record<string, string> = {
+      intent: "create",
+      consignorId: selectedConsignor,
+      sku: formFields.sku,
+      title: formFields.title,
+      brand: formFields.brand,
+      size: formFields.size,
+      gtin: formFields.gtin,
+      quantity: formFields.quantity,
+      cost: formFields.cost,
+      category,
+    };
+    if (formFields.setPriceLater) submitData.setPriceLater = "1";
+    else submitData.price = formFields.price;
+    if (shopifyCategory) submitData.shopifyCategoryId = shopifyCategory.id;
+    if (imageBase64) submitData.image = imageBase64;
+    if (!formFields.cost) delete submitData.cost;
+    if ("useExistingProductId" in decision) submitData.useExistingProductId = decision.useExistingProductId;
+    if ("forceCreate" in decision) submitData.forceCreate = "1";
+    fetcher.submit(submitData, { method: "POST" });
+  };
+
+  const fetcherData = fetcher.data as
+    | { error?: string; duplicate?: import("~/services/catalog").DuplicateMatch }
+    | undefined;
+  const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
+  const duplicateMatch =
+    fetcherData?.error === "duplicate-product" && !dismissedDuplicate
+      ? fetcherData.duplicate ?? null
+      : null;
+  useEffect(() => {
+    if (fetcherData?.error === "duplicate-product") setDismissedDuplicate(false);
+  }, [fetcherData]);
+
+  const submitUseExisting = (productId: string) => {
+    setDismissedDuplicate(true);
+    submitWithDedupDecision({ useExistingProductId: productId });
+  };
+  const submitForceCreate = () => {
+    setDismissedDuplicate(true);
+    submitWithDedupDecision({ forceCreate: true });
   };
 
   return (
@@ -275,6 +329,10 @@ export function CreateListingProvider({
       consignors, selectedConsignor, setSelectedConsignor, selectedConsignorObj, consignorInputRef,
       productInputRef,
       resetAll, handleSubmit, isLoading, hasProduct, knownBrands,
+      duplicateMatch,
+      dismissDuplicateModal: () => setDismissedDuplicate(true),
+      submitUseExisting,
+      submitForceCreate,
     }}>
       {children}
     </CreateListingCtx.Provider>

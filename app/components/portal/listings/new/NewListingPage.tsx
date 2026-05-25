@@ -5,6 +5,8 @@ import { isFootwear, buildCategory, parseCategory, autoSuggest } from "~/lib/cat
 import { AppHeader } from "~/components/portal/AppHeader";
 import { ProductSearchGrid } from "./ProductSearchGrid";
 import { ProductForm } from "./ProductForm";
+import { DuplicateMatchModal } from "./DuplicateMatchModal";
+import type { DuplicateMatch } from "~/services/catalog";
 import type { loader as portalLoader } from "~/routes/portal";
 
 export type ProductResult = {
@@ -62,7 +64,36 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
   const [marketData, setMarketData] = useState<{ lowestPrice: number | null; daysSinceLastSale: number | null } | null>(null);
 
   const isFootwearCategory = isFootwear(mainCategory ? buildCategory(mainCategory, subCategory) : selectedProduct?.category ?? "");
-  const actionData = fetcher.data as { error?: string } | undefined;
+  const actionData = fetcher.data as
+    | { error?: string; duplicate?: DuplicateMatch }
+    | undefined;
+  const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
+  const duplicateMatch =
+    actionData?.error === "duplicate-product" && !dismissedDuplicate
+      ? actionData.duplicate ?? null
+      : null;
+  const isSubmitting = fetcher.state !== "idle";
+
+  // Reopen the modal if a new duplicate response arrives.
+  useEffect(() => {
+    if (actionData?.error === "duplicate-product") setDismissedDuplicate(false);
+  }, [actionData]);
+
+  const handleUseExisting = (productId: string) => {
+    const fd = new FormData();
+    fd.set("title", title);
+    fd.set("brand", brand);
+    fd.set("mainCategory", mainCategory);
+    fd.set("subCategory", subCategory);
+    fd.set("sku", sku);
+    fd.set("size", size);
+    fd.set("gtin", gtin);
+    fd.set("price", price);
+    fd.set("quantity", quantity);
+    if (imageData) fd.set("imageData", imageData);
+    fd.set("useExistingProductId", productId);
+    fetcher.submit(fd, { method: "POST" });
+  };
 
   // Auto-suggest brand + category from title (manual mode only)
   useEffect(() => {
@@ -246,7 +277,7 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           Back to Listings
         </button>
 
-        {actionData?.error && (
+        {actionData?.error && actionData.error !== "duplicate-product" && (
           <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
             {actionData.error}
           </div>
@@ -336,6 +367,14 @@ export function NewListingPage({ consignor, prefillProduct }: NewListingPageProp
           )}
         </fetcher.Form>
       </div>
+      {duplicateMatch && (
+        <DuplicateMatchModal
+          match={duplicateMatch}
+          isSubmitting={isSubmitting}
+          onUseExisting={handleUseExisting}
+          onCancel={() => setDismissedDuplicate(true)}
+        />
+      )}
     </div>
   );
 }

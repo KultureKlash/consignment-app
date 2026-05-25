@@ -95,11 +95,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const costRaw = (formData.get("cost") as string ?? "").trim();
         const cost = costRaw ? Number(costRaw) : undefined;
 
-        const listing = await createListing({
-          admin, sku, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData, cost,
-        });
+        const useExistingProductId = (formData.get("useExistingProductId") as string ?? "").trim() || undefined;
+        const forceCreate = formData.get("forceCreate") === "1";
 
-        return { listing, intent, quantity };
+        try {
+          const listing = await createListing({
+            admin, sku, title, brand, category, size, gtin, price, count: quantity, consignorId, taxonomyId, imageData, cost,
+            useExistingProductId, forceCreate,
+          });
+          return { listing, intent, quantity };
+        } catch (err) {
+          const { DuplicateError } = await import("~/services/catalog");
+          if (err instanceof DuplicateError) {
+            return {
+              error: "duplicate-product" as const,
+              intent,
+              duplicate: err.match,
+              submitted: Object.fromEntries(formData.entries()),
+            };
+          }
+          throw err;
+        }
       }
 
       case "cancel": {

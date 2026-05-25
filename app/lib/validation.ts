@@ -117,6 +117,7 @@ export const quickAddListingSchema = z.object({
     .default("1")
     .transform((v) => Math.max(1, Math.min(50, parseInt(v) || 1))),
   cost: optionalPrice,
+  useExistingProductId: optionalText(64),
 });
 
 // ── Admin edit product (product-level fields) ──

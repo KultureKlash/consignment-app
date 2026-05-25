@@ -7,6 +7,7 @@ import ProductSearch from "./ProductSearch";
 import NewProductFields from "./NewProductFields";
 import { ExistingProductCategoryPicker } from "./CategoryPicker";
 import VariantFields from "./VariantFields";
+import { DuplicateMatchModal } from "./DuplicateMatchModal";
 
 function CreateListingFormInner() {
   const ctx = useCreateListing();
@@ -43,6 +44,16 @@ function CreateListingFormInner() {
       >
         {ctx.isLoading ? <span className="inline-flex items-center gap-2"><RefreshCw size={14} className="animate-spin" /> Creating...</span> : "Create Listing"}
       </button>
+
+      {ctx.duplicateMatch && (
+        <DuplicateMatchModal
+          match={ctx.duplicateMatch}
+          isSubmitting={ctx.isLoading}
+          onUseExisting={ctx.submitUseExisting}
+          onForceCreate={ctx.submitForceCreate}
+          onCancel={ctx.dismissDuplicateModal}
+        />
+      )}
     </div>
   );
 }

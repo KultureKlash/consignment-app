@@ -1,5 +1,5 @@
 import prisma from "~/db.server";
-import { findOrCreateProduct, findOrCreateVariant } from "~/services/catalog";
+import { findOrCreateProduct, findOrCreateVariant, detectDuplicateProduct, DuplicateError } from "~/services/catalog";
 import { syncInventory } from "~/services/inventory";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
 import { LISTING_STATUS } from "~/lib/domain";
@@ -29,6 +29,7 @@ export async function submitListing({
   price,
   count = 1,
   imageData,
+  useExistingProductId,
 }: {
   consignorId: string;
   sku?: string | null;
@@ -40,10 +41,20 @@ export async function submitListing({
   price: number;
   count?: number;
   imageData?: string;
+  /** When set, skip dedup detection and attach this submission to the named product.
+   *  Used after the consignor explicitly confirms an existing product in the dedup modal. */
+  useExistingProductId?: string;
 }) {
   await requireActiveConsignor(consignorId);
 
-  const product = await findOrCreateProduct({ sku, title, brand, category });
+  let product;
+  if (useExistingProductId) {
+    product = await prisma.product.findUniqueOrThrow({ where: { id: useExistingProductId } });
+  } else {
+    const dup = await detectDuplicateProduct({ title, brand, sku, gtin });
+    if (dup.kind !== "none") throw new DuplicateError(dup);
+    product = await findOrCreateProduct({ sku, title, brand, category });
+  }
   const variant = await findOrCreateVariant({ productId: product.id, size, gtin });
 
   // Store image on product if provided and product has no image yet

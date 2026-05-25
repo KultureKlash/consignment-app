@@ -42,20 +42,36 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
   if (intent === "quick-add") {
     const { quickAddListingSchema, parseForm } = await import("~/lib/validation");
     const data = parseForm(quickAddListingSchema, formData);
-    const listing = await createListing({
-      admin,
-      title: data.title,
-      brand: data.brand,
-      category: data.category,
-      sku: data.sku,
-      size: data.size,
-      gtin: data.gtin,
-      price: data.price,
-      count: data.quantity,
-      consignorId: data.consignorId,
-      cost: data.cost,
-    });
-    return { listing, intent, quantity: data.quantity };
+    const forceCreate = formData.get("forceCreate") === "1";
+    try {
+      const listing = await createListing({
+        admin,
+        title: data.title,
+        brand: data.brand,
+        category: data.category,
+        sku: data.sku,
+        size: data.size,
+        gtin: data.gtin,
+        price: data.price,
+        count: data.quantity,
+        consignorId: data.consignorId,
+        cost: data.cost,
+        useExistingProductId: data.useExistingProductId || undefined,
+        forceCreate,
+      });
+      return { listing, intent, quantity: data.quantity };
+    } catch (err) {
+      const { DuplicateError } = await import("~/services/catalog");
+      if (err instanceof DuplicateError) {
+        return {
+          error: "duplicate-product" as const,
+          intent,
+          duplicate: err.match,
+          submitted: Object.fromEntries(formData.entries()),
+        };
+      }
+      throw err;
+    }
   }
 
   if (intent === "approve") {
