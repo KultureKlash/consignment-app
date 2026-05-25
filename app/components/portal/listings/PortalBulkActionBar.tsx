@@ -47,8 +47,12 @@ export function PortalBulkActionBar({ selectedIds, onClear }: PortalBulkActionBa
   return (
     <>
       <div
-        className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 glass-panel-strong glow-border rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 animate-slide-up max-w-[calc(100vw-2rem)]"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        className="fixed left-1/2 -translate-x-1/2 z-40 glass-panel-strong glow-border rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-2 md:gap-3 animate-slide-up max-w-[calc(100vw-2rem)]"
+        style={{
+          // Mobile: sit above the bottom tab bar (h-16 + safe-area) with a 12px gap.
+          // Desktop (lg+): no tab bar — just hover near the bottom edge.
+          bottom: "calc(4.5rem + env(safe-area-inset-bottom))",
+        }}
       >
         <button
           onClick={onClear}
