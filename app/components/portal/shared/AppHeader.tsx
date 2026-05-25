@@ -76,7 +76,11 @@ export function AppHeader({
     setBellOpen(opening);
     if (opening && serverUnread > 0 && !markedRead) {
       setMarkedRead(true);
-      fetcher.submit(null, { method: "POST", action: "/portal/api/notifications-read" });
+      // Defer the network call so it never competes with the panel-open paint.
+      // The mark-as-read can settle a tick later — user doesn't notice.
+      setTimeout(() => {
+        fetcher.submit(null, { method: "POST", action: "/portal/api/notifications-read" });
+      }, 0);
     }
   }
 
