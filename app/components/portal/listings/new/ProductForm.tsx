@@ -1,9 +1,11 @@
-import { Lightbulb, TrendingDown, Clock, Camera } from "lucide-react";
+import { useState } from "react";
+import { Lightbulb, TrendingDown, Clock, Camera, ScanLine } from "lucide-react";
 import { processProductImage } from "~/lib/image-processing";
 import { GlassSelect } from "~/components/portal/GlassSelect";
 import { CATEGORIES, MAIN_CATEGORIES } from "~/lib/categories";
 import { compareSizes } from "~/lib/size-order";
 import { fmt } from "~/lib/currency";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
 import type { ProductResult } from "./NewListingPage";
 
 interface ProductFormProps {
@@ -97,6 +99,10 @@ export function ProductForm({
     fieldErrors.has(field) ? "ring-2 ring-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : "";
 
   const subCategories = mainCategory ? (CATEGORIES[mainCategory] ?? []) : [];
+
+  const [scannerOpen, setScannerOpen] = useState(false);
+  // GTIN is locked when an existing variant + size combo already has one in DB.
+  const gtinLocked = !!(selectedProduct && size && !newSize && gtin);
 
   return (
     <>
@@ -299,15 +305,28 @@ export function ProductForm({
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">
               GTIN / Barcode
             </label>
-            <input
-              type="text"
-              name="gtin"
-              value={gtin}
-              onChange={(e) => { onGtinChange(e.target.value); clearError("gtin"); }}
-              className={`glass-input w-full px-3 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("gtin")}`}
-              placeholder="e.g. 194500787612"
-              readOnly={!!(selectedProduct && size && !newSize && gtin)}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                name="gtin"
+                value={gtin}
+                onChange={(e) => { onGtinChange(e.target.value); clearError("gtin"); }}
+                className={`glass-input w-full pl-3 pr-11 py-2.5 rounded-xl text-sm transition-shadow ${errorRing("gtin")}`}
+                placeholder="e.g. 194500787612"
+                readOnly={gtinLocked}
+              />
+              {!gtinLocked && (
+                <button
+                  type="button"
+                  onClick={() => setScannerOpen(true)}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/[0.08] text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
+                  title="Scan barcode with camera"
+                  aria-label="Scan barcode with camera"
+                >
+                  <ScanLine className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex items-center pt-6">
@@ -387,6 +406,17 @@ export function ProductForm({
       >
         {isSubmitting ? "Submitting..." : "Submit for Review"}
       </button>
+
+      {scannerOpen && (
+        <BarcodeScannerModal
+          onScan={(code) => {
+            onGtinChange(code);
+            clearError("gtin");
+            setScannerOpen(false);
+          }}
+          onCancel={() => setScannerOpen(false)}
+        />
+      )}
     </>
   );
 }
