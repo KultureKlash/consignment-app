@@ -64,6 +64,15 @@ input[type="number"] {
 }
 
 @layer base {
+  /* When the portal layout is rendered, push the dark background up onto html/body
+     so the iOS Safari safe-area (status bar, notch, home indicator) doesn't show
+     the default white. Also kill horizontal scroll — no portal screen should overflow X. */
+  html:has(.portal-root),
+  body:has(.portal-root) {
+    background: hsl(var(--background));
+    overflow-x: hidden;
+  }
+
   .portal-root * {
     border-color: hsl(var(--border));
   }
@@ -90,6 +99,19 @@ input[type="number"] {
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  /* Popover variant: opaque + lighter blur. iOS Safari struggles with a 40px
+     backdrop-filter at the same time as an opacity transition — stutters
+     visibly on first open and lets content behind bleed through during the
+     fade. This variant renders instantly and looks identical at popover scale. */
+  .glass-panel-popover {
+    background: rgba(15, 15, 20, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    will-change: opacity, transform;
+    transform: translateZ(0);
   }
   .glass-input {
     background: rgba(255, 255, 255, 0.06);
@@ -228,6 +250,12 @@ input[type="number"] {
   }
   .animate-fade-in {
     animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* Snappier variant for popovers (notification panel, GlassSelect dropdowns).
+     iOS Safari can't render the 0.5s fade smoothly when the popover also has
+     backdrop-filter — a shorter window minimizes any visible jitter. */
+  .animate-fade-in-fast {
+    animation: fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   .text-foreground { color: hsl(var(--foreground)); }
   .text-muted-foreground { color: hsl(var(--muted-foreground)); }

@@ -81,7 +81,10 @@ export function AppHeader({
   }
 
   return (
-    <div className="px-4 md:px-8 pt-6 md:pt-8 pb-6 md:pb-8 flex items-center justify-between">
+    <div
+      className="px-4 md:px-8 pb-6 md:pb-8 flex items-center justify-between"
+      style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
+    >
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="text-sm md:text-base text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -104,7 +107,7 @@ export function AppHeader({
             </button>
 
             {bellOpen && (
-              <div className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-80 glass-panel-strong glow-border rounded-xl overflow-hidden z-50 shadow-2xl animate-fade-in">
+              <div className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-80 glass-panel-popover glow-border rounded-xl overflow-hidden z-50 shadow-2xl animate-fade-in-fast">
                 <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)]">
                   <p className="text-sm font-semibold">Notifications</p>
                   <p className="text-[10px] text-muted-foreground">Recent activity</p>

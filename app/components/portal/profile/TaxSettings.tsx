@@ -110,7 +110,7 @@ export function TaxSettings({
               {selectedProvince?.hst ? "HST Number" : "GST Number"}
             </label>
             <div className="relative">
-              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
               <input
                 type="text"
                 name="gstNumber"
@@ -129,7 +129,7 @@ export function TaxSettings({
                 QST Number
               </label>
               <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
                 <input
                   type="text"
                   name="qstNumber"

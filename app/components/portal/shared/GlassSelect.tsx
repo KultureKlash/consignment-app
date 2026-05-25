@@ -97,7 +97,7 @@ export function GlassSelect({
             left: pos.left,
             width: pos.width,
           }}
-          className="glass-panel-strong glow-border rounded-xl overflow-hidden shadow-2xl animate-fade-in"
+          className="glass-panel-popover glow-border rounded-xl overflow-hidden shadow-2xl animate-fade-in-fast"
         >
           <div className="max-h-64 overflow-y-auto glass-scrollbar py-1">
             {options.map((opt) => {

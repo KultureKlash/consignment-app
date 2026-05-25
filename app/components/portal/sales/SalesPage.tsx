@@ -203,7 +203,7 @@ export function SalesPage({ consignor, sales, stats, filters, storeOwned, avatar
         {/* Search + Date */}
         <div className="flex gap-3 animate-slide-up items-center" style={{ animationDelay: "240ms" }}>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60 pointer-events-none" />
             <input
               type="text"
               value={searchValue}

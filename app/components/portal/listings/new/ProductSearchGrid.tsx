@@ -22,7 +22,7 @@ export function ProductSearchGrid({
     <div className="animate-slide-up space-y-5">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/60 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -44,7 +44,7 @@ export function ProductSearchGrid({
 
       {/* Search results — card grid */}
       {searchResults.length > 0 && (
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
           {searchResults.map((product) => (
             <button
               key={product.id}
