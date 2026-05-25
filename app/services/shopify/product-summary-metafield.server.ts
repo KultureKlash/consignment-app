@@ -2,6 +2,7 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/domain";
 import { logger } from "~/lib/system";
+import { compareSizes } from "~/lib/size-order";
 
 export type ProductSummary = {
   totalActive: number;
@@ -75,7 +76,8 @@ export async function buildProductSummary(productId: string): Promise<ProductSum
         activePrices,
       };
     })
-    .filter((v) => v.activeCount > 0 || v.needsPrice > 0);
+    .filter((v) => v.activeCount > 0 || v.needsPrice > 0)
+    .sort((a, b) => compareSizes(a.size, b.size));
 
   const allActive = product.variants.flatMap((v) =>
     v.listings.filter((l) => l.status === LISTING_STATUS.ACTIVE),
