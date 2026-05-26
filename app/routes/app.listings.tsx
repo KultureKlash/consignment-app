@@ -19,6 +19,7 @@ import Pagination from "~/components/admin/listings/Pagination";
 import QuickAddPopover from "~/components/admin/QuickAddPopover";
 import BulkActionBar from "~/components/admin/BulkActionBar";
 import { RejectModal } from "~/components/admin/listings/RejectModal";
+import { ConfirmDestructiveModal } from "~/components/admin/listings/ConfirmDestructiveModal";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -128,6 +129,7 @@ export default function Listings() {
   const [quickAdd, setQuickAdd] = useState<{ productId: string; anchorEl: HTMLElement } | null>(null);
   const [bulkDenyModalOpen, setBulkDenyModalOpen] = useState(false);
   const [bulkDenyReason, setBulkDenyReason] = useState("");
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
   const isNavigating = navigation.state === "loading";
   const cancelLoading = ["loading", "submitting"].includes(cancelFetcher.state);
@@ -224,7 +226,7 @@ export default function Listings() {
           onSelectAllVisible={toggleSelectAllVisible}
           onBulkApprove={() => submitApproval("bulk-approve", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
-          onBulkCancel={() => submitCancel("bulk-delete", { listingIds: Array.from(selectedIds).join(",") })}
+          onBulkCancel={() => setBulkDeleteModalOpen(true)}
           onBulkApproveWithdrawal={() => submitApproval("bulk-approve-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkDenyWithdrawal={() => { setBulkDenyModalOpen(true); setBulkDenyReason(""); }}
           onBulkCompleteWithdrawal={() => submitApproval("bulk-complete-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
@@ -289,6 +291,20 @@ export default function Listings() {
             submitApproval("bulk-deny-withdrawal", { listingIds: Array.from(selectedIds).join(","), reason: trimmed });
             setBulkDenyModalOpen(false);
             setBulkDenyReason("");
+          }}
+        />
+      )}
+      {bulkDeleteModalOpen && (
+        <ConfirmDestructiveModal
+          title={`Cancel ${selectedIds.size} listing${selectedIds.size === 1 ? "" : "s"}?`}
+          body="They'll move to the Archive tab. You can restore any of them individually if you change your mind."
+          confirmLabel={cancelLoading ? "Cancelling..." : "Cancel them"}
+          cancelLabel="Keep them"
+          disabled={cancelLoading}
+          onCancel={() => setBulkDeleteModalOpen(false)}
+          onConfirm={() => {
+            submitCancel("bulk-delete", { listingIds: Array.from(selectedIds).join(",") });
+            setBulkDeleteModalOpen(false);
           }}
         />
       )}

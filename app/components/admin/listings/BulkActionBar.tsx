@@ -43,10 +43,13 @@ export default function BulkActionBar({
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
 
   if (selectedIds.size === 0) {
-    // Pre-selection hint: only render if there's something selectable on the page
+    // Pre-selection hint: only render if there's something selectable on the page.
+    // LEFT-aligned on purpose — after the user taps, destructive buttons appear
+    // on the RIGHT side of the post-selection bar. Putting Select-all on the LEFT
+    // means a same-position double-tap can never land on a destructive action.
     if (selectableIds.length === 0) return null;
     return (
-      <div className="flex items-center justify-end pl-4 pr-2 py-1.5 mb-3 text-xs">
+      <div className="flex items-center justify-start pl-4 pr-2 py-1.5 mb-3 text-xs">
         <button
           onClick={onSelectAllVisible}
           className="text-gray-500 hover:text-gray-700 font-semibold cursor-pointer transition-colors"
