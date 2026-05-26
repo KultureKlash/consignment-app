@@ -241,7 +241,7 @@ export function GroupRowsDesktop({
             rows.push(
               <tr
                 key={`vgh-${vg.variantId}`}
-                className={`hidden md:table-row cursor-pointer transition-colors duration-100 ${variantOpen ? "bg-gray-50" : "bg-white hover:bg-gray-50"} ${variantOpen ? "" : (isLastGroup ? "border-b-2 border-b-gray-200" : "border-b border-b-gray-200/40")}`}
+                className={`hidden md:table-row cursor-pointer transition-colors duration-100 ${variantOpen ? "bg-indigo-50/40 hover:bg-indigo-50/60" : "bg-gray-50 hover:bg-gray-100"} ${variantOpen ? "" : (isLastGroup ? "border-b-2 border-b-gray-200" : "border-b border-b-gray-200")}`}
                 onClick={() => onToggleVariant?.(vg.variantId)}
               >
                 {hasSelection && (
@@ -259,21 +259,24 @@ export function GroupRowsDesktop({
                     )}
                   </td>
                 )}
-                {/* Size: chevron sits in the indent gutter so the size digit
-                    lines up exactly with the size column below. */}
-                <td className={`${childIndentTdClass} relative`}>
-                  <ChevronRight
-                    size={12}
-                    className={`absolute left-[24px] top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${variantOpen ? "rotate-90" : ""}`}
-                  />
-                  <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
+                {/* Size: chevron pulled into the indent gutter via -ml so the
+                    size digit lines up exactly with the size column below. */}
+                <td className={childIndentTdClass}>
+                  <span className="inline-flex items-center">
+                    <ChevronRight
+                      size={13}
+                      strokeWidth={2.5}
+                      className={`-ml-[20px] mr-[7px] text-gray-500 transition-transform ${variantOpen ? "rotate-90" : ""}`}
+                    />
+                    <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
+                  </span>
                 </td>
                 <td className="admin-td">
-                  <span className="text-[11px] text-gray-500">{vg.listings.length} listings</span>
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{vg.listings.length} listings</span>
                 </td>
                 <td className={priceCellClass}>
                   {priceText && !variantOpen && (
-                    <span className="text-[11.5px] font-normal text-gray-500 tabular-nums">{priceText}</span>
+                    <span className="text-[12px] font-semibold text-gray-500 tabular-nums">{priceText}</span>
                   )}
                 </td>
                 {trailingColSpan > 0 && <td colSpan={trailingColSpan} className="admin-td" />}
