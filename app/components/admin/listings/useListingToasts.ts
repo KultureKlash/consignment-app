@@ -102,6 +102,15 @@ export function useListingToasts(
       const count = data.completed as number;
       shopify.toast.show(`Marked ${count} withdrawal${count !== 1 ? "s" : ""} as picked up`);
       callbacks?.clearSelection?.();
+    } else if (intent === "bulk-edit") {
+      const listings = (data.listingsUpdated as number | undefined) ?? 0;
+      const products = (data.productsUpdated as number | undefined) ?? 0;
+      shopify.toast.show(
+        products > 0
+          ? `Updated ${listings} listing${listings !== 1 ? "s" : ""} across ${products} product${products !== 1 ? "s" : ""}`
+          : `Updated ${listings} listing${listings !== 1 ? "s" : ""}`,
+      );
+      callbacks?.clearSelection?.();
     }
   }, [fetchers.approval.data, shopify]);
 }

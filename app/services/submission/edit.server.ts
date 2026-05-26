@@ -1,7 +1,7 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { ensureShopifyProductAndVariant, updateShopifyProductImage, updateShopifyProduct } from "~/services/shopify/products.server";
-import { syncInventory } from "~/services/inventory";
+import { syncInventory, safeSyncInventory } from "~/services/inventory";
 import { LISTING_STATUS, TERMINAL_STATUSES } from "~/lib/listing-statuses";
 import { TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { logger } from "~/lib/logger.server";
@@ -185,3 +185,108 @@ export async function adminEditListing({
 
   return updated;
 }
+
+// ── Admin: Bulk edit listings ──
+// Edits a mix of Product-level fields (brand, category — apply to all
+// products that own selected listings) and Listing-level fields (cost,
+// price). Empty/undefined fields are skipped.
+//
+// Price is RESTRICTED: only allowed when every selected listing belongs
+// to a store-owned consignor (i.e. internal inventory). This prevents
+// silently overwriting real consignors' prices in one click.
+
+export async function bulkEditListings({
+  admin,
+  listingIds,
+  brand,
+  category,
+  cost,
+  price,
+}: {
+  admin: AdminApiContext;
+  listingIds: string[];
+  brand?: string;
+  category?: string;
+  cost?: number;
+  price?: number;
+}): Promise<{ listingsUpdated: number; productsUpdated: number }> {
+  if (listingIds.length === 0) {
+    return { listingsUpdated: 0, productsUpdated: 0 };
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { id: { in: listingIds } },
+    include: { consignor: true, variant: { include: { product: true } } },
+  });
+
+  if (listings.length === 0) {
+    return { listingsUpdated: 0, productsUpdated: 0 };
+  }
+
+  // Price safety guard: only store-owned consignors can have their price
+  // bulk-edited by admin. Real consignors set their own prices.
+  if (price !== undefined) {
+    const nonStoreOwned = listings.filter((l) => !l.consignor.storeOwned);
+    if (nonStoreOwned.length > 0) {
+      throw new Error(
+        `Price can only be bulk-edited on store-owned inventory. ${nonStoreOwned.length} selected listing(s) belong to real consignors.`,
+      );
+    }
+  }
+
+  // Group listings by product so we update each Product once even if multiple
+  // listings share it.
+  const uniqueProductIds = Array.from(new Set(listings.map((l) => l.variant.productId)));
+  const uniqueVariantIds = Array.from(new Set(listings.map((l) => l.variantId)));
+
+  // Update Product fields (brand, category) — applies to every listing of
+  // those products, not just the selected ones. Admin should know.
+  if (brand !== undefined || category !== undefined) {
+    await prisma.product.updateMany({
+      where: { id: { in: uniqueProductIds } },
+      data: {
+        ...(brand !== undefined ? { brand: brand || null } : {}),
+        ...(category !== undefined ? { category: category || null } : {}),
+      },
+    });
+  }
+
+  // Update per-listing fields (cost, price). Only touch what was provided.
+  if (cost !== undefined || price !== undefined) {
+    await prisma.listing.updateMany({
+      where: { id: { in: listings.map((l) => l.id) } },
+      data: {
+        ...(cost !== undefined ? { cost } : {}),
+        ...(price !== undefined ? { price } : {}),
+      },
+    });
+  }
+
+  // Shopify sync — best-effort, never throws.
+  // Product-level (brand/category) changes → updateShopifyProduct per product.
+  if (brand !== undefined || category !== undefined) {
+    for (const productId of uniqueProductIds) {
+      try {
+        const fresh = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+        if (fresh.shopifyProductId) {
+          await updateShopifyProduct({ admin, product: fresh });
+        }
+      } catch (err) {
+        logger.error("Bulk edit: Shopify product sync failed", { productId, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  }
+  // Price change → sync inventory per unique variant (Shopify reflects lowest active price).
+  if (price !== undefined) {
+    for (const variantId of uniqueVariantIds) {
+      const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+      await safeSyncInventory({ admin, variant, context: "bulk edit price" });
+    }
+  }
+
+  return {
+    listingsUpdated: listings.length,
+    productsUpdated: uniqueProductIds.length,
+  };
+}
+

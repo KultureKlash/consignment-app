@@ -19,6 +19,7 @@ export {
   adminEditProduct,
   adminEditListing,
   updateListingCost,
+  bulkEditListings,
 } from "./edit.server";
 
 export {

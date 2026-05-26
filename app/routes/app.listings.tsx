@@ -20,6 +20,7 @@ import QuickAddPopover from "~/components/admin/QuickAddPopover";
 import BulkActionBar from "~/components/admin/BulkActionBar";
 import { RejectModal } from "~/components/admin/listings/RejectModal";
 import { ConfirmDestructiveModal } from "~/components/admin/listings/ConfirmDestructiveModal";
+import { BulkEditModal } from "~/components/admin/listings/BulkEditModal";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -130,6 +131,7 @@ export default function Listings() {
   const [bulkDenyModalOpen, setBulkDenyModalOpen] = useState(false);
   const [bulkDenyReason, setBulkDenyReason] = useState("");
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkEditModalOpen, setBulkEditModalOpen] = useState(false);
 
   const isNavigating = navigation.state === "loading";
   const cancelLoading = ["loading", "submitting"].includes(cancelFetcher.state);
@@ -227,6 +229,7 @@ export default function Listings() {
           onBulkApprove={() => submitApproval("bulk-approve", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCheckin={() => submitApproval("bulk-checkin", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkCancel={() => setBulkDeleteModalOpen(true)}
+          onBulkEdit={() => setBulkEditModalOpen(true)}
           onBulkApproveWithdrawal={() => submitApproval("bulk-approve-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
           onBulkDenyWithdrawal={() => { setBulkDenyModalOpen(true); setBulkDenyReason(""); }}
           onBulkCompleteWithdrawal={() => submitApproval("bulk-complete-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
@@ -308,6 +311,28 @@ export default function Listings() {
           }}
         />
       )}
+      {bulkEditModalOpen && (() => {
+        // Price is bulk-editable only when every selected listing belongs to a
+        // store-owned consignor. Otherwise the field is hidden in the modal
+        // (and the server would reject it anyway).
+        const selectedListings = listings.filter((l) => selectedIds.has(l.id));
+        const priceEditable = selectedListings.length > 0 && selectedListings.every((l) => l.consignor.storeOwned);
+        return (
+          <BulkEditModal
+            count={selectedIds.size}
+            priceEditable={priceEditable}
+            isSubmitting={approvalLoading}
+            onCancel={() => setBulkEditModalOpen(false)}
+            onConfirm={(fields) => {
+              submitApproval("bulk-edit", {
+                listingIds: Array.from(selectedIds).join(","),
+                ...fields,
+              });
+              setBulkEditModalOpen(false);
+            }}
+          />
+        );
+      })()}
     </s-page>
   );
 }

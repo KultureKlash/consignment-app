@@ -15,6 +15,7 @@ import {
   bulkDenyWithdrawal,
   bulkCompleteWithdrawal,
   bulkUpdateActiveListingPrice,
+  bulkEditListings,
   updateActiveListingPrice,
   setUnpricedListingPrice,
   bulkSetUnpricedListingPrices,
@@ -1079,6 +1080,86 @@ describe("submission pipeline", () => {
 
       const found = await prisma.listing.findUnique({ where: { id: listing.id } });
       expect(found).toBeNull();
+    });
+  });
+
+  describe("bulkEditListings", () => {
+    it("updates brand + category on the products of all selected listings", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const l1 = await submitListing({ consignorId: consignor.id, title: "Mizuno Wave Rider 27", brand: "Mizuno", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: consignor.id, title: "Saucony Endorphin Pro 4", brand: "Saucony", size: "10", price: 200 });
+
+      const result = await bulkEditListings({
+        admin,
+        listingIds: [l1.id, l2.id],
+        brand: "Athletic",
+        category: "Footwear > Sneakers",
+      });
+
+      expect(result.listingsUpdated).toBe(2);
+      expect(result.productsUpdated).toBe(2);
+
+      const products = await prisma.product.findMany({ where: { id: { in: [l1.variant.product.id, l2.variant.product.id] } } });
+      expect(products.every((p) => p.brand === "Athletic")).toBe(true);
+      expect(products.every((p) => p.category === "Footwear > Sneakers")).toBe(true);
+    });
+
+    it("updates cost on each selected listing", async () => {
+      const { admin } = createMockAdmin();
+      const consignor = await createTestConsignor();
+      const l1 = await submitListing({ consignorId: consignor.id, title: "Karhu Synchron Classic", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: consignor.id, title: "Veja Esplar Leather Beige", size: "10", price: 200 });
+
+      const result = await bulkEditListings({
+        admin,
+        listingIds: [l1.id, l2.id],
+        cost: 50,
+      });
+
+      expect(result.listingsUpdated).toBe(2);
+      const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
+      expect(fresh.every((l) => l.cost === 50)).toBe(true);
+    });
+
+    it("rejects price edit when any selected listing is owned by a real consignor", async () => {
+      const { admin } = createMockAdmin();
+      const realConsignor = await createTestConsignor({ storeOwned: false });
+      const storeConsignor = await createTestConsignor({ name: "Store", email: "store@test.com", storeOwned: true });
+      const l1 = await submitListing({ consignorId: realConsignor.id, title: "Onitsuka Tiger Mexico 66", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: storeConsignor.id, title: "Karhu Mestari Original", size: "10", price: 200 });
+
+      await expect(
+        bulkEditListings({ admin, listingIds: [l1.id, l2.id], price: 250 }),
+      ).rejects.toThrow("Price can only be bulk-edited on store-owned inventory");
+
+      // Neither price should have changed.
+      const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
+      expect(fresh.find((l) => l.id === l1.id)?.price).toBe(100);
+      expect(fresh.find((l) => l.id === l2.id)?.price).toBe(200);
+    });
+
+    it("accepts price edit when ALL selected listings are store-owned", async () => {
+      const { admin } = createMockAdmin();
+      const store = await createTestConsignor({ storeOwned: true });
+      const l1 = await submitListing({ consignorId: store.id, title: "Mephisto Match Vintage Suede", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: store.id, title: "Allen Edmonds Strand Cap Toe", size: "10", price: 200 });
+
+      const result = await bulkEditListings({
+        admin,
+        listingIds: [l1.id, l2.id],
+        price: 250,
+      });
+
+      expect(result.listingsUpdated).toBe(2);
+      const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
+      expect(fresh.every((l) => l.price === 250)).toBe(true);
+    });
+
+    it("returns zeros when no listingIds are provided", async () => {
+      const { admin } = createMockAdmin();
+      const result = await bulkEditListings({ admin, listingIds: [], brand: "Nike" });
+      expect(result).toEqual({ listingsUpdated: 0, productsUpdated: 0 });
     });
   });
 });

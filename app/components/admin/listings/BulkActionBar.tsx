@@ -18,6 +18,7 @@ interface BulkActionBarProps {
   onBulkApprove: () => void;
   onBulkCheckin: () => void;
   onBulkCancel: () => void;
+  onBulkEdit: () => void;
   onBulkApproveWithdrawal: () => void;
   onBulkDenyWithdrawal: () => void;
   onBulkCompleteWithdrawal: () => void;
@@ -33,6 +34,7 @@ export default function BulkActionBar({
   onBulkApprove,
   onBulkCheckin,
   onBulkCancel,
+  onBulkEdit,
   onBulkApproveWithdrawal,
   onBulkDenyWithdrawal,
   onBulkCompleteWithdrawal,
@@ -80,6 +82,13 @@ export default function BulkActionBar({
         </span>
       </div>
       <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+        {/* Bulk edit — neutral, always available. */}
+        <BulkActionButton
+          label="Edit selected"
+          onClick={onBulkEdit}
+          bg="bg-gray-800"
+          bgHover="hover:bg-gray-900"
+        />
         {listings.some((l) => selectedIds.has(l.id) && l.status === LISTING_STATUS.SUBMITTED) && (
           <BulkActionButton
             label={approvalLoading ? "Approving..." : "Approve selected"}

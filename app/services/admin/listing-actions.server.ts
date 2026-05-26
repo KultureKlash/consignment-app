@@ -12,6 +12,7 @@ import {
   bulkApproveWithdrawal,
   bulkDenyWithdrawal,
   bulkCompleteWithdrawal,
+  bulkEditListings,
   approveWithdrawal,
   denyWithdrawal,
   completeWithdrawal,
@@ -168,6 +169,43 @@ export async function handleListingAction(admin: AdminApiContext, formData: Form
     if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
     const result = await bulkCompleteWithdrawal({ admin, listingIds: ids });
     return { completed: result.completed, skipped: result.skipped, intent };
+  }
+
+  if (intent === "bulk-edit") {
+    const ids = (formData.get("listingIds") as string ?? "").split(",").filter(Boolean);
+    if (ids.length === 0) return { error: "No listings selected", intent };
+    if (ids.length > 500) throw new Error("Cannot process more than 500 listings at once");
+
+    // Only include fields the admin actually provided. Empty string = "no change".
+    const brandRaw = (formData.get("brand") as string ?? "").trim();
+    const categoryRaw = (formData.get("category") as string ?? "").trim();
+    const costRaw = (formData.get("cost") as string ?? "").trim();
+    const priceRaw = (formData.get("price") as string ?? "").trim();
+
+    const fields: Record<string, unknown> = {};
+    if (brandRaw) fields.brand = brandRaw;
+    if (categoryRaw) fields.category = categoryRaw;
+    if (costRaw) {
+      const c = parseFloat(costRaw);
+      if (isNaN(c) || c < 0 || c > 999999.99) return { error: "Invalid cost", intent };
+      fields.cost = Math.round(c * 100) / 100;
+    }
+    if (priceRaw) {
+      const p = parseFloat(priceRaw);
+      if (isNaN(p) || p <= 0 || p > 999999.99) return { error: "Invalid price", intent };
+      fields.price = Math.round(p * 100) / 100;
+    }
+
+    if (Object.keys(fields).length === 0) {
+      return { error: "Nothing to update — every field is empty", intent };
+    }
+
+    try {
+      const result = await bulkEditListings({ admin, listingIds: ids, ...fields });
+      return { ...result, intent };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Bulk edit failed", intent };
+    }
   }
 
   if (intent === "approve-withdrawal") {
