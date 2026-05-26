@@ -1,6 +1,6 @@
 import { Barcode } from "lucide-react";
-import CustomSelect from "~/components/admin/shared/CustomSelect";
 import { useCreateListing } from "./CreateListingContext";
+import { compareSizes } from "~/lib/size-order";
 
 export default function VariantFields() {
   const {
@@ -25,29 +25,45 @@ export default function VariantFields() {
         <div>
           <label className="admin-field-label">Size</label>
           {selectedProduct && !newSizeMode ? (
-            <CustomSelect
-              options={selectedProduct.variants.map((v) => v.size)}
-              value={formFields.size}
-              onChange={(val) => {
-                const existingVariant = selectedProduct.variants.find(
-                  (v) => v.size === val,
-                );
-                const variantGtin = existingVariant?.gtin ?? "";
-                setFormFields({ ...formFields, size: val, gtin: variantGtin });
-                setGtinLocked(variantGtin.length > 0);
-                clearError("size");
-              }}
-              placeholder="Select size..."
-              hasError={fieldErrors.has("size")}
-              actionItem={{
-                label: "+ New size",
-                onSelect: () => {
+            <div
+              className={`flex flex-wrap gap-1.5 rounded-lg p-1 -m-1 ${fieldErrors.has("size") ? "ring-1 ring-red-500" : ""}`}
+            >
+              {[...selectedProduct.variants]
+                .sort((a, b) => compareSizes(a.size, b.size))
+                .map((v) => {
+                  const isSelected = formFields.size === v.size;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        const variantGtin = v.gtin ?? "";
+                        setFormFields({ ...formFields, size: v.size, gtin: variantGtin });
+                        setGtinLocked(variantGtin.length > 0);
+                        clearError("size");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${
+                        isSelected
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:bg-gray-50"
+                      }`}
+                    >
+                      {v.size}
+                    </button>
+                  );
+                })}
+              <button
+                type="button"
+                onClick={() => {
                   setNewSizeMode(true);
                   setFormFields({ ...formFields, size: "", gtin: "" });
                   setGtinLocked(false);
-                },
-              }}
-            />
+                }}
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-dashed border-indigo-300 cursor-pointer transition-colors"
+              >
+                + New size
+              </button>
+            </div>
           ) : isFootwearCat ? (
             <input
               type="number"
