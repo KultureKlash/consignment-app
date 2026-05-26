@@ -12,6 +12,7 @@ interface PendingSectionProps {
   setExpandedPayout: (id: string | null) => void;
   handleMarkInvoiced: (payoutId: string) => void;
   handleMarkPaid: (payoutId: string) => void;
+  handleMarkPaidWithoutInvoice: (payoutId: string) => void;
   handleCancel: (payoutId: string) => void;
   isSubmitting: boolean;
   scrollRef: (node: HTMLDivElement | null) => void;
@@ -24,6 +25,7 @@ export function PendingSection({
   setExpandedPayout,
   handleMarkInvoiced,
   handleMarkPaid,
+  handleMarkPaidWithoutInvoice,
   handleCancel,
   isSubmitting,
   scrollRef,
@@ -208,6 +210,22 @@ export function PendingSection({
                         >
                           <CheckCircle2 size={12} className="mr-1 align-middle inline" />
                           Mark Paid
+                        </button>
+                      )}
+                      {payout.status === PAYOUT_STATUS.PENDING && payout.consignor.taxStatus === "business" && !payout.invoiceSent && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const ok = window.confirm(
+                              `Pay ${payout.consignor.name} $${fmt(payout.amount)} without invoice? They'll still be able to upload it later.`,
+                            );
+                            if (ok) handleMarkPaidWithoutInvoice(payout.id);
+                          }}
+                          disabled={isSubmitting}
+                          className={`px-4 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-200 font-[inherit] bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 ${isSubmitting ? "cursor-default" : ""}`}
+                          title="Override the invoice requirement and send the money now"
+                        >
+                          Pay without invoice
                         </button>
                       )}
                       {payout.status === PAYOUT_STATUS.PENDING && (

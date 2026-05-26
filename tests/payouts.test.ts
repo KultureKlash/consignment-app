@@ -224,6 +224,53 @@ describe("payouts.server — markPaid", () => {
     await markPaid(payout.id);
     await expect(markPaid(payout.id)).rejects.toThrow('must be "invoiced"');
   });
+
+  // Admin override: real-world need where business consignor doesn't send
+  // invoice but admin wants to pay them anyway.
+  it("allows pending → paid for business consignor when allowMissingInvoice is true", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "business" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    const updated = await markPaid(payout.id, { allowMissingInvoice: true });
+    expect(updated.status).toBe("paid");
+    // invoiceSent stays false so the consignor portal can still surface it
+    const fresh = await prisma.payout.findUniqueOrThrow({ where: { id: payout.id } });
+    expect(fresh.invoiceSent).toBe(false);
+  });
+
+  it("still rejects pending → paid for business consignor when allowMissingInvoice is false/omitted", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "business" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    await expect(markPaid(payout.id, { allowMissingInvoice: false })).rejects.toThrow('must be "invoiced"');
+  });
+
+  it("individual consignor markPaid works regardless of allowMissingInvoice flag", async () => {
+    const consignor = await createTestConsignor({ taxStatus: "individual" });
+    const { variant } = await setupVariant();
+    const sale = await createSoldItem(consignor.id, variant.id, 200);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [sale.transaction.id],
+    });
+
+    // Same outcome with or without the flag — individual consignors never need an invoice.
+    const updated = await markPaid(payout.id, { allowMissingInvoice: true });
+    expect(updated.status).toBe("paid");
+  });
 });
 
 describe("payouts.server — cancelPayout", () => {

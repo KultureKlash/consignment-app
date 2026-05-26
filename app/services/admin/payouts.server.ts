@@ -226,20 +226,26 @@ export async function markInvoiced(payoutId: string) {
 
 /**
  * Mark a payout as paid.
- * - Business consignors: must be "invoiced" (invoice required first)
+ * - Business consignors: must be "invoiced" (invoice required first) — unless
+ *   `allowMissingInvoice: true` is passed, which is the admin's explicit
+ *   override for "pay them anyway, they can upload the invoice later"
  * - Individual consignors: can be "pending" or "invoiced" (no invoice needed)
  */
-export async function markPaid(payoutId: string) {
+export async function markPaid(payoutId: string, opts: { allowMissingInvoice?: boolean } = {}) {
   const payout = await prisma.payout.findUniqueOrThrow({
     where: { id: payoutId },
     include: { consignor: true, items: true },
   });
 
   const isIndividual = payout.consignor.taxStatus !== "business";
-  const allowedStatuses = isIndividual ? [PAYOUT_STATUS.PENDING, PAYOUT_STATUS.INVOICED] : [PAYOUT_STATUS.INVOICED];
+  const allowedStatuses = isIndividual || opts.allowMissingInvoice
+    ? [PAYOUT_STATUS.PENDING, PAYOUT_STATUS.INVOICED]
+    : [PAYOUT_STATUS.INVOICED];
 
   if (!allowedStatuses.includes(payout.status)) {
-    const expected = isIndividual ? `"${PAYOUT_STATUS.PENDING}" or "${PAYOUT_STATUS.INVOICED}"` : `"${PAYOUT_STATUS.INVOICED}"`;
+    const expected = isIndividual || opts.allowMissingInvoice
+      ? `"${PAYOUT_STATUS.PENDING}" or "${PAYOUT_STATUS.INVOICED}"`
+      : `"${PAYOUT_STATUS.INVOICED}"`;
     throw new Error(`Cannot mark as paid: payout is "${payout.status}" (must be ${expected})`);
   }
 

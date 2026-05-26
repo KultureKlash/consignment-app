@@ -38,7 +38,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return { payout: await createPayout({ consignorId, transactionIds }), intent };
       }
       case "mark-invoiced": { await markInvoiced(formData.get("payoutId") as string); return { intent }; }
-      case "mark-paid": { await markPaid(formData.get("payoutId") as string); return { intent }; }
+      case "mark-paid": {
+        const allowMissingInvoice = formData.get("allowMissingInvoice") === "1";
+        await markPaid(formData.get("payoutId") as string, { allowMissingInvoice });
+        return { intent };
+      }
       case "cancel": { await cancelPayout(formData.get("payoutId") as string); return { intent }; }
       default: throw new Error("Invalid intent");
     }
@@ -156,7 +160,7 @@ export default function Payouts() {
           )}
         </div>
         <UnpaidSection unpaid={filteredUnpaid} expandedConsignor={expandedConsignor} toggleConsignor={toggleConsignor} selectedTxs={selectedTxs} toggleTx={toggleTx} selectAll={selectAll} handleCreatePayout={handleCreatePayout} isSubmitting={isSubmitting} scrollRef={scrollRef} onDownload={() => downloadUnpaidCsv(filteredUnpaid, today)} />
-        <PendingSection payouts={filteredPayouts} expandedPayout={expandedPayout} setExpandedPayout={setExpandedPayout} handleMarkInvoiced={(id) => submit({ intent: "mark-invoiced", payoutId: id })} handleMarkPaid={(id) => submit({ intent: "mark-paid", payoutId: id })} handleCancel={(id) => submit({ intent: "cancel", payoutId: id })} isSubmitting={isSubmitting} scrollRef={scrollRef} onDownload={(list) => downloadPayoutsCsv(list, "pending", today)} />
+        <PendingSection payouts={filteredPayouts} expandedPayout={expandedPayout} setExpandedPayout={setExpandedPayout} handleMarkInvoiced={(id) => submit({ intent: "mark-invoiced", payoutId: id })} handleMarkPaid={(id) => submit({ intent: "mark-paid", payoutId: id })} handleMarkPaidWithoutInvoice={(id) => submit({ intent: "mark-paid", payoutId: id, allowMissingInvoice: "1" })} handleCancel={(id) => submit({ intent: "cancel", payoutId: id })} isSubmitting={isSubmitting} scrollRef={scrollRef} onDownload={(list) => downloadPayoutsCsv(list, "pending", today)} />
         <HistorySection payouts={filteredPayouts} expandedPayout={expandedPayout} setExpandedPayout={setExpandedPayout} scrollRef={scrollRef} onDownload={(list) => downloadPayoutsCsv(list, "history", today)} />
       </div>
     </s-page>

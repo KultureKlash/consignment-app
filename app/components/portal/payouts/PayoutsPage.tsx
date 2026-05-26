@@ -238,6 +238,10 @@ export function PayoutsPage({ consignor, payouts, unbatchedTxs, storeOwned }: Pa
           expandedPayout={expandedPayout}
           onTogglePayout={handleTogglePayout}
           onDownload={() => downloadPayoutItems(filteredPaid, "Payout History")}
+          isSubmitting={isSubmitting}
+          onUploadInvoice={handleUploadInvoice}
+          uploadingPayoutId={activePayoutId}
+          recentlySavedPayoutId={recentlySavedId}
         />
 
         {/* Empty state if nothing at all */}

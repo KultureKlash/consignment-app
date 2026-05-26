@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Clock, CheckCircle2, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, CheckCircle2, Download, Upload, FileText, RefreshCw, Loader2, Check, AlertCircle } from "lucide-react";
 import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
@@ -23,6 +23,13 @@ interface PaidHistoryProps {
   expandedPayout: string | null;
   onTogglePayout: (id: string) => void;
   onDownload: () => void;
+  // For business consignors: allow retroactive invoice upload on payouts that
+  // were paid without invoice (admin override). Same upload mechanics as
+  // ActivePayouts. Individual consignors never see these.
+  isSubmitting?: boolean;
+  onUploadInvoice?: (payoutId: string, file: File) => void;
+  uploadingPayoutId?: string | null;
+  recentlySavedPayoutId?: string | null;
 }
 
 export function PaidHistory({
@@ -32,6 +39,10 @@ export function PaidHistory({
   expandedPayout,
   onTogglePayout,
   onDownload,
+  isSubmitting,
+  onUploadInvoice,
+  uploadingPayoutId,
+  recentlySavedPayoutId,
 }: PaidHistoryProps) {
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-slide-up" style={{ animationDelay: "480ms" }}>
@@ -65,6 +76,12 @@ export function PaidHistory({
                   <div className="flex-1 flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-2 md:gap-3 min-w-0">
                       <StatusBadge status={PAYOUT_STATUS.PAID} />
+                      {!isIndividual && !payout.invoiceSent && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-400/15 text-amber-300">
+                          <AlertCircle className="w-2.5 h-2.5" />
+                          Invoice pending
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground hidden md:inline">
                         {payout.items.length} item{payout.items.length !== 1 ? "s" : ""}
                       </span>
@@ -85,6 +102,95 @@ export function PaidHistory({
                 </button>
                 {isOpen && (
                   <div className="border-t border-[rgba(255,255,255,0.06)] bg-white/[0.02]">
+                    {!isIndividual && onUploadInvoice && (() => {
+                      const isUploading = uploadingPayoutId === payout.id;
+                      const justSaved = recentlySavedPayoutId === payout.id;
+                      // Three states: (1) no invoice yet → drop zone; (2) invoice
+                      // present → filename + Replace; (3) actively uploading/saved.
+                      if (!payout.invoiceSent) {
+                        return (
+                          <div className="px-6 md:px-10 py-4 border-b border-[rgba(255,255,255,0.06)]">
+                            <label className={`flex flex-col items-center gap-2 py-4 px-4 rounded-xl border-2 border-dashed transition-all ${
+                              isUploading
+                                ? "border-blue-400/40 bg-white/[0.03] cursor-wait"
+                                : justSaved
+                                ? "border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/[0.05] cursor-default"
+                                : "border-amber-400/40 hover:border-amber-400/60 hover:bg-white/[0.03] cursor-pointer"
+                            }`}>
+                              {isUploading ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                                  <span className="text-xs font-semibold text-muted-foreground">Uploading…</span>
+                                </>
+                              ) : justSaved ? (
+                                <>
+                                  <Check className="w-5 h-5 text-[hsl(var(--success))]" />
+                                  <span className="text-xs font-semibold text-[hsl(var(--success))]">Uploaded</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-amber-300" />
+                                  <span className="text-xs font-semibold text-amber-200">Upload Invoice (PDF)</span>
+                                  <span className="text-[10px] text-amber-200/70">You were paid without invoice — you can still send it. Max 5MB.</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                disabled={isSubmitting || isUploading}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  onUploadInvoice(payout.id, file);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          </div>
+                        );
+                      }
+                      // Invoice present → small row with file name + Replace (Delete
+                      // is blocked server-side for paid payouts; don't surface it).
+                      return (
+                        <div className="px-6 md:px-10 py-2.5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{payout.invoiceFileName ?? "Invoice uploaded"}</span>
+                          {isUploading ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 shrink-0">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Uploading…
+                            </span>
+                          ) : justSaved ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] shrink-0">
+                              <Check className="w-3 h-3" />
+                              Uploaded
+                            </span>
+                          ) : (
+                            <label
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                              title="Replace this invoice"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Replace
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                disabled={isSubmitting}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  onUploadInvoice(payout.id, file);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          )}
+                          {/* No Delete — server blocks invoice removal once paid. */}
+                        </div>
+                      );
+                    })()}
                     <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_90px] gap-2 px-10 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-[rgba(255,255,255,0.04)]">
                       <span>Product</span>
                       <span className="text-right">Sale</span>
