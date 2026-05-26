@@ -5,33 +5,35 @@ import { logger } from "~/lib/logger.server";
 // In-memory cache: search term → taxonomy GID (survives across requests within same process)
 const taxonomyCache = new Map<string, string | null>();
 
-// Maps our subcategory names to Shopify taxonomy search terms
-// All terms must resolve under "Apparel & Accessories" in Shopify's taxonomy
-// Simple search terms verified against real Shopify taxonomy API.
-// Each term returns the correct "Apparel & Accessories" subcategory as first result.
+// Maps our subcategory names to Shopify taxonomy search terms.
+// All terms must resolve under "Apparel & Accessories" in Shopify's taxonomy.
+// Many bare keywords (jeans, pants, shorts, t-shirts) match Shopify's
+// "Baby & Toddler" sub-tree FIRST — we add disambiguating words to bias
+// toward the adult Clothing tree. As a backstop, resolveShopifyTaxonomyId
+// also filters BLOCKED_PATH_KEYWORDS out of the result list below.
 const TAXONOMY_SEARCH_TERMS: Record<string, string> = {
   // Footwear
   "Sneakers": "sneakers",
   "Slides": "sandals",
   "Boots": "boots",
-  // Apparel — using more specific search terms to avoid hitting
-  // "Baby & Toddler T-Shirts" (which is the first match for plain "t-shirts")
+  // Apparel — disambiguating words ("clothing", "men", explicit category)
+  // bias toward the adult Apparel > Clothing tree.
   "T-Shirts": "tees shirts tops",
   "Long Sleeves": "tees shirts tops",
-  "Hoodies": "hoodies",
-  "Sweatshirts": "sweatshirts",
+  "Hoodies": "hoodies clothing",
+  "Sweatshirts": "sweatshirts clothing",
   "Sweaters": "sweaters clothing",
-  "Jackets": "coats jackets",
-  "Puffer Jackets": "coats jackets",
-  "Varsity Jackets": "coats jackets",
-  "Vests": "vests",
-  "Jeans": "jeans",
-  "Pants": "pants",
-  "Sweatpants": "pants",
-  "Shorts": "shorts",
+  "Jackets": "coats jackets clothing",
+  "Puffer Jackets": "coats jackets clothing",
+  "Varsity Jackets": "coats jackets clothing",
+  "Vests": "vests clothing",
+  "Jeans": "jeans denim clothing",
+  "Pants": "pants clothing",
+  "Sweatpants": "pants clothing",
+  "Shorts": "shorts clothing",
   "Jerseys": "tees shirts tops",
-  "Polos": "polo shirts",
-  "Tracksuits": "outerwear",
+  "Polos": "polo shirts clothing",
+  "Tracksuits": "outerwear clothing",
   // Accessories
   "Handbags": "handbags",
   "Saddle Bags": "handbags",
@@ -40,16 +42,26 @@ const TAXONOMY_SEARCH_TERMS: Record<string, string> = {
   "Pouches": "handbags",
   "Wallets": "wallets",
   "Card Holders": "wallets",
-  "Belts": "belts",
+  "Belts": "belts clothing",
   "Sunglasses": "sunglasses",
   // Headwear
-  "Caps": "hats",
-  "Beanies": "hats",
-  "Bucket Hats": "hats",
-  "Fitted Hats": "hats",
-  "Snapbacks": "hats",
-  "Trucker Hats": "hats",
+  "Caps": "hats clothing",
+  "Beanies": "hats clothing",
+  "Bucket Hats": "hats clothing",
+  "Fitted Hats": "hats clothing",
+  "Snapbacks": "hats clothing",
+  "Trucker Hats": "hats clothing",
 };
+
+// Reject ANY Shopify category whose path contains these words — we never want
+// to assign a Konsign product to the Baby & Toddler / Children / Kids subtree.
+// Match case-insensitively against the full path string returned by Shopify.
+const BLOCKED_PATH_KEYWORDS = ["baby", "toddler", "children", "kids", "infant", "juniors"];
+
+export function isBlockedPath(fullName: string): boolean {
+  const lower = fullName.toLowerCase();
+  return BLOCKED_PATH_KEYWORDS.some((kw) => lower.includes(kw));
+}
 
 /**
  * Resolve our local category (e.g. "Sneakers") to a Shopify taxonomy GID.
@@ -71,11 +83,14 @@ export async function resolveShopifyTaxonomyId(
   if (taxonomyCache.has(searchTerm)) return taxonomyCache.get(searchTerm) ?? null;
 
   try {
+    // Fetch the top 10 candidates and filter out Baby/Toddler/Children
+    // subtree matches. Shopify search often returns those FIRST for bare
+    // keywords like "jeans" or "pants".
     const response = await admin.graphql(
       `#graphql
       query taxonomySearch($search: String!) {
         taxonomy {
-          categories(search: $search, first: 1) {
+          categories(search: $search, first: 10) {
             nodes { id fullName }
           }
         }
@@ -84,8 +99,16 @@ export async function resolveShopifyTaxonomyId(
     );
 
     const { data } = await response.json();
-    const node = data.taxonomy.categories.nodes[0];
-    const id = node?.id ?? null;
+    const nodes: Array<{ id: string; fullName: string }> = data?.taxonomy?.categories?.nodes ?? [];
+    const adultMatch = nodes.find((n) => !isBlockedPath(n.fullName));
+    const id = adultMatch?.id ?? null;
+    if (!id && nodes.length > 0) {
+      // Every result was a kids/baby category — log so we can tighten the search term.
+      logger.warn("Taxonomy search returned only kids/baby matches; leaving category unassigned", {
+        searchTerm,
+        candidates: nodes.map((n) => n.fullName),
+      });
+    }
     taxonomyCache.set(searchTerm, id);
     return id;
   } catch (err) {

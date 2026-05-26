@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createMockAdmin } from "./helpers/mock-admin";
-import { resolveShopifyTaxonomyId, searchShopifyTaxonomy } from "~/services/shopify/taxonomy.server";
+import { resolveShopifyTaxonomyId, searchShopifyTaxonomy, isBlockedPath } from "~/services/shopify/taxonomy.server";
 
 describe("shopify-taxonomy.server", () => {
   describe("resolveShopifyTaxonomyId", () => {
@@ -51,6 +51,35 @@ describe("shopify-taxonomy.server", () => {
       expect(results).toHaveLength(1);
       expect(results[0].id).toMatch(/gid:\/\/shopify\/TaxonomyCategory\//);
       expect(results[0].fullName).toBeDefined();
+    });
+  });
+
+  describe("isBlockedPath (kids/baby filter)", () => {
+    // The Shopify taxonomy returns Baby & Toddler categories FIRST for many
+    // bare apparel keywords. resolveShopifyTaxonomyId uses isBlockedPath to
+    // skip those — Konsign is an adult marketplace, never want a listing
+    // tagged into the kids subtree.
+    it("blocks Baby & Toddler categories", () => {
+      expect(isBlockedPath("Apparel & Accessories > Clothing > Baby & Toddler > Baby & Toddler Bottoms > Jeans")).toBe(true);
+      expect(isBlockedPath("Apparel & Accessories > Clothing > Baby & Toddler T-Shirts")).toBe(true);
+    });
+
+    it("blocks Children / Kids / Infant / Juniors", () => {
+      expect(isBlockedPath("Apparel > Children's Clothing > Tops")).toBe(true);
+      expect(isBlockedPath("Apparel > Kids Sneakers")).toBe(true);
+      expect(isBlockedPath("Apparel > Infant Wear")).toBe(true);
+      expect(isBlockedPath("Apparel > Juniors > Dresses")).toBe(true);
+    });
+
+    it("is case-insensitive", () => {
+      expect(isBlockedPath("APPAREL > BABY & TODDLER > T-SHIRTS")).toBe(true);
+      expect(isBlockedPath("apparel > baby & toddler > t-shirts")).toBe(true);
+    });
+
+    it("accepts adult Apparel & Accessories paths", () => {
+      expect(isBlockedPath("Apparel & Accessories > Clothing > Pants > Jeans")).toBe(false);
+      expect(isBlockedPath("Apparel & Accessories > Clothing > Tops & Tees")).toBe(false);
+      expect(isBlockedPath("Apparel & Accessories > Shoes > Athletic Shoes")).toBe(false);
     });
   });
 });
