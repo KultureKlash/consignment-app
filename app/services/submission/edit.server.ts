@@ -223,13 +223,15 @@ export async function bulkEditListings({
     return { listingsUpdated: 0, productsUpdated: 0 };
   }
 
-  // Price safety guard: only store-owned consignors can have their price
-  // bulk-edited by admin. Real consignors set their own prices.
-  if (price !== undefined) {
+  // Per-listing financial fields (price, cost) are only bulk-editable on
+  // store-owned inventory. Real consignors set their own prices; their cost
+  // is internal to them. Brand/category are catalog-level so they're fine.
+  if (price !== undefined || cost !== undefined) {
     const nonStoreOwned = listings.filter((l) => !l.consignor.storeOwned);
     if (nonStoreOwned.length > 0) {
+      const fieldName = price !== undefined && cost !== undefined ? "Price and cost" : (price !== undefined ? "Price" : "Cost");
       throw new Error(
-        `Price can only be bulk-edited on store-owned inventory. ${nonStoreOwned.length} selected listing(s) belong to real consignors.`,
+        `${fieldName} can only be bulk-edited on store-owned inventory. ${nonStoreOwned.length} selected listing(s) belong to real consignors.`,
       );
     }
   }

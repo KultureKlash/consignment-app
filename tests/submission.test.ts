@@ -1105,11 +1105,11 @@ describe("submission pipeline", () => {
       expect(products.every((p) => p.category === "Footwear > Sneakers")).toBe(true);
     });
 
-    it("updates cost on each selected listing", async () => {
+    it("updates cost on each selected listing (store-owned only)", async () => {
       const { admin } = createMockAdmin();
-      const consignor = await createTestConsignor();
-      const l1 = await submitListing({ consignorId: consignor.id, title: "Karhu Synchron Classic", size: "9", price: 100 });
-      const l2 = await submitListing({ consignorId: consignor.id, title: "Veja Esplar Leather Beige", size: "10", price: 200 });
+      const store = await createTestConsignor({ storeOwned: true });
+      const l1 = await submitListing({ consignorId: store.id, title: "Karhu Synchron Classic", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: store.id, title: "Veja Esplar Leather Beige", size: "10", price: 200 });
 
       const result = await bulkEditListings({
         admin,
@@ -1120,6 +1120,18 @@ describe("submission pipeline", () => {
       expect(result.listingsUpdated).toBe(2);
       const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
       expect(fresh.every((l) => l.cost === 50)).toBe(true);
+    });
+
+    it("rejects cost edit when any selected listing is owned by a real consignor", async () => {
+      const { admin } = createMockAdmin();
+      const real = await createTestConsignor({ storeOwned: false });
+      const store = await createTestConsignor({ name: "Store2", email: "store2@test.com", storeOwned: true });
+      const l1 = await submitListing({ consignorId: real.id, title: "Diadora N9000 Heritage Brown", size: "9", price: 100 });
+      const l2 = await submitListing({ consignorId: store.id, title: "Hoka Mafate Speed 4 Concrete", size: "10", price: 200 });
+
+      await expect(
+        bulkEditListings({ admin, listingIds: [l1.id, l2.id], cost: 50 }),
+      ).rejects.toThrow("Cost can only be bulk-edited on store-owned inventory");
     });
 
     it("rejects price edit when any selected listing is owned by a real consignor", async () => {

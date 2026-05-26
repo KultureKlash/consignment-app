@@ -312,15 +312,15 @@ export default function Listings() {
         />
       )}
       {bulkEditModalOpen && (() => {
-        // Price is bulk-editable only when every selected listing belongs to a
-        // store-owned consignor. Otherwise the field is hidden in the modal
-        // (and the server would reject it anyway).
+        // Cost + Price are bulk-editable only when every selected listing belongs
+        // to a store-owned consignor. Real consignors' financial fields stay
+        // hidden in the modal (server enforces the same guard).
         const selectedListings = listings.filter((l) => selectedIds.has(l.id));
-        const priceEditable = selectedListings.length > 0 && selectedListings.every((l) => l.consignor.storeOwned);
+        const financialsEditable = selectedListings.length > 0 && selectedListings.every((l) => l.consignor.storeOwned);
         return (
           <BulkEditModal
             count={selectedIds.size}
-            priceEditable={priceEditable}
+            financialsEditable={financialsEditable}
             isSubmitting={approvalLoading}
             onCancel={() => setBulkEditModalOpen(false)}
             onConfirm={(fields) => {

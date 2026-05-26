@@ -6,19 +6,21 @@ import { CATEGORIES, MAIN_CATEGORIES, buildCategory } from "~/lib/categories";
  *  - Brand / Category are PRODUCT-level: any product owning a selected
  *    listing gets updated (which affects all of that product's other
  *    listings too, even ones not selected — admin should know).
- *  - Cost / Price are PER-LISTING: applied only to the selected rows.
- *  - Price is hidden unless every selected listing is store-owned (passed
- *    in via priceEditable). Real consignors set their own prices.
+ *  - Cost / Price are PER-LISTING and store-owned only: hidden unless
+ *    every selected listing belongs to a store-owned consignor. Real
+ *    consignors set their own prices; their cost is internal to them.
  *  - Empty fields = leave that field unchanged (not "clear it"). */
 export function BulkEditModal({
   count,
-  priceEditable,
+  financialsEditable,
   isSubmitting,
   onConfirm,
   onCancel,
 }: {
   count: number;
-  priceEditable: boolean;
+  /** True only when every selected listing belongs to a storeOwned consignor.
+   *  Gates the Cost + Price fields. */
+  financialsEditable: boolean;
   isSubmitting?: boolean;
   onConfirm: (fields: { brand?: string; category?: string; cost?: string; price?: string }) => void;
   onCancel: () => void;
@@ -39,8 +41,8 @@ export function BulkEditModal({
     onConfirm({
       ...(brand.trim() ? { brand: brand.trim() } : {}),
       ...(category ? { category } : {}),
-      ...(cost.trim() ? { cost: cost.trim() } : {}),
-      ...(priceEditable && price.trim() ? { price: price.trim() } : {}),
+      ...(financialsEditable && cost.trim() ? { cost: cost.trim() } : {}),
+      ...(financialsEditable && price.trim() ? { price: price.trim() } : {}),
     });
   };
 
@@ -50,7 +52,7 @@ export function BulkEditModal({
         <h3 className="text-[15px] font-semibold mt-0 mb-1">Bulk edit {count} listing{count === 1 ? "" : "s"}</h3>
         <p className="text-[13px] text-gray-500 mt-0 mb-4">
           Leave any field blank to keep it unchanged. Brand &amp; Category apply to the whole product.
-          Cost{priceEditable ? " &amp; Price are" : " is"} per-listing.
+          {financialsEditable && " Cost &amp; Price are per-listing."}
         </p>
 
         <div className="flex flex-col gap-3">
@@ -91,19 +93,19 @@ export function BulkEditModal({
             )}
           </div>
 
-          <div className={`grid gap-3 ${priceEditable ? "grid-cols-2" : "grid-cols-1"}`}>
-            <div>
-              <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Cost</p>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={cost}
-                onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ""))}
-                className="admin-input"
-                placeholder="$"
-              />
-            </div>
-            {priceEditable && (
+          {financialsEditable && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Cost</p>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ""))}
+                  className="admin-input"
+                  placeholder="$"
+                />
+              </div>
               <div>
                 <p className="admin-label text-[11px] uppercase tracking-wide font-bold">Price</p>
                 <input
@@ -115,12 +117,12 @@ export function BulkEditModal({
                   placeholder="$"
                 />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {!priceEditable && (
+          {!financialsEditable && (
             <p className="text-[11px] text-gray-400 mt-1">
-              Price isn't bulk-editable — selection includes real consignor listings. Use individual edit to change those.
+              Cost &amp; Price aren't bulk-editable — selection includes real consignor listings. Use individual edit to change those.
             </p>
           )}
         </div>
