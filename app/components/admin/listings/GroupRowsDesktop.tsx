@@ -234,6 +234,10 @@ export function GroupRowsDesktop({
                 ? `$${fmt(Math.min(...prices))}`
                 : `$${fmt(Math.min(...prices))} – $${fmt(Math.max(...prices))}`;
 
+            // Trailing cells after size + barcode + price.
+            const contentCols = colCount - (hasSelection ? 1 : 0);
+            const trailingColSpan = contentCols - 3;
+
             rows.push(
               <tr
                 key={`vgh-${vg.variantId}`}
@@ -255,16 +259,24 @@ export function GroupRowsDesktop({
                     )}
                   </td>
                 )}
-                <td colSpan={colCount - (hasSelection ? 1 : 0)} className="admin-td py-2">
-                  <div className="flex items-center gap-2">
-                    <ChevronRight size={12} className={`text-gray-400 transition-transform ${variantOpen ? "rotate-90" : ""}`} />
-                    <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
-                    <span className="text-[11px] text-gray-500">{vg.listings.length} listings</span>
-                    {priceText && !variantOpen && (
-                      <span className="ml-auto text-[11px] text-gray-500 tabular-nums">{priceText}</span>
-                    )}
-                  </div>
+                {/* Size: chevron sits in the indent gutter so the size digit
+                    lines up exactly with the size column below. */}
+                <td className={`${childIndentTdClass} relative`}>
+                  <ChevronRight
+                    size={12}
+                    className={`absolute left-[24px] top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${variantOpen ? "rotate-90" : ""}`}
+                  />
+                  <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
                 </td>
+                <td className="admin-td">
+                  <span className="text-[11px] text-gray-500">{vg.listings.length} listings</span>
+                </td>
+                <td className={priceCellClass}>
+                  {priceText && !variantOpen && (
+                    <span className="text-[11.5px] font-normal text-gray-500 tabular-nums">{priceText}</span>
+                  )}
+                </td>
+                {trailingColSpan > 0 && <td colSpan={trailingColSpan} className="admin-td" />}
               </tr>,
             );
           }
