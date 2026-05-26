@@ -5,6 +5,7 @@ import type { ProductGroup } from "./types";
 import { ChevronRight, Package } from "lucide-react";
 import { checkboxClass } from "./listing-styles";
 import { useListingActions } from "./ListingActionsContext";
+import { groupByVariant } from "./listing-utils";
 
 export function GroupRowsMobile({
   group,
@@ -39,6 +40,8 @@ export function GroupRowsMobile({
     selectedIds,
     onToggleId,
     onToggleGroup,
+    expandedVariants,
+    onToggleVariant,
   } = useListingActions();
 
   return (
@@ -69,10 +72,61 @@ export function GroupRowsMobile({
               <span className="text-[10px] font-bold text-gray-400 uppercase">Select all</span>
             </label>
           )}
-          {sortedListings.map((l, i) => {
-            const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
-            return (
-              <div key={l.id} className={`px-3 py-1.5 flex items-center gap-1.5 bg-white ${i < sortedListings.length - 1 ? "border-t border-gray-100" : ""}`}>
+          {(() => {
+            const variantGroups = groupByVariant(sortedListings);
+            const out: React.ReactNode[] = [];
+            variantGroups.forEach((vg, vgIdx) => {
+              const hasHeader = vg.listings.length >= 2;
+              const open = !hasHeader || (expandedVariants?.has(vg.variantId) ?? false);
+
+              const variantSelectableIds = vg.listings
+                .filter((l) => ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status))
+                .map((l) => l.id);
+              const variantAllSelected = variantSelectableIds.length > 0
+                && variantSelectableIds.every((id) => selectedIds?.has(id) ?? false);
+              const variantSomeSelected = !variantAllSelected
+                && variantSelectableIds.some((id) => selectedIds?.has(id) ?? false);
+
+              if (hasHeader) {
+                const prices = vg.listings.map((l) => l.price).filter((p): p is number => p != null);
+                const priceText = prices.length === 0
+                  ? null
+                  : Math.min(...prices) === Math.max(...prices)
+                    ? `$${fmt(Math.min(...prices))}`
+                    : `$${fmt(Math.min(...prices))} – $${fmt(Math.max(...prices))}`;
+                out.push(
+                  <button
+                    key={`vgh-${vg.variantId}`}
+                    type="button"
+                    onClick={() => onToggleVariant?.(vg.variantId)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left border-0 font-[inherit] cursor-pointer ${open ? "bg-gray-50" : "bg-white hover:bg-gray-50"} ${vgIdx > 0 ? "border-t border-gray-100" : ""}`}
+                  >
+                    {hasSelection && variantSelectableIds.length > 0 && (
+                      <input
+                        type="checkbox"
+                        checked={variantAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = variantSomeSelected; }}
+                        onChange={() => onToggleGroup(variantSelectableIds)}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`${checkboxClass} shrink-0`}
+                      />
+                    )}
+                    <ChevronRight size={12} className={`text-gray-400 transition-transform shrink-0 ${open ? "rotate-90" : ""}`} />
+                    <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
+                    <span className="text-[11px] text-gray-500">{vg.listings.length} listings</span>
+                    {priceText && !open && (
+                      <span className="ml-auto text-[11px] text-gray-500 tabular-nums">{priceText}</span>
+                    )}
+                  </button>,
+                );
+              }
+
+              if (!open) return;
+
+              vg.listings.forEach((l, i) => {
+                const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
+                out.push(
+              <div key={l.id} className={`px-3 py-1.5 flex items-center gap-1.5 bg-white ${i < vg.listings.length - 1 ? "border-t border-gray-100" : ""}`}>
                 {hasSelection && (
                   isSelectable ? (
                     <input type="checkbox" checked={selectedIds?.has(l.id) ?? false} onChange={() => onToggleId(l.id)} className={`${checkboxClass} shrink-0`} />
@@ -117,9 +171,12 @@ export function GroupRowsMobile({
                     </button>
                   )}
                 </div>
-              </div>
-            );
-          })}
+              </div>,
+                );
+              });
+            });
+            return out;
+          })()}
         </div>
       )}
     </div>

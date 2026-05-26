@@ -4,6 +4,35 @@ import { LISTING_STATUS } from "~/lib/listing-statuses";
 
 // ── Helpers ──
 
+/** Group the listings inside one product by their variant.id so the table can
+ *  render one collapsed row per variant when there are multiple listings of
+ *  the same size. Preserves the order of the input listings within each
+ *  group (caller already sorted by price/whatever). */
+export type VariantGroup = {
+  variantId: string;
+  size: string;
+  gtin: string | null;
+  listings: ProductGroup["listings"];
+};
+
+export function groupByVariant(listings: ProductGroup["listings"]): VariantGroup[] {
+  const map = new Map<string, VariantGroup>();
+  for (const l of listings) {
+    const existing = map.get(l.variantId);
+    if (existing) {
+      existing.listings.push(l);
+    } else {
+      map.set(l.variantId, {
+        variantId: l.variantId,
+        size: l.variant.size,
+        gtin: l.variant.gtin,
+        listings: [l],
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => compareSizes(a.size, b.size));
+}
+
 export function SortIndicator({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
   if (!active) return <span className="text-gray-300 ml-1 text-[10px]">&#8597;</span>;
   return <span className="ml-1 text-[10px]">{dir === "asc" ? "\u2191" : "\u2193"}</span>;

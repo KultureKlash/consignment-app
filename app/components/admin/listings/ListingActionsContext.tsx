@@ -23,6 +23,11 @@ export interface ListingActions {
   syncingListingId?: string;
   selectedIds?: Set<string>;
   sections?: SectionOption[];
+  /** Per-variant expansion state — used inside a product group to collapse
+   *  multi-listing variants (e.g. "Size 9 × 10 listings") into a single row
+   *  with a chevron, expanded on click. */
+  expandedVariants?: Set<string>;
+  onToggleVariant?: (variantId: string) => void;
 }
 
 const ListingActionsCtx = createContext<ListingActions | null>(null);

@@ -20,7 +20,7 @@ import {
   checkboxClass,
   checkboxTdClass,
 } from "./listing-styles";
-import { SortIndicator, StatusCounts, ActionBtn } from "./listing-utils";
+import { SortIndicator, StatusCounts, ActionBtn, groupByVariant } from "./listing-utils";
 import { SectionPicker } from "./SectionPicker";
 import { useListingActions } from "./ListingActionsContext";
 
@@ -76,6 +76,8 @@ export function GroupRowsDesktop({
     onToggleGroup,
     sections,
     onSectionChange,
+    expandedVariants,
+    onToggleVariant,
   } = useListingActions();
 
   return (
@@ -203,13 +205,79 @@ export function GroupRowsDesktop({
         </tr>
       )}
 
-      {/* Desktop: Child listing rows */}
-      {isExpanded && sortedListings.map((l, i) => {
-        const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
-        return (
+      {/* Desktop: Child listing rows, grouped by variant so multi-listing sizes
+          collapse into a single header row that expands on click. */}
+      {isExpanded && (() => {
+        const variantGroups = groupByVariant(sortedListings);
+        const rows: React.ReactNode[] = [];
+
+        variantGroups.forEach((vg, vgIdx) => {
+          const isLastGroup = vgIdx === variantGroups.length - 1;
+          const variantHasHeader = vg.listings.length >= 2;
+          const variantOpen = !variantHasHeader || (expandedVariants?.has(vg.variantId) ?? false);
+
+          // Selectable listings inside this variant — drives the tri-state checkbox.
+          const variantSelectableIds = vg.listings
+            .filter((l) => ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status))
+            .map((l) => l.id);
+          const variantAllSelected = variantSelectableIds.length > 0
+            && variantSelectableIds.every((id) => selectedIds?.has(id) ?? false);
+          const variantSomeSelected = !variantAllSelected
+            && variantSelectableIds.some((id) => selectedIds?.has(id) ?? false);
+
+          if (variantHasHeader) {
+            // Compute price spread for the header row's "$X – $Y" hint.
+            const prices = vg.listings.map((l) => l.price).filter((p): p is number => p != null);
+            const priceText = prices.length === 0
+              ? null
+              : Math.min(...prices) === Math.max(...prices)
+                ? `$${fmt(Math.min(...prices))}`
+                : `$${fmt(Math.min(...prices))} – $${fmt(Math.max(...prices))}`;
+
+            rows.push(
+              <tr
+                key={`vgh-${vg.variantId}`}
+                className={`hidden md:table-row cursor-pointer transition-colors duration-100 ${variantOpen ? "bg-gray-50" : "bg-white hover:bg-gray-50"} ${variantOpen ? "" : (isLastGroup ? "border-b-2 border-b-gray-200" : "border-b border-b-gray-200/40")}`}
+                onClick={() => onToggleVariant?.(vg.variantId)}
+              >
+                {hasSelection && (
+                  <td className={checkboxTdClass} onClick={(e) => e.stopPropagation()}>
+                    {variantSelectableIds.length > 0 ? (
+                      <input
+                        type="checkbox"
+                        checked={variantAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = variantSomeSelected; }}
+                        onChange={() => onToggleGroup(variantSelectableIds)}
+                        className={checkboxClass}
+                      />
+                    ) : (
+                      <span className="inline-block w-4" />
+                    )}
+                  </td>
+                )}
+                <td colSpan={colCount - (hasSelection ? 1 : 0)} className="admin-td py-2">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight size={12} className={`text-gray-400 transition-transform ${variantOpen ? "rotate-90" : ""}`} />
+                    <span className="font-bold text-[13px] text-gray-900">{vg.size}</span>
+                    <span className="text-[11px] text-gray-500">{vg.listings.length} listings</span>
+                    {priceText && !variantOpen && (
+                      <span className="ml-auto text-[11px] text-gray-500 tabular-nums">{priceText}</span>
+                    )}
+                  </div>
+                </td>
+              </tr>,
+            );
+          }
+
+          if (!variantOpen) return;
+
+          vg.listings.forEach((l, i) => {
+            const isSelectable = ([LISTING_STATUS.SUBMITTED, LISTING_STATUS.APPROVED, LISTING_STATUS.ACTIVE, LISTING_STATUS.WITHDRAWAL_REQUESTED, LISTING_STATUS.PENDING_PICKUP] as string[]).includes(l.status);
+            const isLastRow = isLastGroup && i === vg.listings.length - 1;
+            rows.push(
           <tr
             key={l.id}
-            className={`${childRowClass} hidden md:table-row ${i === sortedListings.length - 1 ? "border-b-2 border-b-gray-200" : ""}`}
+            className={`${childRowClass} hidden md:table-row ${isLastRow ? "border-b-2 border-b-gray-200" : ""}`}
           >
             {hasSelection && (
               <td className={checkboxTdClass} onClick={(e) => e.stopPropagation()}>
@@ -227,13 +295,6 @@ export function GroupRowsDesktop({
             )}
             <td className={childIndentTdClass}>
               <span className="font-semibold">{l.variant.size}</span>
-              {(() => {
-                const sizeCount = group.listings.filter((li) => li.variant.size === l.variant.size).length;
-                const isFirst = sortedListings.findIndex((li) => li.variant.size === l.variant.size) === i;
-                return isFirst && sizeCount > 1 ? (
-                  <span className="ml-1.5 text-[10px] font-semibold text-gray-400 tabular-nums">×{sizeCount}</span>
-                ) : null;
-              })()}
             </td>
             <td className="admin-td text-[11px] font-mono text-gray-400 tracking-wide">
               {l.variant.gtin || "\u2014"}
@@ -388,9 +449,13 @@ export function GroupRowsDesktop({
                 </div>
               </td>
             )}
-          </tr>
-        );
-      })}
+          </tr>,
+            );
+          });
+        });
+
+        return rows;
+      })()}
 
       {/* Mobile: Card layout for child listings */}
       {isExpanded && (

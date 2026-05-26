@@ -67,6 +67,9 @@ export function GroupedView({
   const [editModal, setEditModal] = useState<Listing | null>(null);
   const [editProductModal, setEditProductModal] = useState<ProductGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Per-variant collapse state. Variants with 2+ listings render as a single
+  // row by default; only expand when this set contains their id.
+  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
 
   const hasSelection = !!selectedIds && !!onSelectionChange;
   const colCount = (onCancel ? 7 : 6) + (hasSelection ? 1 : 0);
@@ -79,6 +82,14 @@ export function GroupedView({
       } else {
         next.add(productId);
       }
+      return next;
+    });
+  };
+
+  const toggleVariant = (variantId: string) => {
+    setExpandedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(variantId)) next.delete(variantId); else next.add(variantId);
       return next;
     });
   };
@@ -142,6 +153,8 @@ export function GroupedView({
     sections,
     onSectionChange,
     onEditProduct: onEditProduct ? (g: ProductGroup) => setEditProductModal(g) : undefined,
+    expandedVariants,
+    onToggleVariant: toggleVariant,
   };
 
   return (
