@@ -2119,3 +2119,115 @@ describe("orders.server — post-payout refund handling", () => {
     expect(logs[0].reason).toBe("post_payout_refund");
   });
 });
+
+describe("orders.server — Shopify variant recreation after refund/reassign", () => {
+  /**
+   * Build a product with TWO variants so that when one variant sells out
+   * (qty 0), syncInventory's delete branch fires (siblingCount > 1) and nulls
+   * its shopifyVariantId/inventoryItemId — the exact precondition for the
+   * recreation gap.
+   */
+  async function setupTwoVariantProduct() {
+    const product = await prisma.product.create({
+      data: {
+        title: "Recreate Test Product",
+        sku: `style-rc-${Date.now()}-${Math.random()}`,
+        category: "Footwear > Sneakers",
+        shopifyProductId: `gid://shopify/Product/rc-${Date.now()}`,
+      },
+    });
+    const variantA = await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "9",
+        shopifyVariantId: `gid://shopify/ProductVariant/rcA-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/rcA-${Date.now()}`,
+      },
+    });
+    // Sibling variant keeps the product alive so variantA gets deleted (not zeroed) at qty 0.
+    await prisma.variant.create({
+      data: {
+        productId: product.id,
+        size: "10",
+        shopifyVariantId: `gid://shopify/ProductVariant/rcB-${Date.now()}`,
+        inventoryItemId: `gid://shopify/InventoryItem/rcB-${Date.now()}`,
+      },
+    });
+    return { product, variantA };
+  }
+
+  it("normal refund recreates the Shopify variant that was deleted at qty 0", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor();
+    const { variantA } = await setupTwoVariantProduct();
+
+    await createListings(consignor.id, variantA.id, 350, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/rc-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variantA.shopifyVariantId!, quantity: 1, price: 350 }],
+      financialStatus: "paid",
+    });
+
+    // Selling the only unit drove qty to 0 -> Shopify variant deleted + IDs nulled.
+    const afterSale = await prisma.variant.findUniqueOrThrow({ where: { id: variantA.id } });
+    expect(afterSale.shopifyVariantId).toBeNull();
+    expect(afterSale.inventoryItemId).toBeNull();
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // Listing restored AND the Shopify variant recreated (not left null).
+    const afterRefund = await prisma.variant.findUniqueOrThrow({ where: { id: variantA.id } });
+    expect(afterRefund.shopifyVariantId).not.toBeNull();
+    expect(afterRefund.inventoryItemId).not.toBeNull();
+  });
+
+  it("post-payout reassignment recreates the Shopify variant for the shop consignor listing", async () => {
+    const { admin } = createMockAdmin();
+    const consignor = await createTestConsignor({ feeRate: 0.15 });
+    const { variantA } = await setupTwoVariantProduct();
+
+    await createListings(consignor.id, variantA.id, 200, 1);
+
+    const shopifyOrderId = `gid://shopify/Order/rcpp-${Date.now()}`;
+    await processOrder({
+      admin,
+      shopifyOrderId,
+      lineItems: [{ shopifyVariantId: variantA.shopifyVariantId!, quantity: 1, price: 200 }],
+      financialStatus: "paid",
+    });
+
+    // Variant deleted at qty 0
+    const afterSale = await prisma.variant.findUniqueOrThrow({ where: { id: variantA.id } });
+    expect(afterSale.shopifyVariantId).toBeNull();
+
+    // Mark the sale as paid out so the refund takes the reassignment path
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: { include: { transactions: true } } },
+    });
+    const saleTx = order.items[0].transactions.find((t) => t.type === "sale")!;
+    await prisma.payout.create({
+      data: {
+        consignorId: consignor.id,
+        amount: saleTx.consignorAmount,
+        status: "paid",
+        items: { create: { transactionId: saleTx.id } },
+      },
+    });
+
+    await refundOrder({ admin, shopifyOrderId });
+
+    // The reassigned shop-consignor listing is active AND the variant is back on Shopify.
+    const reassigned = await prisma.listing.findFirst({
+      where: { variantId: variantA.id, status: "active", reassignedFromConsignorId: consignor.id },
+    });
+    expect(reassigned).toBeTruthy();
+
+    const afterRefund = await prisma.variant.findUniqueOrThrow({ where: { id: variantA.id } });
+    expect(afterRefund.shopifyVariantId).not.toBeNull();
+    expect(afterRefund.inventoryItemId).not.toBeNull();
+  });
+});

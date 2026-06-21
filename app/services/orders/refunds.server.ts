@@ -1,10 +1,42 @@
 import prisma from "~/db.server";
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory";
+import { ensureShopifyProductAndVariant } from "~/services/shopify";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, ORDER_ITEM_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import { calculateFee } from "~/lib/fee-calc";
+
+/**
+ * Re-sync Shopify for variants touched by a refund/cancel/reassignment.
+ *
+ * A variant's Shopify IDs get nulled when its last unit sells (syncInventory
+ * deletes the Shopify variant at qty 0). When a refund restores a listing, or
+ * a post-payout refund reassigns the item to a shop consignor, the listing
+ * goes ACTIVE again — but syncInventory alone can't recreate a deleted Shopify
+ * variant. So recreate it first (mirroring the create-listing path), then sync.
+ */
+async function resyncAffectedVariants(
+  admin: AdminApiContext,
+  variantIds: Set<string>,
+): Promise<void> {
+  for (const variantId of variantIds) {
+    const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+
+    if (!variant.shopifyVariantId) {
+      const activeCount = await prisma.listing.count({
+        where: { variantId, status: LISTING_STATUS.ACTIVE },
+      });
+      if (activeCount > 0) {
+        const product = await prisma.product.findUniqueOrThrow({ where: { id: variant.productId } });
+        await ensureShopifyProductAndVariant({ admin, product, variant });
+      }
+    }
+
+    const fresh = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
+    await syncInventory({ admin, variant: fresh });
+  }
+}
 
 /**
  * Cancel an order — full reversal. Restores all listing statuses to "active"
@@ -70,13 +102,7 @@ export async function cancelOrder({
     });
   });
 
-  // Sync inventory for affected variants
-  for (const variantId of affectedVariantIds) {
-    const variant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
-    });
-    await syncInventory({ admin, variant });
-  }
+  await resyncAffectedVariants(admin, affectedVariantIds);
 }
 
 /**
@@ -191,13 +217,7 @@ export async function refundOrder({
     });
   });
 
-  // Sync inventory for affected variants
-  for (const variantId of affectedVariantIds) {
-    const variant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
-    });
-    await syncInventory({ admin, variant });
-  }
+  await resyncAffectedVariants(admin, affectedVariantIds);
 }
 
 /**
