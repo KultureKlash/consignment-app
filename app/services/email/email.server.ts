@@ -9,6 +9,10 @@ const STORE_NAME = "Konsign";
 // ── Core send function ──
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  if (process.env.SIMULATION_MODE === "1") {
+    logger.info("Email skipped (SIMULATION_MODE)", { to, subject });
+    return;
+  }
   if (!RESEND_API_KEY || process.env.NODE_ENV !== "production") {
     logger.info("[DEV] Email would send", { to, subject });
     return;

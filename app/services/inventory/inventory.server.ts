@@ -24,6 +24,11 @@ export async function syncInventory({
   admin: AdminApiContext;
   variant: Variant;
 }): Promise<void> {
+  if (process.env.SIMULATION_MODE === "1") {
+    logger.info("syncInventory skipped (SIMULATION_MODE)", { variantId: variantInput.id });
+    return;
+  }
+
   // Re-read variant from DB to get fresh Shopify IDs
   // (they may have been cleared by a previous delete or updated by another operation)
   const variant = await prisma.variant.findUniqueOrThrow({
