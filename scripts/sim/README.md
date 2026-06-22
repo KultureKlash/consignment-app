@@ -54,6 +54,13 @@ npx tsx scripts/sim/07-withdrawal.ts
 # 8. Multi-item / multi-consignor single order — per-item transactions,
 #    per-consignor fee math + balances, one email per consignor. Rolls back.
 npx tsx scripts/sim/08-multi-item-order.ts
+
+# 9. High-volume stress + invariants — N sales (default 100) as mixed 1-3 item
+#    orders, ~half paid out, ~20% refunded, then system-wide money invariants.
+#    Rolls back by default; --keep persists for UI inspection.
+npx tsx scripts/sim/09-stress.ts            # 100 transactions
+npx tsx scripts/sim/09-stress.ts 250        # 250 transactions
+npx tsx scripts/sim/09-stress.ts 100 --keep # keep the data in prod
 ```
 
 ## What each script catches
@@ -68,6 +75,7 @@ npx tsx scripts/sim/08-multi-item-order.ts
 | 06 otp | OTP request/verify, lockout, expiry, enumeration, rate-limit |
 | 07 withdrawal | Withdrawal state machine + active-only/ownership guards |
 | 08 multi-item | Multi-consignor order: per-item txns, fee math, email grouping |
+| 09 stress | N transactions at once; system-wide money invariants hold |
 
 ## Findings surfaced by these sims
 
