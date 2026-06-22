@@ -42,6 +42,18 @@ npx tsx scripts/sim/04-inventory-parity.ts
 #    Or pass --simulate to dry-run a bulk payout for every consignor.
 npx tsx scripts/sim/05-payout-totals.ts            # verify mode
 npx tsx scripts/sim/05-payout-totals.ts --simulate # synthetic + rollback
+
+# 6. OTP login — request + verify cycle, lockout, expiry, anti-enumeration,
+#    rate-limit probe. Cleans up its OtpCode rows.
+npx tsx scripts/sim/06-otp.ts
+
+# 7. Withdrawal lifecycle — request -> approve -> complete, request -> deny,
+#    and the active-only + ownership guards. Restores listings at end.
+npx tsx scripts/sim/07-withdrawal.ts
+
+# 8. Multi-item / multi-consignor single order — per-item transactions,
+#    per-consignor fee math + balances, one email per consignor. Rolls back.
+npx tsx scripts/sim/08-multi-item-order.ts
 ```
 
 ## What each script catches
@@ -53,6 +65,14 @@ npx tsx scripts/sim/05-payout-totals.ts --simulate # synthetic + rollback
 | 03 lifecycle | Broken `creditOrder`/`createPayout`/`markPaid`/`refundOrder`/`ReassignmentLog` flow |
 | 04 parity | Shopify variant qty != count(active listings at lowest price) |
 | 05 totals | Payout math drift — sum(payouts) != net(sales - refunds) per consignor |
+| 06 otp | OTP request/verify, lockout, expiry, enumeration, rate-limit |
+| 07 withdrawal | Withdrawal state machine + active-only/ownership guards |
+| 08 multi-item | Multi-consignor order: per-item txns, fee math, email grouping |
+
+## Findings surfaced by these sims
+
+1. **Variant recreation after refund/reassign (FIXED on branch `fix/refund-reassign-shopify-variant-recreation`)** — when a size's last unit sold, the deleted Shopify variant was never recreated on refund-restore or post-payout reassignment.
+2. **OTP rate limit is dead code (OPEN)** — `requestOtp` deletes all prior `OtpCode` rows (otp.server.ts:42) before the per-hour count window (otp.server.ts:35-38) can accumulate, so the "max 3 per hour" guard never fires. `06-otp.ts` check 8 documents this.
 
 ## Known gotcha — null categories in imported data
 
