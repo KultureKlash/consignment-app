@@ -134,25 +134,27 @@ describe("OTP login flow", () => {
     expect(result.error).toContain("suspended");
   });
 
-  it("requestOtp deletes old OTPs before creating new one", async () => {
+  it("requestOtp invalidates prior codes, keeping exactly one active", async () => {
     await createTestConsignor({ email: "multi@test.com" });
     await requestOtp("multi@test.com");
     await requestOtp("multi@test.com");
-    const count = await prisma.otpCode.count({ where: { email: "multi@test.com" } });
-    expect(count).toBe(1); // Only latest OTP exists
+    // Only the newest code is still active (prior ones soft-invalidated, not
+    // hard-deleted — deletion would break the per-hour rate-limit window).
+    const active = await prisma.otpCode.count({ where: { email: "multi@test.com", usedAt: null } });
+    expect(active).toBe(1);
   });
 
   it("ATTACK: blocks more than 3 OTP requests per hour (per-email rate limit)", async () => {
     const email = "otp-flood@test.com";
     await createTestConsignor({ email });
-    // requestOtp deletes old ones, so manually insert 3 recent codes to simulate history
-    for (let i = 0; i < 3; i++) {
-      await prisma.otpCode.create({
-        data: { email, code: String(100000 + i), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
-      });
-    }
-    const result = await requestOtp(email);
-    expect(result.error).toContain("Too many code requests");
+    // Three natural requests succeed; the fourth within the hour is blocked.
+    // (Regression: before the soft-invalidate fix, requestOtp hard-deleted prior
+    // codes so the count never reached 3 and this limit never fired.)
+    expect((await requestOtp(email)).success).toBe(true);
+    expect((await requestOtp(email)).success).toBe(true);
+    expect((await requestOtp(email)).success).toBe(true);
+    const fourth = await requestOtp(email);
+    expect(fourth.error).toContain("Too many code requests");
   });
 
   it("verifyOtp succeeds with correct code", async () => {

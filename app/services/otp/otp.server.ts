@@ -30,7 +30,11 @@ export async function requestOtp(email: string): Promise<{ success: boolean; err
     return { error: "Your account has been suspended. Please contact the store for more information." };
   }
 
-  // Per-email rate limit: max 3 OTP requests per hour
+  // Per-email rate limit: max 3 OTP requests per hour.
+  // The count must include codes we then invalidate, so we soft-invalidate prior
+  // codes (mark used) rather than deleting them — a hard delete would wipe the
+  // window and the limit could never trigger. Rows are purged after 1h by
+  // cleanExpiredOtps, which lines up with this 1h window.
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const recentCount = await prisma.otpCode.count({
     where: { email: normalizedEmail, createdAt: { gte: oneHourAgo } },
@@ -39,7 +43,12 @@ export async function requestOtp(email: string): Promise<{ success: boolean; err
     return { error: "Too many code requests. Please wait before trying again." };
   }
 
-  await prisma.otpCode.deleteMany({ where: { email: normalizedEmail } });
+  // Invalidate any still-active code so only the newest one verifies, while
+  // keeping the row for the rate-limit window above.
+  await prisma.otpCode.updateMany({
+    where: { email: normalizedEmail, usedAt: null },
+    data: { usedAt: new Date() },
+  });
 
   const code = String(randomInt(100000, 999999));
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_SECONDS * 1000);

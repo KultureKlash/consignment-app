@@ -157,11 +157,17 @@ export async function createPayout({
     throw new Error("Payout amount must be greater than 0");
   }
 
-  // Atomic: re-validate + create inside transaction to prevent double-payout on concurrent requests
+  // Atomic: re-validate + create inside transaction to prevent double-payout on
+  // concurrent requests. A single bulk query (not one findFirst per txn) keeps
+  // the interactive transaction fast enough to stay under the 5s timeout even
+  // for large batches.
   const payout = await prisma.$transaction(async (tx) => {
-    for (const txn of transactions) {
-      const existing = await tx.payoutItem.findFirst({ where: { transactionId: txn.id } });
-      if (existing) throw new Error(`Transaction ${txn.id} was already included in a payout`);
+    const alreadyPaid = await tx.payoutItem.findMany({
+      where: { transactionId: { in: transactionIds } },
+      select: { transactionId: true },
+    });
+    if (alreadyPaid.length > 0) {
+      throw new Error(`Transaction ${alreadyPaid[0].transactionId} was already included in a payout`);
     }
 
     return tx.payout.create({
