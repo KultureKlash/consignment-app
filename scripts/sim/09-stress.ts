@@ -124,6 +124,10 @@ async function main() {
   console.log(`\n[phase 2] Paying out ~half of earning consignors...`);
   const earners = [...new Set(items.map((l) => l.consignorId))];
   const toPayOut = earners.filter((_, i) => i % 2 === 0);
+  // Chunk transactions per payout. createPayout re-validates every txn inside a
+  // 5s interactive transaction, so very large batches time out (see FINDING in
+  // README). Realistic payouts are bounded anyway.
+  const PAYOUT_CHUNK = 15;
   let payoutsMade = 0;
   for (const cid of toPayOut) {
     const txns = await prisma.transaction.findMany({
@@ -132,11 +136,14 @@ async function main() {
     });
     if (txns.length === 0) continue;
     const consignor = await prisma.consignor.findUniqueOrThrow({ where: { id: cid } });
-    const payout = await createPayout({ consignorId: cid, transactionIds: txns.map((t) => t.id) });
-    created.payoutIds.push(payout.id);
-    if (consignor.taxStatus === "business") await markInvoiced(payout.id);
-    await markPaid(payout.id);
-    payoutsMade++;
+    for (let i = 0; i < txns.length; i += PAYOUT_CHUNK) {
+      const chunk = txns.slice(i, i + PAYOUT_CHUNK);
+      const payout = await createPayout({ consignorId: cid, transactionIds: chunk.map((t) => t.id) });
+      created.payoutIds.push(payout.id);
+      if (consignor.taxStatus === "business") await markInvoiced(payout.id);
+      await markPaid(payout.id);
+      payoutsMade++;
+    }
   }
   console.log(`  ${payoutsMade} payouts created + paid.`);
 
