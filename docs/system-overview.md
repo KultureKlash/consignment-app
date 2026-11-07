@@ -223,9 +223,10 @@ Customer order, linked to Shopify by `shopifyId`.
 |-------|------|-------|
 | id | String @id @default(cuid()) | |
 | shopifyId | String? @unique | Shopify order GID |
-| total | Float | Sum of allocated listing prices |
+| total | Float | Sum of allocated listing prices (excludes unmapped line items) |
 | status | String @default("open") | `open`, `refunded`, `cancelled` |
 | paymentStatus | String @default("pending") | `pending`, `paid`, `refunded`, `voided` |
+| unmappedLineItems | Json? | Shopify line items with no local Variant — `[{ shopifyVariantId, quantity, price, reason }]` |
 | createdAt | DateTime | |
 
 **Relations:** items[] (OrderItem)
@@ -395,6 +396,26 @@ ORDER BY price DESC, createdAt DESC
 
 All mutations happen inside `prisma.$transaction()`. Inventory sync happens after the transaction commits.
 
+**Redelivery resume (processOrder):** because `syncInventory()` and `creditOrder()` run
+*after* the allocation transaction commits, a failure in either leaves the order created
+while Shopify still shows stock and the consignor is uncredited. On redelivery
+`processOrder` therefore re-runs both steps for the existing order instead of returning
+early. Both are safe to repeat: `syncInventory` sets an absolute quantity derived from
+the DB, and `creditOrder` no-ops once `paymentStatus` is `paid`.
+
+**Unmapped line items:** a Shopify line item with no local `Variant` (gift card, product
+created outside this app, deleted variant) is skipped and recorded on
+`Order.unmappedLineItems` as `[{ shopifyVariantId, quantity, price, reason }]`, then shown
+as a warning banner on the admin order detail page. It used to throw, which rolled back
+the whole order transaction — so a cart mixing a consignment item with any untracked
+product produced no `Order` row at all and its consignment items were never sold or
+credited. Unmapped items are excluded from `Order.total`, consignor balances, and
+inventory sync.
+
+Note: insufficient inventory still throws and aborts the order. That is deliberate — it
+means Shopify oversold relative to our listings, and the 500 + redelivery gives the
+inventory a chance to be restored. It is not the same case as an untracked product.
+
 ### services/shopify/products.server.ts
 **Purpose:** Sync products and variants to Shopify Admin API.
 
@@ -447,6 +468,25 @@ Uses process-level in-memory cache. Caches null results to avoid repeated lookup
 | None | — | Create record, run handler |
 
 On success → status = `completed`. On error → status = `failed` + error message stored.
+
+**`createWebhookHandler(opts)` response contract:**
+
+| Outcome | HTTP | Shopify behavior |
+|---------|------|------------------|
+| Handler succeeded | 200 | Done |
+| Event already `completed` | 200 | Done (deduped) |
+| Event still `processing` (< 5 min) | 200 | Done (another worker owns it) |
+| Handler threw | **500** | Redelivers; the `failed` row is deleted on arrival so the handler re-runs |
+
+The error path **must** return 500. It previously returned 200, which told Shopify the
+event had succeeded — and since nothing in the system replays `WebhookEvent` rows with
+status `failed`, any transient Shopify or database error became permanent silent data
+loss. The `failed → retry` row in the table above was unreachable in production because
+no redelivery ever arrived.
+
+Known remaining gap: a worker that crashes mid-handler leaves the row `processing`, and
+we already returned 200, so no redelivery comes. It self-heals only if another delivery
+arrives after the 5-minute stale window.
 
 ---
 

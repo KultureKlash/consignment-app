@@ -5,6 +5,25 @@ import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { calculateFee } from "~/lib/fee-calc";
 import { sendItemSoldEmail } from "~/services/email";
+import { logger } from "~/lib/system";
+
+/** A Shopify line item with no local Variant row. Recorded on the Order. */
+export type UnmappedLineItem = {
+  shopifyVariantId: string;
+  quantity: number;
+  price: number;
+  reason: "variant_not_found";
+};
+
+/** Push current DB-derived quantity to Shopify for each variant. */
+async function syncVariants(admin: AdminApiContext, variantIds: Set<string>) {
+  for (const variantId of variantIds) {
+    const variant = await prisma.variant.findUniqueOrThrow({
+      where: { id: variantId },
+    });
+    await syncInventory({ admin, variant });
+  }
+}
 
 /**
  * Process an incoming order — allocate per-item listings to order items.
@@ -32,15 +51,33 @@ export async function processOrder({
   }>;
   financialStatus?: string;
 }) {
-  // Idempotency: if this order was already processed, return it
   const existing = await prisma.order.findUnique({
     where: { shopifyId: shopifyOrderId },
-    include: { items: true },
+    include: { items: { include: { listing: { select: { variantId: true } } } } },
   });
-  if (existing) return existing;
+
+  if (existing) {
+    // Redelivery. The allocation transaction below is atomic, but syncInventory
+    // and creditOrder run after it commits — if either failed last time, the
+    // order exists while Shopify still shows stock and the consignor is
+    // uncredited. Returning early here stranded that state permanently, so
+    // resume both instead. Safe to repeat: syncInventory sets an absolute
+    // quantity from the DB, and creditOrder no-ops once paymentStatus is paid.
+    await syncVariants(admin, new Set(existing.items.map((i) => i.listing.variantId)));
+
+    if (financialStatus === ORDER_PAYMENT_STATUS.PAID) {
+      await creditOrder({ shopifyOrderId });
+    }
+
+    return prisma.order.findUniqueOrThrow({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: true },
+    });
+  }
 
   // Track which variants were affected for inventory sync after commit
   const affectedVariantIds = new Set<string>();
+  const unmappedLineItems: UnmappedLineItem[] = [];
 
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
@@ -55,9 +92,17 @@ export async function processOrder({
       });
 
       if (!variant) {
-        throw new Error(
-          `Variant not found for Shopify ID: ${lineItem.shopifyVariantId}`
-        );
+        // Not a consignment item: a gift card, a product created outside this
+        // app, or a deleted variant. Record it and keep going — aborting threw
+        // away the whole order, so any consignment items in the same cart were
+        // never marked sold and never credited.
+        unmappedLineItems.push({
+          shopifyVariantId: lineItem.shopifyVariantId,
+          quantity: lineItem.quantity,
+          price: lineItem.price,
+          reason: "variant_not_found",
+        });
+        continue;
       }
 
       affectedVariantIds.add(variant.id);
@@ -107,18 +152,24 @@ export async function processOrder({
 
     return tx.order.update({
       where: { id: newOrder.id },
-      data: { total: orderTotal },
+      data: {
+        total: orderTotal,
+        ...(unmappedLineItems.length > 0 ? { unmappedLineItems } : {}),
+      },
       include: { items: true },
     });
   });
 
-  // Sync inventory for all affected variants (after transaction commits)
-  for (const variantId of affectedVariantIds) {
-    const variant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
+  if (unmappedLineItems.length > 0) {
+    logger.warn("Order has line items with no local variant", {
+      shopifyOrderId,
+      count: unmappedLineItems.length,
+      shopifyVariantIds: unmappedLineItems.map((u) => u.shopifyVariantId),
     });
-    await syncInventory({ admin, variant });
   }
+
+  // Sync inventory for all affected variants (after transaction commits)
+  await syncVariants(admin, affectedVariantIds);
 
   // If payment is already captured, credit the consignor balance immediately
   if (financialStatus === ORDER_PAYMENT_STATUS.PAID) {
