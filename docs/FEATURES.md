@@ -461,7 +461,7 @@ Final polish and design.
 [x] Test panel UI (embedded app, listing/order/refund testing)
 [x] Dev store reset script (`scripts/reset-dev-store.ts`)
 [x] Shopify state rebuild script (`scripts/rebuild-shopify-state.ts`)
-[x] Vitest test suite — 459 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts, submission, listing-management, fee-calc, metafields, security, session-timeout, tax, payout-statuses, dashboard)
+[x] Vitest test suite — 488 tests (catalog, listings, inventory, orders, webhooks, categories, taxonomy, consignors, shopify-products, payouts, submission, listing-management, fee-calc, metafields, security, session-timeout, tax, payout-statuses, dashboard)
 [x] Separate test database (`test.sqlite`)
 [x] Mock admin helper for Shopify API testing
 [x] Comprehensive seed data (8 consignors incl. 2 shop consignors, 15 products, 51 variants, ~150 listings, 6 orders with transactions)

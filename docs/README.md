@@ -92,7 +92,7 @@ This starts the Shopify dev tunnel + Remix dev server. The app will be available
 ## Running Tests
 
 ```bash
-# Run all 459 tests
+# Run all 488 tests
 npx vitest run
 
 # Run a specific test file
@@ -150,7 +150,7 @@ app/
     system/            — Logger, Sentry, rate limiting
     categories/        — Category constants + auto-suggest
 docs/                  — Architecture, coding standards, checklists
-tests/                 — 459 Vitest tests
+tests/                 — 488 Vitest tests
 prisma/
   schema.prisma        — Database schema (14 models)
 ```
