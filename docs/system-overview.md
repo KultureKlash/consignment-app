@@ -530,6 +530,23 @@ Retention nulls the payload and **keeps the row**.
 | `customers/redact` | Nulls it for the named orders, plus any payload whose embedded `customer.id` matches |
 | `shop/redact` | Nulls every stored payload |
 
+### Two windows, two different controls
+
+`WebhookEvent` has a second, longer window, and the two are easy to confuse:
+
+| Window | Mechanism | What happens | Purpose |
+|---|---|---|---|
+| **90 days** | `/cron/retention`, daily and automatic | `rawPayload` nulled, row kept | PII retention |
+| **365 days** | `/app/cleanup`, manual and admin-authenticated | The row itself deleted | Audit horizon |
+
+Only the 90-day job is a privacy control, and only it runs on a schedule. The 365-day
+delete exists so `WebhookEvent` does not grow forever; by the time it fires, the payload
+has been redacted for nine months.
+
+The row delete was 30 days until it was raised to 365. At 30 days it deleted rows before
+the 90-day redaction could ever apply to them, which made the retention job look
+effective while actually doing nothing, and discarded the audit trail a year early.
+
 `/cron/retention` has no Shopify session to authenticate against, so it is guarded
 by a `CRON_SECRET` bearer token compared with `timingSafeEqual`, and returns **404**
 on a bad secret so it is not discoverable by probing. `CRON_SECRET` is required in

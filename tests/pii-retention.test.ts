@@ -73,6 +73,7 @@ describe("PII — rawPayload is unreachable from the portal", () => {
     // Allowlist with the reason each one qualifies. A new entry appearing here
     // is the signal to check whether that file should be touching PII at all.
     const ALLOWED = [
+      "app/routes/app.cleanup.tsx", // deletes the row at 365d; documents both windows
       "app/routes/cron.retention.tsx", // scheduled redaction
       "app/routes/webhooks.customers.data_request.tsx", // counts what we hold
       "app/routes/webhooks.customers.redact.tsx", // per-customer redaction
