@@ -242,9 +242,13 @@ async function loadLocalOrders(from: Date, to: Date): Promise<LocalOrderSnapshot
         const line: LocalTransactionLine = {
           transactionId: t.id,
           shopifyVariantId,
-          gross: t.grossAmount,
-          fee: t.feeAmount,
-          consignor: t.consignorAmount,
+          // Ledger side converted here. The reconciler compares against
+          // Shopify payload amounts, which arrive as JSON strings parsed to
+          // numbers, so the comparison is number-based with an explicit
+          // tolerance. Documented as a known leak in the migration notes.
+          gross: t.grossAmount.toNumber(),
+          fee: t.feeAmount.toNumber(),
+          consignor: t.consignorAmount.toNumber(),
         };
         if (t.type === "sale") saleLines.push(line);
         else refundLines.push(line);

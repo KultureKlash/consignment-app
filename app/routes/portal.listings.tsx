@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toPlainMoney } from "~/lib/finance";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useRouteLoaderData, useFetcher, Link, useSearchParams } from "react-router";
 import { redirect } from "react-router";
@@ -64,7 +65,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const lowestPrices: Record<string, number> = {};
   if (variantIds.length > 0) {
     const mins = await prisma.listing.groupBy({ by: ["variantId"], where: { variantId: { in: variantIds }, status: LISTING_STATUS.ACTIVE }, _min: { price: true } });
-    for (const m of mins) if (m._min.price != null) lowestPrices[m.variantId] = m._min.price;
+    // Loader boundary: these drive display only.
+    for (const m of mins) if (m._min.price != null) lowestPrices[m.variantId] = m._min.price.toNumber();
   }
   return { consignor, listings, statusCounts, statusFilter, showInactive, search, lowestPrices, page, totalPages, totalGroups };
 }

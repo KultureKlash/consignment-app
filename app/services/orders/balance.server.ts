@@ -1,13 +1,15 @@
+import { Prisma } from "@prisma/client";
 import prisma from "~/db.server";
 import { ORDER_STATUS } from "~/lib/order-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
+import { ZERO } from "~/lib/finance";
 
 /**
  * Get a consignor's current balance.
  * Balance = sum of all transactions (sales are positive, refunds are negative)
  *           minus sum of completed payouts.
  */
-export async function getConsignorBalance(consignorId: string): Promise<number> {
+export async function getConsignorBalance(consignorId: string): Promise<Prisma.Decimal> {
   const [txAgg, payoutAgg] = await Promise.all([
     prisma.transaction.aggregate({
       where: { consignorId },
@@ -19,10 +21,10 @@ export async function getConsignorBalance(consignorId: string): Promise<number> 
     }),
   ]);
 
-  const totalEarnings = txAgg._sum.amount ?? 0;
-  const totalPayouts = payoutAgg._sum.amount ?? 0;
+  const totalEarnings = txAgg._sum.amount ?? ZERO;
+  const totalPayouts = payoutAgg._sum.amount ?? ZERO;
 
-  return totalEarnings - totalPayouts;
+  return totalEarnings.minus(totalPayouts);
 }
 
 /** The subset of a Prisma client findOverpaidConsignors needs. */
@@ -37,11 +39,11 @@ export type OverpaidConsignor = {
   name: string;
   email: string;
   /** sum(transactions.amount) — sales positive, refunds negative */
-  net: number;
+  net: Prisma.Decimal;
   /** sum(payouts.amount) where status = paid */
-  paid: number;
+  paid: Prisma.Decimal;
   /** paid − net, always > tolerance for a returned row */
-  overage: number;
+  overage: Prisma.Decimal;
 };
 
 /**
@@ -53,17 +55,18 @@ export type OverpaidConsignor = {
  * simulation run) while leaving the other unscoped produces false positives,
  * because a payout can settle transactions created before that subset.
  *
- * Tolerance absorbs Float accumulation in the Postgres SUMs; money columns are
- * `double precision`, so exact equality is not reliable.
+ * Money columns are numeric(10,2) and SUM over them is exact, so the tolerance
+ * exists only to absorb a legitimately tiny overage rather than float noise. It
+ * is a Decimal comparison, never a JS number one.
  */
 export async function findOverpaidConsignors(
-  opts: { client?: BalanceReader; tolerance?: number } = {},
+  opts: { client?: BalanceReader; tolerance?: Prisma.Decimal | number | string } = {},
 ): Promise<OverpaidConsignor[]> {
   // One-off scripts build their own PrismaClient against a different
   // DATABASE_URL than ~/db.server picked up at import time, so they must be able
   // to pass theirs in rather than silently reconciling the wrong database.
   const db = opts.client ?? prisma;
-  const tolerance = opts.tolerance ?? 0.02;
+  const tolerance = new Prisma.Decimal(opts.tolerance ?? "0.02");
 
   const consignors = await db.consignor.findMany({
     select: { id: true, name: true, email: true },
@@ -83,27 +86,27 @@ export async function findOverpaidConsignors(
       }),
     ]);
 
-    const net = txAgg._sum.amount ?? 0;
-    const paid = payoutAgg._sum.amount ?? 0;
-    const overage = paid - net;
+    const net = txAgg._sum.amount ?? ZERO;
+    const paid = payoutAgg._sum.amount ?? ZERO;
+    const overage = paid.minus(net);
 
-    if (overage > tolerance) {
+    if (overage.greaterThan(tolerance)) {
       overpaid.push({ consignorId: c.id, name: c.name, email: c.email, net, paid, overage });
     }
   }
 
-  return overpaid.sort((a, b) => b.overage - a.overage);
+  return overpaid.sort((a, b) => b.overage.comparedTo(a.overage));
 }
 
 /**
  * Get total amount already paid out to a consignor.
  */
-export async function getConsignorPaidTotal(consignorId: string): Promise<number> {
+export async function getConsignorPaidTotal(consignorId: string): Promise<Prisma.Decimal> {
   const result = await prisma.payout.aggregate({
     where: { consignorId, status: PAYOUT_STATUS.PAID },
     _sum: { amount: true },
   });
-  return result._sum.amount ?? 0;
+  return result._sum.amount ?? ZERO;
 }
 
 // ── Fulfill order (Shopify fulfilled webhook) ──

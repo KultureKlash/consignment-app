@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { ZERO } from "~/lib/finance";
 import { findOrCreateProduct, findOrCreateVariant, detectDuplicateProduct, DuplicateError } from "~/services/catalog";
 import { syncInventory } from "~/services/inventory";
 import { ensureShopifyProductAndVariant } from "~/services/shopify/products.server";
@@ -100,7 +101,8 @@ export async function submitListing({
   sendSubmissionConfirmedEmail(first.consignor, {
     product: first.variant.product.title,
     size: first.variant.size,
-    price: first.price ?? 0,
+    // Email body: display boundary.
+    price: (first.price ?? ZERO).toNumber(),
     quantity: listings.length,
   }).catch(() => {});
 

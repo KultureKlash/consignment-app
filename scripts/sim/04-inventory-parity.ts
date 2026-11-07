@@ -111,8 +111,8 @@ async function main() {
   for (const c of counts) {
     if (c.price == null) continue;
     const existing = lowestByVariant.get(c.variantId);
-    if (!existing || c.price < existing.price) {
-      lowestByVariant.set(c.variantId, { price: c.price, count: c._count._all });
+    if (!existing || c.price!.toNumber() < existing.price) {
+      lowestByVariant.set(c.variantId, { price: c.price!.toNumber(), count: c._count._all });
     }
   }
   // Variants with no active listings → expected qty 0

@@ -95,6 +95,79 @@ logger.error("Shopify sync failed", { listingId, error: err.message });
 
 ---
 
+## Money
+
+Every money column is `Decimal @db.Decimal(10, 2)` and reaches you as a
+`Prisma.Decimal`. **`feeRate` is the exception and stays `Float`** — it is a ratio,
+not an amount: no currency, no 2-decimal meaning, never summed or paid out. See the
+note on `Consignor.feeRate` in `prisma/schema.prisma`.
+
+### The rule
+
+**Client-side arithmetic on money is display-only. Any amount that drives a write, a
+comparison or a payout must be computed server-side in `Prisma.Decimal`.**
+
+A number that merely gets rendered may be a plain number. A number that decides
+something may not.
+
+### Server side — use Decimal methods, never JS operators
+
+```typescript
+// good
+const total = sumMoney(items.map((i) => i.price));
+if (amount.lessThanOrEqualTo(ZERO)) throw new Error("Payout must be > 0");
+const net = paid.minus(earned);
+const refund = consignorAmount.negated();
+items.sort((a, b) => b.price.comparedTo(a.price));
+
+// bad — every one of these is a real bug
+let total = 0; total += item.price;        // "0100.00" string concatenation
+if (amount <= 0) ...                        // compares an object to a number
+const refund = -consignorAmount;            // coerces through Number
+items.sort((a, b) => b.price - a.price);    // NaN
+```
+
+Helpers live in `~/lib/finance`: `toDecimal`, `roundMoney`, `sumMoney`, `ZERO`.
+`roundMoney` is the **only** place money is rounded, alongside `calculateFee`, which
+still computes in integer cents.
+
+### The display boundary
+
+Convert with `toPlainMoney()` from `~/lib/finance` — once, on whatever a display
+query returns, not field by field, so adding a money column cannot silently skip it:
+
+```typescript
+return toPlainMoney({ order, summary, timeline });
+```
+
+Why it has to happen there and not in the component:
+
+- `Prisma.Decimal.toJSON()` serializes to a **string**. A component doing
+  `reduce((s, p) => s + p.amount, 0)` then computes `0 + "100.00"` → `"0100.00"`.
+  A silently wrong total, not a crash.
+- `fmt()` takes a number. Given a string it falls through to
+  `String.prototype.toLocaleString`, which ignores the options and quietly drops the
+  thousands separators and the 2-decimal padding.
+
+`fmt()` is unchanged and components need no Decimal awareness, which also keeps
+decimal.js out of the client bundle.
+
+`grep -rn toPlainMoney app/` is the complete, auditable list of places a float
+re-enters the system. Every one of them is display-only by construction. Adding a
+call is a decision to be reviewed, not a convenience.
+
+### Tests
+
+`expect(decimal).toBe(30)` fails on `Object.is` even when the value is right, and
+`toBe` accepts `unknown` so TypeScript cannot warn you. Use the `money()` helper from
+`tests/setup.ts`, which preserves `null`/`undefined` rather than coercing to 0:
+
+```typescript
+expect(money(txs[0].feeAmount)).toBe(45);
+```
+
+---
+
 ## Components
 
 - **Max 10 props per component.** Beyond that, use React Context.

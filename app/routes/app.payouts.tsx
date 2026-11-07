@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { toPlainMoney } from "~/lib/finance";
 import { useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useCallback, useEffect, useState } from "react";
@@ -84,7 +85,9 @@ export default function Payouts() {
     return !(start && d < start) && !(end && d >= end);
   }
 
-  const filteredUnpaid = (unpaidByConsignor as UnpaidEntry[])
+  // toPlainMoney, not a cast: the cast would have let Decimal reach a
+  // component that does `sum + tx.consignorAmount`, which concatenates strings.
+  const filteredUnpaid = (toPlainMoney(unpaidByConsignor) as UnpaidEntry[])
     .filter((e) => !filterConsignor || e.consignor.id === filterConsignor)
     .map((e) => {
       if (datePreset === "all") return e;

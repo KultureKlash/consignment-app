@@ -54,7 +54,7 @@ async function main() {
   console.log(`\nBuilding 1 order with ${picked.length} items across ${consignorsUsed} consignors:`);
   for (const l of picked) console.log(`  ${l.consignor.name} (fee ${l.consignor.feeRate}): $${l.price} [${l.id}]`);
 
-  const orderTotal = picked.reduce((s, l) => s + l.price!, 0);
+  const orderTotal = picked.reduce((s, l) => s + l.price!.toNumber(), 0);
 
   // Build the order directly (allocation correctness is covered by 02-allocation.ts).
   const shopifyOrderId = `${RUN_ID}`;
@@ -89,7 +89,7 @@ async function main() {
   const feeMismatches: string[] = [];
   for (const t of txns) {
     const expected = calculateFee(t.salePrice, t.orderItem!.listing.consignor.feeRate);
-    if (Math.abs(t.feeAmount - expected.feeAmount) < 0.01 && Math.abs(t.consignorAmount - expected.consignorAmount) < 0.01) {
+    if (Math.abs(t.feeAmount.toNumber() - expected.feeAmount.toNumber()) < 0.01 && Math.abs(t.consignorAmount.toNumber() - expected.consignorAmount.toNumber()) < 0.01) {
       feeOk++;
     } else {
       feeMismatches.push(`  ${t.orderItem!.listing.consignor.name}: $${t.salePrice} -> expected fee $${expected.feeAmount.toFixed(2)}, got $${t.feeAmount.toFixed(2)}`);
@@ -107,12 +107,12 @@ async function main() {
   const expectedByConsignor = new Map<string, number>();
   for (const l of picked) {
     const fee = calculateFee(l.price!, l.consignor.feeRate);
-    expectedByConsignor.set(l.consignorId, (expectedByConsignor.get(l.consignorId) ?? 0) + fee.consignorAmount);
+    expectedByConsignor.set(l.consignorId, (expectedByConsignor.get(l.consignorId) ?? 0) + fee.consignorAmount.toNumber());
   }
   let balanceOk = 0;
   const balMismatches: string[] = [];
   for (const [cid, expectedAmt] of expectedByConsignor) {
-    const actual = txns.filter((t) => t.orderItem!.listing.consignorId === cid).reduce((s, t) => s + t.amount, 0);
+    const actual = txns.filter((t) => t.orderItem!.listing.consignorId === cid).reduce((s, t) => s + t.amount.toNumber(), 0);
     if (Math.abs(actual - expectedAmt) < 0.02) balanceOk++;
     else balMismatches.push(`  consignor ${cid}: expected $${expectedAmt.toFixed(2)}, got $${actual.toFixed(2)}`);
   }

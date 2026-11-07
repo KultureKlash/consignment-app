@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { toPlainMoney, ZERO } from "~/lib/finance";
 import { fmt } from "~/lib/formatting";
 import { LISTING_STATUS } from "~/lib/domain";
 import { TRANSACTION_TYPE, ORDER_PAYMENT_STATUS, ORDER_ITEM_STATUS } from "~/lib/domain";
@@ -45,11 +46,11 @@ export async function getDashboardData() {
     prisma.listing.count({ where: { status: LISTING_STATUS.PENDING_PICKUP } }),
   ]);
 
-  const totalSales = salesAgg._sum.grossAmount ?? 0;
-  const consignmentFees = consignFeesAgg._sum.feeAmount ?? 0;
-  const storeProfit = (storeAgg._sum.grossAmount ?? 0) - (storeAgg._sum.cost ?? 0);
-  const totalEarnings = consignmentFees + storeProfit;
-  const inventoryValue = inventoryAgg._sum.price ?? 0;
+  const totalSales = salesAgg._sum.grossAmount ?? ZERO;
+  const consignmentFees = consignFeesAgg._sum.feeAmount ?? ZERO;
+  const storeProfit = (storeAgg._sum.grossAmount ?? ZERO).minus(storeAgg._sum.cost ?? ZERO);
+  const totalEarnings = consignmentFees.plus(storeProfit);
+  const inventoryValue = inventoryAgg._sum.price ?? ZERO;
 
   const activityFeed = await getActivityFeed(15);
 
@@ -124,7 +125,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
 
     if (listing.status === LISTING_STATUS.SOLD && listing.soldAt && listing.price != null) {
       events.push({
-        product, size, detail: "sold for", price: `$${fmt(listing.price)}`,
+        product, size, detail: "sold for", price: `$${fmt(listing.price.toNumber())}`,
         time: relativeTime(now, listing.soldAt), type: "sale",
         sortTime: listing.soldAt.getTime(),
       });
@@ -147,7 +148,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
       events.push({
         product, size,
         detail: listing.price != null ? "listed at" : "created (needs price)",
-        price: listing.price != null ? `$${fmt(listing.price)}` : "—",
+        price: listing.price != null ? `$${fmt(listing.price.toNumber())}` : "—",
         actor: listing.consignor.name,
         time: relativeTime(now, listing.createdAt), type: "listing",
         sortTime: listing.createdAt.getTime(),
@@ -162,7 +163,7 @@ export async function getActivityFeed(limit = 15): Promise<FeedEvent[]> {
     const product = listing.variant.product.title;
     const size = listing.variant.size;
     events.push({
-      product, size, detail: "refunded", price: `$${fmt(Math.abs(tx.grossAmount))}`,
+      product, size, detail: "refunded", price: `$${fmt(tx.grossAmount.abs().toNumber())}`,
       time: relativeTime(now, tx.createdAt), type: "request",
       sortTime: tx.createdAt.getTime(),
     });

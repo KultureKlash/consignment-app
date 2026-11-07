@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import {
   submitListing,
@@ -118,7 +118,7 @@ describe("submission pipeline", () => {
 
       expect(listing.status).toBe("submitted");
       expect(listing.submittedAt).toBeTruthy();
-      expect(listing.price).toBe(250);
+      expect(money(listing.price)).toBe(250);
       expect(listing.variant.size).toBe("10");
       expect(listing.variant.product.title).toBe("Jordan 1 Retro High");
     });
@@ -172,7 +172,7 @@ describe("submission pipeline", () => {
         price: 150,
       });
 
-      expect(updated.price).toBe(150);
+      expect(money(updated.price)).toBe(150);
     });
 
     it("rejects update by non-owner", async () => {
@@ -313,7 +313,7 @@ describe("submission pipeline", () => {
       });
 
       expect(updated.status).toBe("approved_awaiting_dropoff");
-      expect(updated.price).toBe(175);
+      expect(money(updated.price)).toBe(175);
     });
   });
 
@@ -463,7 +463,7 @@ describe("submission pipeline", () => {
         price: 175,
       });
 
-      expect(updated.price).toBe(175);
+      expect(money(updated.price)).toBe(175);
       expect(updated.status).toBe("active");
     });
 
@@ -478,7 +478,7 @@ describe("submission pipeline", () => {
         price: 195,
       });
 
-      expect(updated.price).toBe(195);
+      expect(money(updated.price)).toBe(195);
       expect(updated.status).toBe("approved_awaiting_dropoff");
     });
 
@@ -847,7 +847,7 @@ describe("submission pipeline", () => {
       expect(result.skipped).toBe(0);
 
       const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id, l3.id] } } });
-      expect(fresh.every((l) => l.price === 1500)).toBe(true);
+      expect(fresh.every((l) => l.price?.toNumber() === 1500)).toBe(true);
     });
 
     it("IDOR guard: silently filters out listings owned by another consignor", async () => {
@@ -869,7 +869,7 @@ describe("submission pipeline", () => {
       expect(result.skipped).toBe(1);
 
       const stolenAttempt = await prisma.listing.findUniqueOrThrow({ where: { id: theirs.id } });
-      expect(stolenAttempt.price).toBe(200); // unchanged
+      expect(money(stolenAttempt.price)).toBe(200); // unchanged
     });
 
     it("rejects invalid price", async () => {
@@ -946,7 +946,7 @@ describe("submission pipeline", () => {
 
       const after = await prisma.listing.findUniqueOrThrow({ where: { id: listing.id } });
       expect(after.status).toBe("active");
-      expect(after.price).toBe(250);
+      expect(money(after.price)).toBe(250);
       expect(after.listedAt).not.toBeNull();
     });
 
@@ -1027,7 +1027,7 @@ describe("submission pipeline", () => {
       expect(result.updated).toBe(3);
       const after = await prisma.listing.findMany({ where: { consignorId: consignor.id } });
       expect(after.every((l) => l.status === "active")).toBe(true);
-      expect(after.every((l) => l.price === 175)).toBe(true);
+      expect(after.every((l) => l.price?.toNumber() === 175)).toBe(true);
       expect(after.every((l) => l.listedAt !== null)).toBe(true);
     });
 
@@ -1119,7 +1119,7 @@ describe("submission pipeline", () => {
 
       expect(result.listingsUpdated).toBe(2);
       const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
-      expect(fresh.every((l) => l.cost === 50)).toBe(true);
+      expect(fresh.every((l) => l.cost?.toNumber() === 50)).toBe(true);
     });
 
     it("rejects cost edit when any selected listing is owned by a real consignor", async () => {
@@ -1147,8 +1147,8 @@ describe("submission pipeline", () => {
 
       // Neither price should have changed.
       const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
-      expect(fresh.find((l) => l.id === l1.id)?.price).toBe(100);
-      expect(fresh.find((l) => l.id === l2.id)?.price).toBe(200);
+      expect(money(fresh.find((l) => l.id === l1.id)?.price)).toBe(100);
+      expect(money(fresh.find((l) => l.id === l2.id)?.price)).toBe(200);
     });
 
     it("accepts price edit when ALL selected listings are store-owned", async () => {
@@ -1165,7 +1165,7 @@ describe("submission pipeline", () => {
 
       expect(result.listingsUpdated).toBe(2);
       const fresh = await prisma.listing.findMany({ where: { id: { in: [l1.id, l2.id] } } });
-      expect(fresh.every((l) => l.price === 250)).toBe(true);
+      expect(fresh.every((l) => l.price?.toNumber() === 250)).toBe(true);
     });
 
     it("returns zeros when no listingIds are provided", async () => {

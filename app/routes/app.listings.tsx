@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { toPlainMoney } from "~/lib/finance";
 import { useFetcher, useLoaderData, useNavigation, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
@@ -235,7 +236,7 @@ export default function Listings() {
           onBulkCompleteWithdrawal={() => submitApproval("bulk-complete-withdrawal", { listingIds: Array.from(selectedIds).join(",") })}
         />
         <ListingsTable
-          listings={listings} grouped
+          listings={toPlainMoney(listings)} grouped
           onCancel={(id) => submitCancel("delete", { listingId: id })}
           onRestore={(id) => submitCancel("restore", { listingId: id })}
           onApprove={(id) => submitApproval("approve", { listingId: id })}

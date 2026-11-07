@@ -3,7 +3,7 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
-import { calculateFee } from "~/lib/fee-calc";
+import { calculateFee, ZERO } from "~/lib/finance";
 import { sendItemSoldEmail } from "~/services/email";
 import { logger } from "~/lib/system";
 
@@ -115,7 +115,9 @@ export async function processOrder({
       },
     });
 
-    let orderTotal = 0;
+    // Decimal, not a number: this is summed from numeric(10,2) columns and
+    // written straight back to one.
+    let orderTotal = ZERO;
 
     for (const lineItem of lineItems) {
       const variant = await tx.variant.findUnique({
@@ -177,7 +179,7 @@ export async function processOrder({
           },
         });
 
-        orderTotal += listing.price;
+        orderTotal = orderTotal.plus(listing.price);
       }
     }
 
@@ -258,7 +260,7 @@ export async function creditOrder({
       const grossAmount = item.price;
       const feeRate = item.listing.consignor.feeRate;
       const { feeAmount, consignorAmount } = calculateFee(grossAmount, feeRate);
-      const listingCost = item.listing.cost ?? 0;
+      const listingCost = item.listing.cost ?? ZERO;
       await tx.transaction.create({
         data: {
           consignorId: item.listing.consignorId,
@@ -279,11 +281,13 @@ export async function creditOrder({
         data: { status: LISTING_STATUS.SOLD },
       });
 
+      // Email bodies are display text, so money becomes a number here. This is
+      // a deliberate, documented boundary: nothing downstream of it writes.
       const soldItem = {
         product: item.listing.variant.product.title,
         size: item.listing.variant.size,
-        salePrice: item.price,
-        payoutAmount: consignorAmount,
+        salePrice: item.price.toNumber(),
+        payoutAmount: consignorAmount.toNumber(),
       };
       const bucket = soldByConsignor.get(item.listing.consignorId);
       if (bucket) {

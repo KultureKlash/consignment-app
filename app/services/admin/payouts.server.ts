@@ -2,7 +2,9 @@ import prisma from "~/db.server";
 import { sendPayoutReadyEmail, sendPayoutPaidEmail } from "~/services/email";
 import { PAYOUT_STATUS } from "~/lib/domain";
 import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/domain";
+import { Prisma } from "@prisma/client";
 import { computeTax } from "~/lib/tax";
+import { sumMoney, ZERO } from "~/lib/finance";
 
 /**
  * Get all data needed for the payouts admin page:
@@ -38,13 +40,16 @@ export async function getPayoutsPageData() {
 
   // Group unpaid transactions by consignor
   type UnpaidTx = typeof unpaidTxs[number];
-  const consignorMap = new Map<string, { consignor: UnpaidTx["consignor"]; transactions: UnpaidTx[]; total: number }>();
+  const consignorMap = new Map<
+    string,
+    { consignor: UnpaidTx["consignor"]; transactions: UnpaidTx[]; total: Prisma.Decimal }
+  >();
 
   for (const tx of unpaidTxs) {
     const existing = consignorMap.get(tx.consignorId);
     if (existing) {
       existing.transactions.push(tx);
-      existing.total += tx.consignorAmount;
+      existing.total = existing.total.plus(tx.consignorAmount);
     } else {
       consignorMap.set(tx.consignorId, {
         consignor: tx.consignor,
@@ -55,7 +60,7 @@ export async function getPayoutsPageData() {
   }
 
   const unpaidByConsignor = Array.from(consignorMap.values())
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => b.total.comparedTo(a.total));
 
   // Recent payouts with items
   const payouts = await prisma.payout.findMany({
@@ -85,7 +90,7 @@ export async function getPayoutsPageData() {
   });
 
   // Summary stats
-  const totalOutstanding = unpaidByConsignor.reduce((sum, c) => sum + c.total, 0);
+  const totalOutstanding = sumMoney(unpaidByConsignor.map((c) => c.total));
 
   const [pendingAgg, invoicedAgg, paidAgg] = await Promise.all([
     prisma.payout.aggregate({ where: { status: PAYOUT_STATUS.PENDING }, _sum: { amount: true } }),
@@ -151,9 +156,11 @@ export async function createPayout({
     }
   }
 
-  const amount = transactions.reduce((sum, tx) => sum + tx.consignorAmount, 0);
+  const amount = sumMoney(transactions.map((tx) => tx.consignorAmount));
 
-  if (amount <= 0) {
+  // Decimal comparison. `amount <= 0` on a float could pass for a balance that
+  // was really zero but summed to 1e-13, creating a payout for nothing.
+  if (amount.lessThanOrEqualTo(ZERO)) {
     throw new Error("Payout amount must be greater than 0");
   }
 
@@ -203,8 +210,9 @@ export async function createPayout({
     });
   });
 
+  // Email body: display boundary, so money becomes a number here.
   sendPayoutReadyEmail(payout.consignor, {
-    amount: payout.amount,
+    amount: payout.amount.toNumber(),
     itemCount: transactionIds.length,
   }).catch(() => {});
 
@@ -262,9 +270,12 @@ export async function markPaid(payoutId: string, opts: { allowMissingInvoice?: b
   });
 
   // Confirmation email (best-effort — don't block the status change if delivery fails)
-  const tax = computeTax(payout.amount, payout.consignor);
+  // computeTax and the email body are both display-side: the GST/QST figures
+  // go on an invoice, are never stored, and never drive a write. Converting to
+  // number here is the documented boundary.
+  const tax = computeTax(payout.amount.toNumber(), payout.consignor);
   sendPayoutPaidEmail(payout.consignor, {
-    amount: payout.amount,
+    amount: payout.amount.toNumber(),
     itemCount: payout.items.length,
     totalWithTax: tax.isTaxable ? tax.total : undefined,
     isTaxable: tax.isTaxable,

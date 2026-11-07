@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData } from "~/services/admin";
 import { findOverpaidConsignors } from "~/services/orders";
 
@@ -405,7 +405,7 @@ describe("payouts.server — getPayoutsPageData", () => {
 
     expect(data.unpaidByConsignor).toHaveLength(0);
     expect(data.payouts).toHaveLength(0);
-    expect(data.stats.totalOutstanding).toBe(0);
+    expect(money(data.stats.totalOutstanding)).toBe(0);
     expect(data.stats.totalPending).toBe(0);
     expect(data.stats.totalPaid).toBe(0);
   });
@@ -450,9 +450,9 @@ describe("balance.server — findOverpaidConsignors", () => {
     const overpaid = await findOverpaidConsignors();
     expect(overpaid).toHaveLength(1);
     expect(overpaid[0].name).toBe("Overpaid Person");
-    expect(overpaid[0].net).toBe(0);
-    expect(overpaid[0].paid).toBe(340); // 400 * 0.85
-    expect(overpaid[0].overage).toBe(340);
+    expect(money(overpaid[0].net)).toBe(0);
+    expect(money(overpaid[0].paid)).toBe(340); // 400 * 0.85
+    expect(money(overpaid[0].overage)).toBe(340);
   });
 
   it("ignores payouts that are not yet paid", async () => {

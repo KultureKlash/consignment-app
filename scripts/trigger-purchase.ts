@@ -99,8 +99,8 @@ async function main() {
   // Expected math
   const feeRate = listing.consignor.feeRate;
   const gross = listing.price;
-  const feeAmount = Math.round(gross * feeRate * 100) / 100;
-  const consignorAmount = Math.round((gross - feeAmount) * 100) / 100;
+  const feeAmount = Math.round(Number(gross) * feeRate * 100) / 100;
+  const consignorAmount = Math.round((Number(gross) - feeAmount) * 100) / 100;
 
   // Count active listings at this variant's lowest price (drives expected qty after sale)
   const lowest = await prisma.listing.findFirst({
@@ -140,7 +140,7 @@ async function main() {
     admin,
     shopifyOrderId,
     orderNumber: `#MANUAL-${Date.now().toString().slice(-5)}`,
-    lineItems: [{ shopifyVariantId: listing.variant.shopifyVariantId, quantity: 1, price: gross }],
+    lineItems: [{ shopifyVariantId: listing.variant.shopifyVariantId, quantity: 1, price: Number(gross) }],
     financialStatus: "paid",
   });
 
@@ -161,9 +161,9 @@ async function main() {
   const rows: Array<[string, string, string, boolean]> = [
     ["Listing status", "sold", listingAfter.status, listingAfter.status === "sold"],
     ["Order payment", "paid", order.paymentStatus, order.paymentStatus === "paid"],
-    ["Txn gross", `$${gross.toFixed(2)}`, `$${txn?.grossAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.grossAmount - gross) < 0.01],
-    ["Txn fee", `$${feeAmount.toFixed(2)}`, `$${txn?.feeAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.feeAmount - feeAmount) < 0.01],
-    ["Txn consignor amt", `$${consignorAmount.toFixed(2)}`, `$${txn?.consignorAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.consignorAmount - consignorAmount) < 0.02],
+    ["Txn gross", `$${Number(gross).toFixed(2)}`, `$${txn?.grossAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.grossAmount.toNumber() - Number(gross)) < 0.01],
+    ["Txn fee", `$${feeAmount.toFixed(2)}`, `$${txn?.feeAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.feeAmount.toNumber() - feeAmount) < 0.01],
+    ["Txn consignor amt", `$${consignorAmount.toFixed(2)}`, `$${txn?.consignorAmount.toFixed(2) ?? "?"}`, !!txn && Math.abs(txn.consignorAmount.toNumber() - consignorAmount) < 0.02],
     ["Shopify qty", `${before.qty - 1}`, `${after.qty}`, after.qty === before.qty - 1],
   ];
   let allOk = true;

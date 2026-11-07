@@ -107,7 +107,7 @@ async function main() {
     idx += size;
     orderNum++;
     const sid = `${RUN_ID}-o${orderNum}`;
-    const total = batch.reduce((s, l) => s + l.price!, 0);
+    const total = batch.reduce((s, l) => s + l.price!.toNumber(), 0);
     const order = await prisma.order.create({
       data: { shopifyId: sid, orderNumber: `#${sid}`, total, status: "open", paymentStatus: "pending" },
     });
@@ -193,7 +193,7 @@ async function main() {
   let feeBad = 0;
   for (const t of saleTxns) {
     const exp = calculateFee(t.salePrice, t.orderItem!.listing.consignor.feeRate);
-    if (Math.abs(t.feeAmount - exp.feeAmount) > 0.01 || Math.abs(t.consignorAmount - exp.consignorAmount) > 0.01) feeBad++;
+    if (Math.abs(t.feeAmount.toNumber() - exp.feeAmount.toNumber()) > 0.01 || Math.abs(t.consignorAmount.toNumber() - exp.consignorAmount.toNumber()) > 0.01) feeBad++;
   }
   check({
     name: "2. Every sale fee == calculateFee(price, rate)",
@@ -205,7 +205,7 @@ async function main() {
   // 3. Every refund transaction is the exact negative of a sale consignorAmount
   let refundBad = 0;
   for (const r of refundTxns) {
-    if (r.amount >= 0) refundBad++; // refunds are negative
+    if (r.amount.toNumber() >= 0) refundBad++; // refunds are negative
   }
   check({
     name: "3. All refund transactions are negative",

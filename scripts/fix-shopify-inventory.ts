@@ -117,7 +117,7 @@ async function main() {
         const count = await prisma.listing.count({
           where: { variantId: v.id, status: "active", price: lowest.price },
         });
-        variantStats.set(v.id, { price: lowest.price, count });
+        variantStats.set(v.id, { price: lowest.price!.toNumber(), count });
       }
     }
   }

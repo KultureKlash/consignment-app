@@ -68,7 +68,7 @@ async function main() {
     where: { consignorId: alice.id, status: "paid" },
     _sum: { amount: true },
   });
-  const balance = (txAgg._sum.amount ?? 0) - (payoutAgg._sum.amount ?? 0);
+  const balance = Number(txAgg._sum.amount ?? 0) - Number(payoutAgg._sum.amount ?? 0);
   console.log("\nTotal earnings (sum tx):", txAgg._sum.amount ?? 0);
   console.log("Total paid payouts:", payoutAgg._sum.amount ?? 0);
   console.log("Balance:", balance);

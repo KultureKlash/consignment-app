@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { toPlainMoney, roundMoney, ZERO } from "~/lib/finance";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
 import { TRANSACTION_TYPE, ORDER_ITEM_STATUS } from "~/lib/order-statuses";
 
@@ -57,12 +58,14 @@ export async function getConsignorSales(
     }),
   ]);
 
-  const totalSalePrice = totalEarned._sum.salePrice ?? 0;
-  const totalCost = totalEarned._sum.cost ?? 0;
+  const totalSalePrice = totalEarned._sum.salePrice ?? ZERO;
+  const totalCost = totalEarned._sum.cost ?? ZERO;
   const totalEarnedVal = storeOwned
-    ? totalSalePrice - totalCost
-    : (totalEarned._sum.consignorAmount ?? 0);
-  const avgSale = salesCount > 0 ? totalSalePrice / salesCount : 0;
+    ? totalSalePrice.minus(totalCost)
+    : (totalEarned._sum.consignorAmount ?? ZERO);
+  // Average is a derived display statistic, so rounding it to cents here is the
+  // presentation choice, not a ledger value.
+  const avgSale = salesCount > 0 ? roundMoney(totalSalePrice.dividedBy(salesCount)) : ZERO;
 
   const sales = transactions.map((tx) => {
     const payoutItem = tx.payoutItems[0];
@@ -80,20 +83,21 @@ export async function getConsignorSales(
       cost: tx.cost,
       fee: tx.feeAmount,
       payout: tx.consignorAmount,
-      profit: tx.salePrice - tx.cost,
+      profit: tx.salePrice.minus(tx.cost),
       date: tx.createdAt,
       status: tx.orderItem?.status ?? ORDER_ITEM_STATUS.SOLD,
       payoutStatus,
     };
   });
 
-  return {
+  // Display boundary -- see app/lib/finance/serialize.ts.
+  return toPlainMoney({
     storeOwned,
     sales,
     stats: {
       totalEarned: totalEarnedVal,
       itemsSold: salesCount,
-      avgSale: Math.round(avgSale * 100) / 100,
+      avgSale,
     },
-  };
+  });
 }

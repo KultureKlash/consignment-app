@@ -77,3 +77,4 @@ consignor-report.*
 *-export.csv
 unpriced-items.csv
 graphify-out/
+.money-decimal/

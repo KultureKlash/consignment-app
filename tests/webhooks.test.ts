@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { withWebhookDedup, createWebhookHandler } from "~/services/webhooks";
 import { processOrder, creditOrder, getConsignorBalance } from "~/services/orders";
@@ -283,7 +283,7 @@ describe("processOrder — redelivery recovery", () => {
     expect(afterFailure.items).toHaveLength(1);
     expect(afterFailure.paymentStatus).toBe("pending");
     expect(await prisma.transaction.count({ where: { consignorId: consignor.id } })).toBe(0);
-    expect(await getConsignorBalance(consignor.id)).toBe(0);
+    expect((await getConsignorBalance(consignor.id)).toNumber()).toBe(0);
 
     // Redelivery with a healthy Shopify must finish the job, not return early.
     const healthy = createMockAdmin();
@@ -298,7 +298,7 @@ describe("processOrder — redelivery recovery", () => {
     expect(healthy.findCalls("inventorySetQuantities")).toHaveLength(1);
 
     const { consignorAmount } = calculateFee(300, 0.2);
-    expect(await getConsignorBalance(consignor.id)).toBe(consignorAmount);
+    expect((await getConsignorBalance(consignor.id)).toNumber()).toBe(consignorAmount.toNumber());
 
     const sales = await prisma.transaction.findMany({
       where: { consignorId: consignor.id, type: "sale" },
@@ -333,7 +333,7 @@ describe("processOrder — redelivery recovery", () => {
     expect(sales).toHaveLength(2); // one per allocated item, not four
 
     const { consignorAmount } = calculateFee(200, 0.15);
-    expect(await getConsignorBalance(consignor.id)).toBe(consignorAmount * 2);
+    expect((await getConsignorBalance(consignor.id)).toNumber()).toBe(consignorAmount.times(2).toNumber());
 
     expect(await prisma.order.count({ where: { shopifyId: "gid://shopify/Order/9002" } })).toBe(1);
     expect(await prisma.orderItem.count()).toBe(2);
@@ -362,7 +362,7 @@ describe("processOrder — redelivery recovery", () => {
     expect(sales).toHaveLength(1);
 
     const { consignorAmount } = calculateFee(150, 0.15);
-    expect(await getConsignorBalance(consignor.id)).toBe(consignorAmount);
+    expect((await getConsignorBalance(consignor.id)).toNumber()).toBe(consignorAmount.toNumber());
   });
 });
 
@@ -386,11 +386,11 @@ describe("processOrder — unmapped line items", () => {
 
     // The consignment item settled normally.
     expect(order.items).toHaveLength(1);
-    expect(order.total).toBe(250); // unmapped item excluded from marketplace total
+    expect(money(order.total)).toBe(250); // unmapped item excluded from marketplace total
     expect(order.paymentStatus).toBe("paid");
 
     const { consignorAmount } = calculateFee(250, 0.15);
-    expect(await getConsignorBalance(consignor.id)).toBe(consignorAmount);
+    expect((await getConsignorBalance(consignor.id)).toNumber()).toBe(consignorAmount.toNumber());
     expect(await prisma.listing.count({ where: { variantId: variant.id, status: "sold" } })).toBe(1);
 
     // And the unmapped line item is recorded for admin review.
@@ -416,7 +416,7 @@ describe("processOrder — unmapped line items", () => {
     });
 
     expect(order.items).toHaveLength(0);
-    expect(order.total).toBe(0);
+    expect(money(order.total)).toBe(0);
 
     const stored = await prisma.order.findUniqueOrThrow({
       where: { shopifyId: "gid://shopify/Order/9005" },

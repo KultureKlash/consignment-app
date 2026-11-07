@@ -134,8 +134,8 @@ async function main() {
   for (const c of counts) {
     if (c.price == null) continue;
     const existing = variantToOffers.get(c.variantId);
-    if (!existing || c.price < existing.price) {
-      variantToOffers.set(c.variantId, { price: c.price, count: c._count._all });
+    if (!existing || c.price!.toNumber() < existing.price) {
+      variantToOffers.set(c.variantId, { price: c.price!.toNumber(), count: c._count._all });
     }
   }
 

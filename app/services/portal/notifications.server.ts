@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { toPlainMoney } from "~/lib/finance";
 import { fmt } from "~/lib/currency";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
@@ -220,7 +221,14 @@ export async function getConsignorNotifications(
     }
   }
 
-  const allItems = buildNotifications(saleNotifs, recentPayouts, rejectionNotifs, approvalNotifs, withdrawalNotifs);
+  // Display boundary: notification text only. See app/lib/finance/serialize.ts.
+  const allItems = buildNotifications(
+    toPlainMoney(saleNotifs),
+    toPlainMoney(recentPayouts),
+    rejectionNotifs,
+    approvalNotifs,
+    withdrawalNotifs,
+  );
   const inAppEnabled = isInAppEnabled(notificationPrefs);
   const items = inAppEnabled ? allItems : [];
   const unreadCount = notificationsReadAt

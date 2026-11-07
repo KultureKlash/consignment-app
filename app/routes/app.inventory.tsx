@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { toPlainMoney } from "~/lib/finance";
 import { Link, useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect } from "react";
@@ -195,7 +196,7 @@ export default function Inventory() {
       <CreateListingForm consignors={consignors} knownBrands={knownBrands} />
 
       <s-section heading="Recent Listings">
-        <ListingsTable listings={listings} grouped onCancel={handleCancel} onAdminEdit={handleAdminEdit} isLoading={cancelLoading || editLoading} />
+        <ListingsTable listings={toPlainMoney(listings)} grouped onCancel={handleCancel} onAdminEdit={handleAdminEdit} isLoading={cancelLoading || editLoading} />
         {listings.length > 0 && (
           <div style={{ textAlign: "center", marginTop: "12px" }}>
             <Link

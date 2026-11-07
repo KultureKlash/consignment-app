@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { createListing, queryListings } from "~/services/listings";
 import { LISTING_STATUS } from "~/lib/domain";
@@ -21,7 +21,7 @@ describe("listings.server", () => {
         consignorId: consignor.id,
       });
 
-      expect(listing.price).toBe(350);
+      expect(money(listing.price)).toBe(350);
       expect(listing.consignor.name).toBe("Test Consignor");
 
       // DB should have 1 product, 1 variant, 1 listing
@@ -53,7 +53,7 @@ describe("listings.server", () => {
 
       // All listings should be active at the same price
       const listings = await prisma.listing.findMany();
-      expect(listings.every((l) => l.price === 350 && l.status === "active")).toBe(true);
+      expect(listings.every((l) => l.price?.toNumber() === 350 && l.status === "active")).toBe(true);
     });
 
     it("reuses existing product when useExistingProductId is passed", async () => {
@@ -331,7 +331,7 @@ describe("listings.server", () => {
       const variantId = listings[0].variantId;
       expect(listings.every((l) => l.status === "active")).toBe(true);
       expect(listings.every((l) => l.variantId === variantId)).toBe(true);
-      expect(listings.every((l) => l.price === 340)).toBe(true);
+      expect(listings.every((l) => l.price?.toNumber() === 340)).toBe(true);
     });
 
     it("all created listings have listedAt set", async () => {
@@ -448,7 +448,7 @@ describe("listings.server", () => {
         consignorId: consignor.id,
       });
 
-      expect(listing.price).toBe(180);
+      expect(money(listing.price)).toBe(180);
       const product = await prisma.product.findFirst();
       expect(product?.sku).toBeNull();
       expect(product?.title).toBe("Ami Paris Bucket Hat");
@@ -593,7 +593,7 @@ describe("listings.server", () => {
 
       // Listing was created in DB despite Shopify failure
       expect(listing).toBeDefined();
-      expect(listing.price).toBe(200);
+      expect(money(listing.price)).toBe(200);
       expect(await prisma.listing.count()).toBe(1);
 
       // Product and variant exist in local DB
