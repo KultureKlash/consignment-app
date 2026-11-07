@@ -227,6 +227,11 @@ Customer order, linked to Shopify by `shopifyId`.
 | status | String @default("open") | `open`, `refunded`, `cancelled` |
 | paymentStatus | String @default("pending") | `pending`, `paid`, `refunded`, `voided` |
 | unmappedLineItems | Json? | Shopify line items with no local Variant — `[{ shopifyVariantId, quantity, price, reason }]` |
+| shopifySubtotal | Float? | Shopify line items after line-level discounts, pre-tax, pre-shipping |
+| shopifyDiscounts | Float? | Total discount Shopify applied to the order |
+| shopifyTax | Float? | Reconciliation only — never feeds a credit |
+| shopifyShipping | Float? | Reconciliation only — never feeds a credit |
+| shopifyTotal | Float? | Grand total charged, incl. tax + shipping |
 | createdAt | DateTime | |
 
 **Relations:** items[] (OrderItem)
@@ -290,6 +295,7 @@ Ensures each Shopify webhook is processed exactly once (idempotency).
 | status | String @default("processing") | `processing`, `completed`, `failed` |
 | error | String? | Error message if failed |
 | processedAt | DateTime? | When processing completed |
+| rawPayload | Json? | Exactly what Shopify sent, written before the handler runs. Enables replay from source and lets the reconciler read Shopify's numbers without an API call. **Contains customer PII** — prune with the row |
 | createdAt | DateTime | |
 
 ---
@@ -402,6 +408,24 @@ while Shopify still shows stock and the consignor is uncredited. On redelivery
 `processOrder` therefore re-runs both steps for the existing order instead of returning
 early. Both are safe to repeat: `syncInventory` sets an absolute quantity derived from
 the DB, and `creditOrder` no-ops once `paymentStatus` is `paid`.
+
+**Discounts — the store absorbs them (business rule):** consignors set their price and
+are credited on **their listing price**, never on what the customer actually paid. The
+store takes only its fee percentage, so an order discount comes entirely out of the
+store's side. `Transaction.grossAmount` is therefore the local listing price, which is
+the pre-discount Shopify line price — never a discounted line total.
+
+Consequence: a discount larger than the fee rate means the store paid out more than it
+collected on that item. Operationally, consignment variants are meant to be excluded
+from discounts in Shopify; `scripts/sim/10-reconcile-shopify.ts` flags any discount that
+lands on one anyway, and separately flags any that exceeded the fee.
+
+Shopify's own figures are recorded on the `Order` row (`shopifySubtotal`,
+`shopifyDiscounts`, `shopifyTax`, `shopifyShipping`, `shopifyTotal`) for reconciliation
+only. They never feed a consignor credit. `Order.total` stays the sum of allocated
+listing prices in **every** code path — it previously meant Shopify's grand total in
+`prisma/seed-import.ts` and the listing sum in the webhook path, so any report summing
+the column mixed units.
 
 **Unmapped line items:** a Shopify line item with no local `Variant` (gift card, product
 created outside this app, deleted variant) is skipped and recorded on

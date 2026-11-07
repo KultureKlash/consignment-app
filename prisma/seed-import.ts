@@ -211,13 +211,20 @@ async function main() {
     const paymentStatus = o.financialStatus === "paid" ? "paid" : "pending";
     const status = o.fulfillmentStatus === "fulfilled" ? "closed" : "open";
 
+    // `total` is the sum of allocated listing prices in every code path, so it
+    // cannot be Shopify's grand total. It is backfilled from the order items
+    // below once they exist; Shopify's own figures go in the shopify* columns.
     const created = await prisma.order.create({
       data: {
         shopifyId: o.shopifyOrderId,
         orderNumber: o.orderName,
-        total: o.totalPrice,
+        total: 0,
         status,
         paymentStatus,
+        shopifySubtotal: o.subtotalPrice,
+        shopifyDiscounts: o.totalDiscounts,
+        shopifyTax: o.totalTax,
+        shopifyTotal: o.totalPrice,
         createdAt: new Date(o.createdAt),
       },
     });
@@ -346,6 +353,20 @@ async function main() {
     }
   }
   console.log(`  ✓ ${orderItemCount} order items, ${txCount} transactions (${skipped} skipped)`);
+
+  // Backfill Order.total from the items actually created, keeping the column's
+  // meaning identical to the live webhook path (sum of allocated listing prices).
+  const grouped = await prisma.orderItem.groupBy({
+    by: ["orderId"],
+    _sum: { price: true },
+  });
+  for (const g of grouped) {
+    await prisma.order.update({
+      where: { id: g.orderId },
+      data: { total: g._sum.price ?? 0 },
+    });
+  }
+  console.log(`  ✓ backfilled total on ${grouped.length} orders from their items`);
 
   console.log("\nDone! Database seeded successfully.");
 }

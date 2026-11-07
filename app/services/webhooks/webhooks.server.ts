@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
+import type { Prisma } from "@prisma/client";
 import prisma from "~/db.server";
 import { logger } from "~/lib/system";
 
@@ -45,8 +46,12 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
       : `gid://shopify/Order/${payload.id}`;
 
     try {
-      await withWebhookDedup(webhookId, topic, shopifyObjectId, () =>
-        opts.handler({ shop, payload, shopifyObjectId, request }),
+      await withWebhookDedup(
+        webhookId,
+        topic,
+        shopifyObjectId,
+        () => opts.handler({ shop, payload, shopifyObjectId, request }),
+        payload,
       );
       logger.info("Webhook processed", { topic, shopifyObjectId });
       return new Response();
@@ -72,6 +77,10 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
  * Webhook deduplication wrapper. Ensures each Shopify webhook event
  * is processed exactly once, even if Shopify retries delivery.
  *
+ * `rawPayload` is persisted before the handler runs, so a handler that corrupts
+ * an order can be replayed from exactly what Shopify sent. It carries customer
+ * PII — see the schema comment on WebhookEvent.rawPayload.
+ *
  * Returns the handler result, or null if the event was already processed.
  */
 export async function withWebhookDedup<T>(
@@ -79,6 +88,7 @@ export async function withWebhookDedup<T>(
   topic: string,
   shopifyObjectId: string,
   handler: () => Promise<T>,
+  rawPayload?: unknown,
 ): Promise<T | null> {
   // Check for existing event
   const existing = await prisma.webhookEvent.findUnique({
@@ -110,13 +120,15 @@ export async function withWebhookDedup<T>(
     }
   }
 
-  // Create the event record as "processing"
+  // Create the event record as "processing". The payload is written here, before
+  // the handler runs, so it survives a handler that throws.
   const event = await prisma.webhookEvent.create({
     data: {
       shopifyEventId,
       topic,
       shopifyObjectId,
       status: "processing",
+      ...(rawPayload === undefined ? {} : { rawPayload: rawPayload as Prisma.InputJsonValue }),
     },
   });
 

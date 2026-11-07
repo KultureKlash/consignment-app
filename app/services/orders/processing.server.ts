@@ -7,6 +7,15 @@ import { calculateFee } from "~/lib/fee-calc";
 import { sendItemSoldEmail } from "~/services/email";
 import { logger } from "~/lib/system";
 
+/** What Shopify charged the customer. Bookkeeping only — never feeds a credit. */
+export type ShopifyOrderTotals = {
+  subtotal: number;
+  discounts: number;
+  tax: number;
+  shipping: number;
+  total: number;
+};
+
 /** A Shopify line item with no local Variant row. Recorded on the Order. */
 export type UnmappedLineItem = {
   shopifyVariantId: string;
@@ -40,6 +49,7 @@ export async function processOrder({
   orderNumber,
   lineItems,
   financialStatus,
+  shopifyTotals,
 }: {
   admin: AdminApiContext;
   shopifyOrderId: string;
@@ -50,6 +60,12 @@ export async function processOrder({
     price: number;
   }>;
   financialStatus?: string;
+  /**
+   * What Shopify charged the customer. Stored for reconciliation only — never
+   * used to compute a consignor credit. Consignors are paid on their listing
+   * price and the store absorbs discounts (see CLAUDE.md).
+   */
+  shopifyTotals?: ShopifyOrderTotals;
 }) {
   const existing = await prisma.order.findUnique({
     where: { shopifyId: shopifyOrderId },
@@ -81,7 +97,22 @@ export async function processOrder({
 
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
-      data: { shopifyId: shopifyOrderId, orderNumber: orderNumber ?? null, total: 0, status: ORDER_STATUS.OPEN, paymentStatus: ORDER_PAYMENT_STATUS.PENDING },
+      data: {
+        shopifyId: shopifyOrderId,
+        orderNumber: orderNumber ?? null,
+        total: 0,
+        status: ORDER_STATUS.OPEN,
+        paymentStatus: ORDER_PAYMENT_STATUS.PENDING,
+        ...(shopifyTotals
+          ? {
+              shopifySubtotal: shopifyTotals.subtotal,
+              shopifyDiscounts: shopifyTotals.discounts,
+              shopifyTax: shopifyTotals.tax,
+              shopifyShipping: shopifyTotals.shipping,
+              shopifyTotal: shopifyTotals.total,
+            }
+          : {}),
+      },
     });
 
     let orderTotal = 0;

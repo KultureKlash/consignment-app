@@ -53,6 +53,20 @@ Use `LISTING_STATUS`, `ORDER_STATUS`, `PAYOUT_STATUS`, `TRANSACTION_TYPE`, `CONS
 ### Finance
 Use `calculateFee` from `~/lib/finance`. Never inline `price * feeRate`.
 
+### Discounts — the store absorbs them
+Consignors set their price and are credited on **their listing price**, never on
+what the customer actually paid. The store takes only its fee percentage, so any
+order discount comes entirely out of the store's side.
+
+`grossAmount` on a Transaction is therefore the local listing price, not a Shopify
+line amount. Never recompute a consignor's credit from Shopify's discounted line
+total.
+
+Consequence to watch: a discount larger than the fee rate means the store paid out
+more than it collected on that item. Operationally consignment variants are meant
+to be excluded from discounts in Shopify; `scripts/sim/10-reconcile-shopify.ts`
+flags any discount that lands on one anyway.
+
 ### Imports
 Import from the folder, not the file:
 ```typescript

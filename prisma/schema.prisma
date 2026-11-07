@@ -150,6 +150,17 @@ model Order {
   // [{ shopifyVariantId, quantity, price, reason }]
   unmappedLineItems Json?
 
+  // What Shopify says the customer was charged. Bookkeeping only — these never
+  // feed a consignor credit (see the discount rule in CLAUDE.md). `total` above
+  // stays the sum of allocated listing prices in every code path, so the two are
+  // never interchangeable: `total` is what we owe consignors against, these are
+  // what the customer paid.
+  shopifySubtotal  Float?  // line items after line-level discounts, pre-tax, pre-shipping
+  shopifyDiscounts Float?  // total discount applied to the order
+  shopifyTax       Float?
+  shopifyShipping  Float?
+  shopifyTotal     Float?  // grand total charged, incl. tax + shipping
+
   items     OrderItem[]
 
   createdAt DateTime @default(now())
@@ -208,6 +219,15 @@ model WebhookEvent {
   error           String?
   processedAt     DateTime?
   createdAt       DateTime  @default(now())
+
+  // Exactly what Shopify sent, stored before the handler runs. Lets a corrupted
+  // order be replayed from source, and lets the reconciler compare the ledger
+  // against Shopify's own numbers without an Admin API call per order.
+  //
+  // CONTAINS CUSTOMER PII (name, email, shipping address, phone). It is retained
+  // only as long as the WebhookEvent row; prune it on the same schedule — see the
+  // cleanup route. Do not surface it in the portal or any consignor-facing view.
+  rawPayload      Json?
 
   @@index([topic, status, createdAt])
 }
