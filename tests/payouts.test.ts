@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createPayout, markInvoiced, markPaid, cancelPayout, getPayoutsPageData } from "~/services/admin";
+import { findOverpaidConsignors } from "~/services/orders";
 
 async function setupVariant() {
   const product = await prisma.product.create({
@@ -404,8 +405,109 @@ describe("payouts.server — getPayoutsPageData", () => {
 
     expect(data.unpaidByConsignor).toHaveLength(0);
     expect(data.payouts).toHaveLength(0);
-    expect(data.stats.totalOutstanding).toBe(0);
+    expect(money(data.stats.totalOutstanding)).toBe(0);
     expect(data.stats.totalPending).toBe(0);
     expect(data.stats.totalPaid).toBe(0);
+  });
+});
+
+describe("balance.server — findOverpaidConsignors", () => {
+  it("returns nothing when payouts never exceed net earned", async () => {
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+    const { transaction } = await createSoldItem(consignor.id, variant.id, 400);
+
+    const payout = await createPayout({ consignorId: consignor.id, transactionIds: [transaction.id] });
+    await markPaid(payout.id);
+
+    expect(await findOverpaidConsignors()).toEqual([]);
+  });
+
+  it("flags a consignor whose paid payouts exceed net earned", async () => {
+    const consignor = await createTestConsignor({ name: "Overpaid Person" });
+    const { variant } = await setupVariant();
+    const { transaction, orderItem } = await createSoldItem(consignor.id, variant.id, 400);
+
+    const payout = await createPayout({ consignorId: consignor.id, transactionIds: [transaction.id] });
+    await markPaid(payout.id);
+
+    // A refund after the payout that writes a clawback instead of reassigning
+    // drops net below what was already paid.
+    await prisma.transaction.create({
+      data: {
+        consignorId: consignor.id,
+        orderItemId: orderItem.id,
+        type: "refund",
+        salePrice: 400,
+        feeRate: consignor.feeRate,
+        grossAmount: -400,
+        feeAmount: -(400 * consignor.feeRate),
+        consignorAmount: -(400 * (1 - consignor.feeRate)),
+        amount: -(400 * (1 - consignor.feeRate)),
+      },
+    });
+
+    const overpaid = await findOverpaidConsignors();
+    expect(overpaid).toHaveLength(1);
+    expect(overpaid[0].name).toBe("Overpaid Person");
+    expect(money(overpaid[0].net)).toBe(0);
+    expect(money(overpaid[0].paid)).toBe(340); // 400 * 0.85
+    expect(money(overpaid[0].overage)).toBe(340);
+  });
+
+  it("ignores payouts that are not yet paid", async () => {
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+    const { transaction, orderItem } = await createSoldItem(consignor.id, variant.id, 400);
+
+    // Pending payout, plus a refund that zeroes net. Nothing has left the bank.
+    await createPayout({ consignorId: consignor.id, transactionIds: [transaction.id] });
+    await prisma.transaction.create({
+      data: {
+        consignorId: consignor.id,
+        orderItemId: orderItem.id,
+        type: "refund",
+        salePrice: 400,
+        feeRate: consignor.feeRate,
+        grossAmount: -400,
+        feeAmount: -(400 * consignor.feeRate),
+        consignorAmount: -(400 * (1 - consignor.feeRate)),
+        amount: -(400 * (1 - consignor.feeRate)),
+      },
+    });
+
+    expect(await findOverpaidConsignors()).toEqual([]);
+  });
+
+  it("does not flag a consignor whose payout settled sales from before a given batch", async () => {
+    // Regression guard for the 09-stress invariant bug: one payout covering both
+    // an older sale and a newer one is correct, and must not look like overpayment
+    // just because a caller only knows about the newer sale.
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+    const older = await createSoldItem(consignor.id, variant.id, 450);
+    const newer = await createSoldItem(consignor.id, variant.id, 450);
+
+    const payout = await createPayout({
+      consignorId: consignor.id,
+      transactionIds: [older.transaction.id, newer.transaction.id],
+    });
+    await markPaid(payout.id);
+
+    expect(await findOverpaidConsignors()).toEqual([]);
+  });
+
+  it("respects the tolerance argument", async () => {
+    const consignor = await createTestConsignor();
+    const { variant } = await setupVariant();
+    const { transaction } = await createSoldItem(consignor.id, variant.id, 400);
+
+    const payout = await createPayout({ consignorId: consignor.id, transactionIds: [transaction.id] });
+    await markPaid(payout.id);
+    // Nudge the payout a cent above net — inside default tolerance, outside a tight one.
+    await prisma.payout.update({ where: { id: payout.id }, data: { amount: 340.01 } });
+
+    expect(await findOverpaidConsignors()).toEqual([]);
+    expect(await findOverpaidConsignors({ tolerance: 0.001 })).toHaveLength(1);
   });
 });

@@ -223,9 +223,15 @@ Customer order, linked to Shopify by `shopifyId`.
 |-------|------|-------|
 | id | String @id @default(cuid()) | |
 | shopifyId | String? @unique | Shopify order GID |
-| total | Float | Sum of allocated listing prices |
+| total | Float | Sum of allocated listing prices (excludes unmapped line items) |
 | status | String @default("open") | `open`, `refunded`, `cancelled` |
 | paymentStatus | String @default("pending") | `pending`, `paid`, `refunded`, `voided` |
+| unmappedLineItems | Json? | Shopify line items with no local Variant — `[{ shopifyVariantId, quantity, price, reason }]` |
+| shopifySubtotal | Float? | Shopify line items after line-level discounts, pre-tax, pre-shipping |
+| shopifyDiscounts | Float? | Total discount Shopify applied to the order |
+| shopifyTax | Float? | Reconciliation only — never feeds a credit |
+| shopifyShipping | Float? | Reconciliation only — never feeds a credit |
+| shopifyTotal | Float? | Grand total charged, incl. tax + shipping |
 | createdAt | DateTime | |
 
 **Relations:** items[] (OrderItem)
@@ -289,6 +295,7 @@ Ensures each Shopify webhook is processed exactly once (idempotency).
 | status | String @default("processing") | `processing`, `completed`, `failed` |
 | error | String? | Error message if failed |
 | processedAt | DateTime? | When processing completed |
+| rawPayload | Json? | Exactly what Shopify sent, written before the handler runs. Enables replay from source and lets the reconciler read Shopify's numbers without an API call. **Contains customer PII** — prune with the row |
 | createdAt | DateTime | |
 
 ---
@@ -395,6 +402,44 @@ ORDER BY price DESC, createdAt DESC
 
 All mutations happen inside `prisma.$transaction()`. Inventory sync happens after the transaction commits.
 
+**Redelivery resume (processOrder):** because `syncInventory()` and `creditOrder()` run
+*after* the allocation transaction commits, a failure in either leaves the order created
+while Shopify still shows stock and the consignor is uncredited. On redelivery
+`processOrder` therefore re-runs both steps for the existing order instead of returning
+early. Both are safe to repeat: `syncInventory` sets an absolute quantity derived from
+the DB, and `creditOrder` no-ops once `paymentStatus` is `paid`.
+
+**Discounts — the store absorbs them (business rule):** consignors set their price and
+are credited on **their listing price**, never on what the customer actually paid. The
+store takes only its fee percentage, so an order discount comes entirely out of the
+store's side. `Transaction.grossAmount` is therefore the local listing price, which is
+the pre-discount Shopify line price — never a discounted line total.
+
+Consequence: a discount larger than the fee rate means the store paid out more than it
+collected on that item. Operationally, consignment variants are meant to be excluded
+from discounts in Shopify; `scripts/sim/10-reconcile-shopify.ts` flags any discount that
+lands on one anyway, and separately flags any that exceeded the fee.
+
+Shopify's own figures are recorded on the `Order` row (`shopifySubtotal`,
+`shopifyDiscounts`, `shopifyTax`, `shopifyShipping`, `shopifyTotal`) for reconciliation
+only. They never feed a consignor credit. `Order.total` stays the sum of allocated
+listing prices in **every** code path — it previously meant Shopify's grand total in
+`prisma/seed-import.ts` and the listing sum in the webhook path, so any report summing
+the column mixed units.
+
+**Unmapped line items:** a Shopify line item with no local `Variant` (gift card, product
+created outside this app, deleted variant) is skipped and recorded on
+`Order.unmappedLineItems` as `[{ shopifyVariantId, quantity, price, reason }]`, then shown
+as a warning banner on the admin order detail page. It used to throw, which rolled back
+the whole order transaction — so a cart mixing a consignment item with any untracked
+product produced no `Order` row at all and its consignment items were never sold or
+credited. Unmapped items are excluded from `Order.total`, consignor balances, and
+inventory sync.
+
+Note: insufficient inventory still throws and aborts the order. That is deliberate — it
+means Shopify oversold relative to our listings, and the 500 + redelivery gives the
+inventory a chance to be restored. It is not the same case as an untracked product.
+
 ### services/shopify/products.server.ts
 **Purpose:** Sync products and variants to Shopify Admin API.
 
@@ -447,6 +492,114 @@ Uses process-level in-memory cache. Caches null results to avoid repeated lookup
 | None | — | Create record, run handler |
 
 On success → status = `completed`. On error → status = `failed` + error message stored.
+
+**`createWebhookHandler(opts)` response contract:**
+
+| Outcome | HTTP | Shopify behavior |
+|---------|------|------------------|
+| Handler succeeded | 200 | Done |
+| Event already `completed` | 200 | Done (deduped) |
+| Event still `processing` (< 5 min) | 200 | Done (another worker owns it) |
+| Handler threw | **500** | Redelivers; the `failed` row is deleted on arrival so the handler re-runs |
+
+The error path **must** return 500. It previously returned 200, which told Shopify the
+event had succeeded — and since nothing in the system replays `WebhookEvent` rows with
+status `failed`, any transient Shopify or database error became permanent silent data
+loss. The `failed → retry` row in the table above was unreachable in production because
+no redelivery ever arrived.
+
+Known remaining gap: a worker that crashes mid-handler leaves the row `processing`, and
+we already returned 200, so no redelivery comes. It self-heals only if another delivery
+arrives after the 5-minute stale window.
+
+---
+
+## PII retention — WebhookEvent.rawPayload
+
+`rawPayload` is the only place this app stores storefront-customer PII: an order
+payload carries the customer's name, email, phone and shipping address. The row
+around it holds no PII (ids, topic, status) and is what dedup and audit depend on.
+
+**Retention window: 90 days.** Long enough to replay a corrupted order and to
+reconcile a closed quarter; short enough to be a defensible retention period.
+Retention nulls the payload and **keeps the row**.
+
+| Trigger | Effect |
+|---|---|
+| Daily `/cron/retention` | Nulls `rawPayload` where `createdAt` is older than 90 days |
+| `customers/redact` | Nulls it for the named orders, plus any payload whose embedded `customer.id` matches |
+| `shop/redact` | Nulls every stored payload |
+
+### Two windows, two different controls
+
+`WebhookEvent` has a second, longer window, and the two are easy to confuse:
+
+| Window | Mechanism | What happens | Purpose |
+|---|---|---|---|
+| **90 days** | `/cron/retention`, daily and automatic | `rawPayload` nulled, row kept | PII retention |
+| **365 days** | `/app/cleanup`, manual and admin-authenticated | The row itself deleted | Audit horizon |
+
+Only the 90-day job is a privacy control, and only it runs on a schedule. The 365-day
+delete exists so `WebhookEvent` does not grow forever; by the time it fires, the payload
+has been redacted for nine months.
+
+The row delete was 30 days until it was raised to 365. At 30 days it deleted rows before
+the 90-day redaction could ever apply to them, which made the retention job look
+effective while actually doing nothing, and discarded the audit trail a year early.
+
+`/cron/retention` has no Shopify session to authenticate against, so it is guarded
+by a `CRON_SECRET` bearer token compared with `timingSafeEqual`, and returns **404**
+on a bad secret so it is not discoverable by probing. `CRON_SECRET` is required in
+production — without it the route 404s and retention silently never happens, so
+`validateEnv()` fails the boot instead. Scheduling is in `docs/DEPLOY-FLY.md`.
+
+Rules this depends on:
+- No portal service, route, or component may reference `rawPayload` or query
+  `WebhookEvent` at all. `tests/pii-retention.test.ts` asserts both by scanning the
+  portal surface, and keeps an allowlist of the files permitted to touch it.
+- The privacy-compliance handlers pass `storePayload: false`, because their payloads
+  name the very customer being erased — storing them would manufacture the PII the
+  request exists to remove.
+
+### Mandatory privacy-compliance webhooks
+
+Declared under `[webhooks.privacy_compliance]` in `shopify.app.toml`. Shopify requires
+all three for any app that can read customer data.
+
+| Topic | Route | Behavior |
+|---|---|---|
+| `customers/data_request` | `webhooks.customers.data_request.tsx` | Logs the request and how many stored payloads are held. Shopify gives the **merchant** 30 days to deliver the data; the app cannot email it |
+| `customers/redact` | `webhooks.customers.redact.tsx` | Redacts that customer's payloads |
+| `shop/redact` | `webhooks.shop.redact.tsx` | Redacts all payloads 48h after uninstall |
+
+Scope note on `shop/redact`: it clears customer PII only. Consignors, listings, orders,
+transactions and payouts are deliberately retained — that is the store's financial
+record, and deleting it on uninstall would destroy payout history the merchant may
+still owe against. Erasing it is a business decision with accounting consequences, not
+something a webhook should do silently.
+
+---
+
+## Error reporting
+
+`logger.error` sends the **original Error** to `Sentry.captureException`, so the stack
+survives and Sentry groups by it. It previously called `captureMessage` with a constant
+log line, which collapsed every unrelated failure sharing that line into one issue and
+carried no stack — and every call site passed `err.message`, destroying the stack before
+Sentry could see it. Pass the Error itself:
+
+```typescript
+logger.error("Webhook processing failed", { topic, shop, shopifyEventId, orderId, error });
+```
+
+These meta keys are promoted to searchable Sentry **tags**: `topic`, `shop`,
+`shopifyEventId`, `orderId`, `consignorId`. Everything else becomes a non-searchable
+extra. `captureMessage` is now only the fallback for conditions with no Error (Shopify
+`userErrors`, for instance).
+
+`logger.error` returns a promise. Await it on paths about to return a response —
+the webhook error path does, then calls `flushSentry()`, because a fire-and-forget
+capture can be lost when the response is flushed and the request torn down.
 
 ---
 

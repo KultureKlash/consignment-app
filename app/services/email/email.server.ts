@@ -23,7 +23,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
 
   if (error) {
-    logger.error("Email send failed", { to, subject, error: String(error) });
+    logger.error("Email send failed", { to, subject, error: error });
     throw new Error("Failed to send email");
   }
 }
@@ -43,7 +43,7 @@ async function sendIfEnabled(
   try {
     await sendEmail(consignor.email, subject, html);
   } catch (err) {
-    logger.error("Email delivery failed", { to: consignor.email, subject, error: err instanceof Error ? err.message : String(err) });
+    logger.error("Email delivery failed", { to: consignor.email, subject, error: err });
   }
 }
 
@@ -136,7 +136,7 @@ export async function sendItemSoldEmail(
       `,
     }));
   } catch (err) {
-    logger.error("Email delivery failed", { to: consignor.email, subject: "Item sold", error: err instanceof Error ? err.message : String(err) });
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Item sold", error: err });
   }
 }
 
@@ -187,7 +187,7 @@ export async function sendPayoutPaidEmail(
       `,
     }));
   } catch (err) {
-    logger.error("Email delivery failed", { to: consignor.email, subject: "Payment sent", error: err instanceof Error ? err.message : String(err) });
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Payment sent", error: err });
   }
 }
 
@@ -381,6 +381,6 @@ export async function sendAccountSuspendedEmail(
       `,
     }));
   } catch (err) {
-    logger.error("Email delivery failed", { to: consignor.email, subject: "Account suspended", error: err instanceof Error ? err.message : String(err) });
+    logger.error("Email delivery failed", { to: consignor.email, subject: "Account suspended", error: err });
   }
 }

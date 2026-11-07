@@ -223,7 +223,7 @@ app/
 prisma/
   schema.prisma                  — 14 models (Session, Consignor, Product, Variant, Listing, Order, OrderItem, Transaction, Payout, PayoutItem, WebhookEvent, ReassignmentLog, OtpCode, StoreSection)
 
-tests/                           — 350+ Vitest tests
+tests/                           — 514 Vitest tests
 docs/                            — Architecture, features, standards, checklists
 ```
 

@@ -13,7 +13,7 @@ async function main() {
         p.transaction.aggregate({ where: { consignorId: alice.id }, _sum: { amount: true } }),
         p.payout.aggregate({ where: { consignorId: alice.id, status: "paid" }, _sum: { amount: true } }),
       ]);
-      return (txAgg._sum.amount ?? 0) - (payoutAgg._sum.amount ?? 0);
+      return Number(txAgg._sum.amount ?? 0) - Number(payoutAgg._sum.amount ?? 0);
     })(),
     p.listing.count({ where: { consignorId: alice.id, status: "active" } }),
     p.listing.count({ where: { consignorId: alice.id, status: "sold" } }),

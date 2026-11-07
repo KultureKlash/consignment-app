@@ -47,7 +47,7 @@ async function main() {
     select: { id: true, amount: true, salePrice: true, orderItem: { select: { listing: { select: { variant: { select: { size: true, product: { select: { title: true } } } } } } } } },
   });
 
-  const total = txns.reduce((s, t) => s + t.amount, 0);
+  const total = txns.reduce((s, t) => s + t.amount.toNumber(), 0);
 
   console.log(`Consignor: ${consignor.name} <${consignor.email}> (tax=${consignor.taxStatus})`);
   console.log(`Unpaid sale transactions: ${txns.length}`);
@@ -78,7 +78,7 @@ async function main() {
 
   console.log(`\n=== RESULT (expected vs actual) ===\n`);
   const rows: Array<[string, string, string, boolean]> = [
-    ["Payout amount", `$${total.toFixed(2)}`, `$${final.amount.toFixed(2)}`, Math.abs(final.amount - total) < 0.01],
+    ["Payout amount", `$${total.toFixed(2)}`, `$${final.amount.toFixed(2)}`, Math.abs(final.amount.toNumber() - total) < 0.01],
     ["Payout status", "paid", final.status, final.status === "paid"],
     ["Items bundled", `${txns.length}`, `${final.items.length}`, final.items.length === txns.length],
   ];

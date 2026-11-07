@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
+import type { Prisma } from "@prisma/client";
 import prisma from "~/db.server";
-import { logger } from "~/lib/system";
+import { logger, flushSentry } from "~/lib/system";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -16,6 +17,14 @@ interface WebhookHandlerOptions {
    * Defaults to `gid://shopify/Order/${payload.id}`.
    */
   getObjectId?: (payload: Record<string, any>) => string;
+  /**
+   * Persist the raw payload on the WebhookEvent row. Default true.
+   *
+   * Set false for the privacy-compliance topics: their payloads name the very
+   * customer whose data we are being told to erase, so storing them would
+   * manufacture the PII the request exists to remove.
+   */
+  storePayload?: boolean;
   /** The actual business logic. Receives everything it might need. */
   handler: (ctx: {
     shop: string;
@@ -45,21 +54,45 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
       : `gid://shopify/Order/${payload.id}`;
 
     try {
-      await withWebhookDedup(webhookId, topic, shopifyObjectId, () =>
-        opts.handler({ shop, payload, shopifyObjectId, request }),
+      await withWebhookDedup(
+        webhookId,
+        topic,
+        shopifyObjectId,
+        () => opts.handler({ shop, payload, shopifyObjectId, request }),
+        opts.storePayload === false ? undefined : payload,
       );
       logger.info("Webhook processed", { topic, shopifyObjectId });
+      return new Response();
     } catch (error) {
-      logger.error("Webhook processing failed", { topic, shopifyObjectId, error: error instanceof Error ? error.message : String(error) });
+      // 500 so Shopify redelivers. withWebhookDedup has already marked this
+      // event "failed", and its failed branch deletes the row on redelivery,
+      // so the retry re-runs the handler instead of being deduped away.
+      // Swallowing this as a 200 made every transient Shopify or database
+      // error permanent — nothing else in the system replays a failed event.
+      // The Error itself, not its message — the stack is the point. Tag names
+      // match what Sentry alert rules filter on.
+      await logger.error("Webhook processing failed", {
+        topic,
+        shop,
+        shopifyEventId: webhookId,
+        orderId: shopifyObjectId,
+        error,
+      });
+      // We are about to return, so the request can be torn down before a
+      // fire-and-forget capture reaches Sentry.
+      await flushSentry();
+      return new Response("Webhook processing failed", { status: 500 });
     }
-
-    return new Response();
   };
 }
 
 /**
  * Webhook deduplication wrapper. Ensures each Shopify webhook event
  * is processed exactly once, even if Shopify retries delivery.
+ *
+ * `rawPayload` is persisted before the handler runs, so a handler that corrupts
+ * an order can be replayed from exactly what Shopify sent. It carries customer
+ * PII — see the schema comment on WebhookEvent.rawPayload.
  *
  * Returns the handler result, or null if the event was already processed.
  */
@@ -68,6 +101,7 @@ export async function withWebhookDedup<T>(
   topic: string,
   shopifyObjectId: string,
   handler: () => Promise<T>,
+  rawPayload?: unknown,
 ): Promise<T | null> {
   // Check for existing event
   const existing = await prisma.webhookEvent.findUnique({
@@ -99,13 +133,15 @@ export async function withWebhookDedup<T>(
     }
   }
 
-  // Create the event record as "processing"
+  // Create the event record as "processing". The payload is written here, before
+  // the handler runs, so it survives a handler that throws.
   const event = await prisma.webhookEvent.create({
     data: {
       shopifyEventId,
       topic,
       shopifyObjectId,
       status: "processing",
+      ...(rawPayload === undefined ? {} : { rawPayload: rawPayload as Prisma.InputJsonValue }),
     },
   });
 

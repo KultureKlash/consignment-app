@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { createMockAdmin } from "./helpers/mock-admin";
 import { processOrder, cancelOrder, refundOrder, getConsignorBalance, creditOrder } from "~/services/orders";
 import { getOrderDetail } from "~/services/orders";
@@ -55,7 +55,7 @@ describe("orders.server — processOrder", () => {
       lineItems: [{ shopifyVariantId: variant.shopifyVariantId!, quantity: 2, price: 350 }],
     });
 
-    expect(order.total).toBe(700); // 350 * 2
+    expect(money(order.total)).toBe(700); // 350 * 2
     expect(order.status).toBe("open");
 
     // 2 listings should be pending_sale, 3 should remain active
@@ -69,7 +69,7 @@ describe("orders.server — processOrder", () => {
 
     // 2 order items (1 per listing)
     expect(order.items).toHaveLength(2);
-    expect(order.items.every((i) => i.price === 350)).toBe(true);
+    expect(order.items.every((i) => i.price.toNumber() === 350)).toBe(true);
   });
 
   it("allocates lowest price first across multiple listings", async () => {
@@ -88,7 +88,7 @@ describe("orders.server — processOrder", () => {
     });
 
     // Should take the $340 one first, then 1 of the $350 ones
-    expect(order.total).toBe(690); // 340 + 350
+    expect(money(order.total)).toBe(690); // 340 + 350
     expect(order.items).toHaveLength(2);
 
     // Cheap listing should be pending_sale
@@ -173,12 +173,12 @@ describe("orders.server — processOrder", () => {
     expect(transactions.every((t) => t.type === "sale")).toBe(true);
 
     // Each transaction: 200 - (200 * 0.15) = 170
-    expect(transactions.every((t) => t.amount === 170)).toBe(true);
-    expect(transactions.every((t) => t.salePrice === 200)).toBe(true);
+    expect(transactions.every((t) => t.amount.toNumber() === 170)).toBe(true);
+    expect(transactions.every((t) => t.salePrice.toNumber() === 200)).toBe(true);
     expect(transactions.every((t) => t.feeRate === 0.15)).toBe(true);
-    expect(transactions.every((t) => t.grossAmount === 200)).toBe(true);
-    expect(transactions.every((t) => t.feeAmount === 30)).toBe(true);
-    expect(transactions.every((t) => t.consignorAmount === 170)).toBe(true);
+    expect(transactions.every((t) => t.grossAmount.toNumber() === 200)).toBe(true);
+    expect(transactions.every((t) => t.feeAmount.toNumber() === 30)).toBe(true);
+    expect(transactions.every((t) => t.consignorAmount.toNumber() === 170)).toBe(true);
   });
 
   it("handles multiple line items (different variants)", async () => {
@@ -211,7 +211,7 @@ describe("orders.server — processOrder", () => {
       ],
     });
 
-    expect(order.total).toBe(800); // 350 + 450
+    expect(money(order.total)).toBe(800); // 350 + 450
     expect(order.items).toHaveLength(2);
   });
 
@@ -256,9 +256,9 @@ describe("orders.server — processOrder", () => {
     const txs = await prisma.transaction.findMany({ where: { type: "sale" } });
     expect(txs).toHaveLength(1);
     expect(txs[0].feeRate).toBe(0.15);
-    expect(txs[0].feeAmount).toBe(45); // 300 * 0.15
-    expect(txs[0].consignorAmount).toBe(255); // 300 - 45
-    expect(txs[0].amount).toBe(255);
+    expect(money(txs[0].feeAmount)).toBe(45); // 300 * 0.15
+    expect(money(txs[0].consignorAmount)).toBe(255); // 300 - 45
+    expect(money(txs[0].amount)).toBe(255);
   });
 
   it("idempotent: duplicate shopifyOrderId returns existing order", async () => {
@@ -366,7 +366,7 @@ describe("orders.server — cancelOrder", () => {
     // Per-item: 2 sale + 2 refund = 4 transactions
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(2);
-    expect(refundTxs.every((t) => t.amount === -170)).toBe(true); // -(200 * 0.85)
+    expect(refundTxs.every((t) => t.amount.toNumber() === -170)).toBe(true); // -(200 * 0.85)
 
     // No void transactions
     const voidTxs = await prisma.transaction.findMany({ where: { type: "void" } });
@@ -374,7 +374,7 @@ describe("orders.server — cancelOrder", () => {
 
     // Net should be zero
     const allTxs = await prisma.transaction.findMany();
-    const net = allTxs.reduce((sum, t) => sum + t.amount, 0);
+    const net = allTxs.reduce((sum, t) => sum + t.amount.toNumber(), 0);
     expect(net).toBe(0);
   });
 
@@ -679,13 +679,13 @@ describe("orders.server — refundOrder", () => {
 
     // consignor1: -(340 * (1 - 0.15)) = -289
     // consignor2: -(350 * (1 - 0.20)) = -280
-    const amounts = refundTxs.map((t) => t.amount).sort((a, b) => a - b);
+    const amounts = refundTxs.map((t) => t.amount.toNumber()).sort((a, b) => a - b);
     expect(amounts[0]).toBe(-289); // consignor1
     expect(amounts[1]).toBe(-280); // consignor2
 
     // Net should be zero
     const allTxs = await prisma.transaction.findMany();
-    const net = allTxs.reduce((sum, t) => sum + t.amount, 0);
+    const net = allTxs.reduce((sum, t) => sum + t.amount.toNumber(), 0);
     expect(Math.abs(net)).toBeLessThan(0.001);
   });
 
@@ -769,13 +769,13 @@ describe("orders.server — refundOrder", () => {
     // Refund transaction: -(350 * 0.85) = -297.5
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(1);
-    expect(refundTxs[0].amount).toBe(-297.5);
+    expect(money(refundTxs[0].amount)).toBe(-297.5);
 
     // Order should still be open (2 items not refunded)
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/26" } });
     expect(order?.status).toBe("open");
     // Order total should reflect only sold items: 350 * 2 = 700
-    expect(order?.total).toBe(700);
+    expect(money(order?.total)).toBe(700);
   });
 
   it("order total recalculates to 0 after full refund", async () => {
@@ -793,12 +793,12 @@ describe("orders.server — refundOrder", () => {
     });
 
     let order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-full" } });
-    expect(order?.total).toBe(700);
+    expect(money(order?.total)).toBe(700);
 
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/total-full" });
 
     order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-full" } });
-    expect(order?.total).toBe(0);
+    expect(money(order?.total)).toBe(0);
     expect(order?.status).toBe("refunded");
   });
 
@@ -819,7 +819,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     let order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-partial" } });
-    expect(order?.total).toBe(790); // 340 + 450
+    expect(money(order?.total)).toBe(790); // 340 + 450
 
     // Refund 1 unit — reverse priority takes the $450 item first
     await refundOrder({
@@ -829,7 +829,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-partial" } });
-    expect(order?.total).toBe(340); // only the $340 item remains
+    expect(money(order?.total)).toBe(340); // only the $340 item remains
     expect(order?.status).toBe("open");
   });
 
@@ -849,7 +849,7 @@ describe("orders.server — refundOrder", () => {
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/total-cancel" });
 
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/total-cancel" } });
-    expect(order?.total).toBe(0);
+    expect(money(order?.total)).toBe(0);
     expect(order?.status).toBe("cancelled");
   });
 
@@ -919,7 +919,7 @@ describe("orders.server — refundOrder", () => {
 
     // Net balance should be zero
     const allTxs = await prisma.transaction.findMany();
-    const net = allTxs.reduce((sum, t) => sum + t.amount, 0);
+    const net = allTxs.reduce((sum, t) => sum + t.amount.toNumber(), 0);
     expect(Math.abs(net)).toBeLessThan(0.001);
   });
 
@@ -998,7 +998,7 @@ describe("orders.server — refundOrder", () => {
     // Verify the refund transaction is for the $220 item
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(1);
-    expect(refundTxs[0].salePrice).toBe(220);
+    expect(money(refundTxs[0].salePrice)).toBe(220);
   });
 
   it("reverse priority tiebreak: same price refunds newest listing first", async () => {
@@ -1050,7 +1050,7 @@ describe("orders.server — refundOrder", () => {
 
     // Sale: 3 items × 200 × 0.85 = 510
     let balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(510);
+    expect(money(balance)).toBe(510);
 
     // Refund 1: -170
     await refundOrder({
@@ -1060,7 +1060,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(340); // 510 - 170
+    expect(money(balance)).toBe(340); // 510 - 170
 
     // Refund 1 more: -170
     await refundOrder({
@@ -1070,7 +1070,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(170); // 340 - 170
+    expect(money(balance)).toBe(170); // 340 - 170
 
     // Refund last 1: -170
     await refundOrder({
@@ -1080,7 +1080,7 @@ describe("orders.server — refundOrder", () => {
     });
 
     balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("cancel partially-refunded order: restores only remaining items", async () => {
@@ -1125,7 +1125,7 @@ describe("orders.server — refundOrder", () => {
 
     // Net balance should be zero
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 });
 
@@ -1166,11 +1166,11 @@ describe("orders.server — refundOrder restock handling", () => {
     // Refund transaction should exist
     const refundTxs = await prisma.transaction.findMany({ where: { type: "refund" } });
     expect(refundTxs).toHaveLength(1);
-    expect(refundTxs[0].amount).toBe(-170); // 200 * 0.85
+    expect(money(refundTxs[0].amount)).toBe(-170); // 200 * 0.85
 
     // Balance should be reduced
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(170); // 340 - 170
+    expect(money(balance)).toBe(170); // 340 - 170
   });
 
   it("return refund restores inventory", async () => {
@@ -1357,7 +1357,7 @@ describe("orders.server — getConsignorBalance", () => {
   it("returns 0 with no transactions", async () => {
     const consignor = await createTestConsignor();
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("returns sale amount after order", async () => {
@@ -1376,7 +1376,7 @@ describe("orders.server — getConsignorBalance", () => {
 
     // 2 items × 200 × 0.85 = 340
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(340);
+    expect(money(balance)).toBe(340);
   });
 
   it("returns 0 after order + full refund", async () => {
@@ -1396,7 +1396,7 @@ describe("orders.server — getConsignorBalance", () => {
     await refundOrder({ admin, shopifyOrderId: "gid://shopify/Order/31" });
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("returns partial amount after order + partial refund", async () => {
@@ -1425,7 +1425,7 @@ describe("orders.server — getConsignorBalance", () => {
     });
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(340);
+    expect(money(balance)).toBe(340);
   });
 
   it("subtracts completed payouts from balance", async () => {
@@ -1455,7 +1455,7 @@ describe("orders.server — getConsignorBalance", () => {
     });
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(240); // 340 - 100 (pending $50 not deducted)
+    expect(money(balance)).toBe(240); // 340 - 100 (pending $50 not deducted)
   });
 
   it("returns 0 after order + cancel (not just refund)", async () => {
@@ -1475,7 +1475,7 @@ describe("orders.server — getConsignorBalance", () => {
     await cancelOrder({ admin, shopifyOrderId: "gid://shopify/Order/34" });
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 });
 
@@ -1506,7 +1506,7 @@ describe("orders.server — payment status", () => {
 
     // Balance is $0
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("processOrder with financialStatus paid: creates transactions immediately", async () => {
@@ -1527,7 +1527,7 @@ describe("orders.server — payment status", () => {
     const txs = await prisma.transaction.findMany();
     expect(txs).toHaveLength(2);
     expect(txs.every((t) => t.type === "sale")).toBe(true);
-    expect(txs.every((t) => t.amount === 170)).toBe(true); // 200 * 0.85
+    expect(txs.every((t) => t.amount.toNumber() === 170)).toBe(true); // 200 * 0.85
 
     // Order is paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-2" } });
@@ -1535,7 +1535,7 @@ describe("orders.server — payment status", () => {
 
     // Balance reflects sale
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(340);
+    expect(money(balance)).toBe(340);
   });
 
   it("creditOrder on pending order creates transactions and sets paymentStatus paid", async () => {
@@ -1562,7 +1562,7 @@ describe("orders.server — payment status", () => {
     const txs = await prisma.transaction.findMany();
     expect(txs).toHaveLength(2);
     expect(txs.every((t) => t.type === "sale")).toBe(true);
-    expect(txs.every((t) => t.amount === 170)).toBe(true);
+    expect(txs.every((t) => t.amount.toNumber() === 170)).toBe(true);
 
     // Order is now paid
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-3" } });
@@ -1616,7 +1616,7 @@ describe("orders.server — payment status", () => {
     expect(await prisma.transaction.count()).toBe(0);
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("cancelOrder on paid order creates offsetting refund transactions", async () => {
@@ -1644,11 +1644,11 @@ describe("orders.server — payment status", () => {
 
     const refundTxs = allTxs.filter((t) => t.type === "refund");
     expect(refundTxs).toHaveLength(2);
-    expect(refundTxs.every((t) => t.amount === -170)).toBe(true);
+    expect(refundTxs.every((t) => t.amount.toNumber() === -170)).toBe(true);
 
     // Net balance = 0
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
 
     // paymentStatus should be "refunded"
     const order = await prisma.order.findUnique({ where: { shopifyId: "gid://shopify/Order/ps-6" } });
@@ -1720,7 +1720,7 @@ describe("orders.server — payment status", () => {
 
     // Balance should be $0 — inventory allocated but no payment
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(0);
+    expect(money(balance)).toBe(0);
   });
 
   it("balance reflects only paid orders in mixed scenario", async () => {
@@ -1746,7 +1746,7 @@ describe("orders.server — payment status", () => {
     });
 
     const balance = await getConsignorBalance(consignor.id);
-    expect(balance).toBe(340); // only the paid order
+    expect(money(balance)).toBe(340); // only the paid order
   });
 });
 
@@ -1944,7 +1944,7 @@ describe("orders.server — post-payout refund handling", () => {
     });
     expect(newListings).toHaveLength(1);
     expect(newListings[0].reassignedFromListingId).toBeTruthy();
-    expect(newListings[0].price).toBe(200);
+    expect(money(newListings[0].price)).toBe(200);
   });
 
   it("footwear items are reassigned to Kulture Klash", async () => {
@@ -2014,13 +2014,13 @@ describe("orders.server — post-payout refund handling", () => {
 
     const balanceBefore = await getConsignorBalance(consignor.id);
     // Balance = sale amount - paid payout = 170 - 170 = 0
-    expect(balanceBefore).toBe(0);
+    expect(money(balanceBefore)).toBe(0);
 
     await refundOrder({ admin, shopifyOrderId });
 
     const balanceAfter = await getConsignorBalance(consignor.id);
     // No negative transaction created, so balance stays the same
-    expect(balanceAfter).toBe(0);
+    expect(money(balanceAfter)).toBe(0);
   });
 
   it("normal refund (no paid payout) still creates negative transaction", async () => {
@@ -2064,7 +2064,7 @@ describe("orders.server — post-payout refund handling", () => {
     expect(txs).toHaveLength(2);
     expect(txs[0].type).toBe("sale");
     expect(txs[1].type).toBe("refund");
-    expect(txs[1].amount).toBe(-170); // -200 * 0.85
+    expect(money(txs[1].amount)).toBe(-170); // -200 * 0.85
 
     // Listing restored to active
     const listings = await prisma.listing.findMany({ where: { variantId: variant.id } });

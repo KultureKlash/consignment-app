@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { prisma, createTestConsignor } from "./setup";
+import { prisma, createTestConsignor, money } from "./setup";
 import { getDashboardData, getActivityFeed } from "~/services/admin";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 
@@ -32,13 +32,13 @@ async function createSoldListing(consignorId: string, variantId: string, price: 
 describe("dashboard.server — getDashboardData", () => {
   it("returns zero metrics when database is empty", async () => {
     const data = await getDashboardData();
-    expect(data.totalSales).toBe(0);
+    expect(money(data.totalSales)).toBe(0);
     expect(data.totalOrders).toBe(0);
     expect(data.allOrders).toBe(0);
-    expect(data.consignmentFees).toBe(0);
-    expect(data.storeProfit).toBe(0);
-    expect(data.totalEarnings).toBe(0);
-    expect(data.inventoryValue).toBe(0);
+    expect(money(data.consignmentFees)).toBe(0);
+    expect(money(data.storeProfit)).toBe(0);
+    expect(money(data.totalEarnings)).toBe(0);
+    expect(money(data.inventoryValue)).toBe(0);
     expect(data.submittedCount).toBe(0);
     expect(data.awaitingDropoffCount).toBe(0);
     expect(data.withdrawalRequestCount).toBe(0);

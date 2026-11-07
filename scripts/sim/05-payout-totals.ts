@@ -51,8 +51,8 @@ async function verifyExistingPayouts() {
       where: { consignorId: c.id },
       select: { id: true, type: true, amount: true, payoutItems: { select: { payoutId: true } } },
     });
-    const totalEarned = txns.filter((t) => t.type === "sale").reduce((s, t) => s + t.amount, 0);
-    const totalRefunded = txns.filter((t) => t.type === "refund").reduce((s, t) => s + Math.abs(t.amount), 0);
+    const totalEarned = txns.filter((t) => t.type === "sale").reduce((s, t) => s + t.amount.toNumber(), 0);
+    const totalRefunded = txns.filter((t) => t.type === "refund").reduce((s, t) => s + Math.abs(t.amount.toNumber()), 0);
     const netBalance = totalEarned - totalRefunded;
 
     // Sum of all payouts
@@ -60,9 +60,9 @@ async function verifyExistingPayouts() {
       where: { consignorId: c.id },
       select: { id: true, amount: true, status: true, items: { select: { transactionId: true } } },
     });
-    const paidOut = payouts.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-    const pending = payouts.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
-    const invoiced = payouts.filter((p) => p.status === "invoiced").reduce((s, p) => s + p.amount, 0);
+    const paidOut = payouts.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount.toNumber(), 0);
+    const pending = payouts.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount.toNumber(), 0);
+    const invoiced = payouts.filter((p) => p.status === "invoiced").reduce((s, p) => s + p.amount.toNumber(), 0);
     const allPayoutSum = paidOut + pending + invoiced;
 
     // Every txn covered by a payout
@@ -116,7 +116,7 @@ async function simulateSyntheticPayouts() {
     });
     if (txns.length === 0) continue;
 
-    const expectedSum = txns.reduce((s, t) => s + t.amount, 0);
+    const expectedSum = txns.reduce((s, t) => s + t.amount.toNumber(), 0);
     try {
       const payout = await createPayout({
         consignorId: c.id,
@@ -124,10 +124,10 @@ async function simulateSyntheticPayouts() {
       });
       created.payoutIds.add(payout.id);
       simulated++;
-      if (Math.abs(payout.amount - expectedSum) < 0.01) {
+      if (Math.abs(payout.amount.toNumber() - expectedSum) < 0.01) {
         mathOk++;
       } else {
-        mismatches.push(`  ${c.name}: txn_sum=$${expectedSum.toFixed(2)}, payout.amount=$${payout.amount.toFixed(2)}, diff=$${(payout.amount - expectedSum).toFixed(2)}`);
+        mismatches.push(`  ${c.name}: txn_sum=$${expectedSum.toFixed(2)}, payout.amount=$${payout.amount.toFixed(2)}, diff=$${(payout.amount.toNumber() - expectedSum).toFixed(2)}`);
       }
     } catch (err) {
       mismatches.push(`  ${c.name}: createPayout failed - ${err instanceof Error ? err.message : String(err)}`);

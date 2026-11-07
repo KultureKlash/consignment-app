@@ -5,7 +5,8 @@ import { ensureShopifyProductAndVariant } from "~/services/shopify";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, ORDER_ITEM_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { PAYOUT_STATUS } from "~/lib/payout-statuses";
-import { calculateFee } from "~/lib/fee-calc";
+import { Prisma } from "@prisma/client";
+import { calculateFee, sumMoney, ZERO } from "~/lib/finance";
 
 /**
  * Re-sync Shopify for variants touched by a refund/cancel/reassignment.
@@ -152,7 +153,7 @@ export async function refundOrder({
       const refundableItems = order.items
         .filter((item) => item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE)
         .sort((a, b) =>
-          b.price - a.price ||
+          b.price.comparedTo(a.price) ||
           b.listing.createdAt.getTime() - a.listing.createdAt.getTime()
         );
 
@@ -173,7 +174,7 @@ export async function refundOrder({
               item.listing.variant.shopifyVariantId === refundLine.shopifyVariantId
           )
           .sort((a, b) =>
-            b.price - a.price ||
+            b.price.comparedTo(a.price) ||
             b.listing.createdAt.getTime() - a.listing.createdAt.getTime()
           );
 
@@ -202,9 +203,11 @@ export async function refundOrder({
       where: { orderId: order.id },
     });
     const allRefunded = updatedItems.every((item) => item.status === ORDER_ITEM_STATUS.REFUNDED);
-    const newTotal = updatedItems
-      .filter((item) => item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE)
-      .reduce((sum, item) => sum + item.price, 0);
+    const newTotal = sumMoney(
+      updatedItems
+        .filter((item) => item.status === ORDER_ITEM_STATUS.SOLD || item.status === ORDER_ITEM_STATUS.PENDING_SALE)
+        .map((item) => item.price),
+    );
 
     await tx.order.update({
       where: { id: order.id },
@@ -274,13 +277,13 @@ async function refundItem(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   item: {
     id: string;
-    price: number;
+    price: Prisma.Decimal;
     listingId: string;
     orderId?: string;
     listing: {
       consignorId: string;
       variantId: string;
-      cost?: number | null;
+      cost?: Prisma.Decimal | null;
       consignor: { feeRate: number };
       variant: {
         shopifyVariantId?: string | null;
@@ -290,7 +293,7 @@ async function refundItem(
     transactions: Array<{
       type: string;
       feeRate: number;
-      cost?: number;
+      cost?: Prisma.Decimal;
       payoutItems: Array<{ payout: { status: string } }>;
     }>;
   },
@@ -352,7 +355,7 @@ async function refundItem(
         (t) => t.type === TRANSACTION_TYPE.SALE,
       );
       const rate = saleTx?.feeRate ?? item.listing.consignor.feeRate;
-      const refundCost = saleTx?.cost ?? item.listing.cost ?? 0;
+      const refundCost = saleTx?.cost ?? item.listing.cost ?? ZERO;
       const refundGross = item.price;
       const { feeAmount: refundFee, consignorAmount: refundConsignor } =
         calculateFee(refundGross, rate);
@@ -364,10 +367,12 @@ async function refundItem(
           salePrice: item.price,
           cost: refundCost,
           feeRate: rate,
-          grossAmount: -refundGross,
-          feeAmount: -refundFee,
-          consignorAmount: -refundConsignor,
-          amount: -refundConsignor,
+          // .negated(), not unary minus: `-decimal` coerces through Number and
+          // would silently reintroduce float into the refund leg of the ledger.
+          grossAmount: refundGross.negated(),
+          feeAmount: refundFee.negated(),
+          consignorAmount: refundConsignor.negated(),
+          amount: refundConsignor.negated(),
           type: txType,
         },
       });

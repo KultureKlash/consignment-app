@@ -1,4 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
+import { toPlainMoney } from "~/lib/finance";
 import prisma from "~/db.server";
 import { LISTING_STATUS } from "~/lib/domain";
 import { logger } from "~/lib/system";
@@ -65,7 +66,9 @@ export async function buildProductSummary(productId: string): Promise<ProductSum
       // listings are pre-sorted ASC by orderBy above
       const activePrices = active
         .filter((l) => l.price != null)
-        .map((l) => ({ price: l.price as number, owner: l.consignor.name }));
+        // The metafield is a JSON document Shopify stores and the storefront
+        // renders, so it carries plain numbers. Display boundary.
+        .map((l) => ({ price: l.price!.toNumber(), owner: l.consignor.name }));
       return {
         variantId: v.id,
         size: v.size,
@@ -98,14 +101,14 @@ export async function buildProductSummary(productId: string): Promise<ProductSum
     pendingPickup: allListings.filter((l) => l.status === LISTING_STATUS.PENDING_PICKUP).length,
   };
 
-  return {
+  return toPlainMoney({
     totalActive,
     lowest,
     variants,
     actions,
     product: { title: product.title },
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /**
@@ -164,7 +167,7 @@ export async function syncProductSummaryMetafield({
   } catch (err) {
     logger.error("syncProductSummaryMetafield crashed", {
       productId,
-      error: err instanceof Error ? err.message : String(err),
+      error: err,
     });
   }
 }

@@ -3,8 +3,36 @@ import type { AdminApiContext } from "@shopify/shopify-app-react-router/server";
 import { syncInventory } from "~/services/inventory";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
-import { calculateFee } from "~/lib/fee-calc";
+import { calculateFee, ZERO } from "~/lib/finance";
 import { sendItemSoldEmail } from "~/services/email";
+import { logger } from "~/lib/system";
+
+/** What Shopify charged the customer. Bookkeeping only — never feeds a credit. */
+export type ShopifyOrderTotals = {
+  subtotal: number;
+  discounts: number;
+  tax: number;
+  shipping: number;
+  total: number;
+};
+
+/** A Shopify line item with no local Variant row. Recorded on the Order. */
+export type UnmappedLineItem = {
+  shopifyVariantId: string;
+  quantity: number;
+  price: number;
+  reason: "variant_not_found";
+};
+
+/** Push current DB-derived quantity to Shopify for each variant. */
+async function syncVariants(admin: AdminApiContext, variantIds: Set<string>) {
+  for (const variantId of variantIds) {
+    const variant = await prisma.variant.findUniqueOrThrow({
+      where: { id: variantId },
+    });
+    await syncInventory({ admin, variant });
+  }
+}
 
 /**
  * Process an incoming order — allocate per-item listings to order items.
@@ -21,6 +49,7 @@ export async function processOrder({
   orderNumber,
   lineItems,
   financialStatus,
+  shopifyTotals,
 }: {
   admin: AdminApiContext;
   shopifyOrderId: string;
@@ -31,23 +60,64 @@ export async function processOrder({
     price: number;
   }>;
   financialStatus?: string;
+  /**
+   * What Shopify charged the customer. Stored for reconciliation only — never
+   * used to compute a consignor credit. Consignors are paid on their listing
+   * price and the store absorbs discounts (see CLAUDE.md).
+   */
+  shopifyTotals?: ShopifyOrderTotals;
 }) {
-  // Idempotency: if this order was already processed, return it
   const existing = await prisma.order.findUnique({
     where: { shopifyId: shopifyOrderId },
-    include: { items: true },
+    include: { items: { include: { listing: { select: { variantId: true } } } } },
   });
-  if (existing) return existing;
+
+  if (existing) {
+    // Redelivery. The allocation transaction below is atomic, but syncInventory
+    // and creditOrder run after it commits — if either failed last time, the
+    // order exists while Shopify still shows stock and the consignor is
+    // uncredited. Returning early here stranded that state permanently, so
+    // resume both instead. Safe to repeat: syncInventory sets an absolute
+    // quantity from the DB, and creditOrder no-ops once paymentStatus is paid.
+    await syncVariants(admin, new Set(existing.items.map((i) => i.listing.variantId)));
+
+    if (financialStatus === ORDER_PAYMENT_STATUS.PAID) {
+      await creditOrder({ shopifyOrderId });
+    }
+
+    return prisma.order.findUniqueOrThrow({
+      where: { shopifyId: shopifyOrderId },
+      include: { items: true },
+    });
+  }
 
   // Track which variants were affected for inventory sync after commit
   const affectedVariantIds = new Set<string>();
+  const unmappedLineItems: UnmappedLineItem[] = [];
 
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
-      data: { shopifyId: shopifyOrderId, orderNumber: orderNumber ?? null, total: 0, status: ORDER_STATUS.OPEN, paymentStatus: ORDER_PAYMENT_STATUS.PENDING },
+      data: {
+        shopifyId: shopifyOrderId,
+        orderNumber: orderNumber ?? null,
+        total: 0,
+        status: ORDER_STATUS.OPEN,
+        paymentStatus: ORDER_PAYMENT_STATUS.PENDING,
+        ...(shopifyTotals
+          ? {
+              shopifySubtotal: shopifyTotals.subtotal,
+              shopifyDiscounts: shopifyTotals.discounts,
+              shopifyTax: shopifyTotals.tax,
+              shopifyShipping: shopifyTotals.shipping,
+              shopifyTotal: shopifyTotals.total,
+            }
+          : {}),
+      },
     });
 
-    let orderTotal = 0;
+    // Decimal, not a number: this is summed from numeric(10,2) columns and
+    // written straight back to one.
+    let orderTotal = ZERO;
 
     for (const lineItem of lineItems) {
       const variant = await tx.variant.findUnique({
@@ -55,9 +125,17 @@ export async function processOrder({
       });
 
       if (!variant) {
-        throw new Error(
-          `Variant not found for Shopify ID: ${lineItem.shopifyVariantId}`
-        );
+        // Not a consignment item: a gift card, a product created outside this
+        // app, or a deleted variant. Record it and keep going — aborting threw
+        // away the whole order, so any consignment items in the same cart were
+        // never marked sold and never credited.
+        unmappedLineItems.push({
+          shopifyVariantId: lineItem.shopifyVariantId,
+          quantity: lineItem.quantity,
+          price: lineItem.price,
+          reason: "variant_not_found",
+        });
+        continue;
       }
 
       affectedVariantIds.add(variant.id);
@@ -101,24 +179,30 @@ export async function processOrder({
           },
         });
 
-        orderTotal += listing.price;
+        orderTotal = orderTotal.plus(listing.price);
       }
     }
 
     return tx.order.update({
       where: { id: newOrder.id },
-      data: { total: orderTotal },
+      data: {
+        total: orderTotal,
+        ...(unmappedLineItems.length > 0 ? { unmappedLineItems } : {}),
+      },
       include: { items: true },
     });
   });
 
-  // Sync inventory for all affected variants (after transaction commits)
-  for (const variantId of affectedVariantIds) {
-    const variant = await prisma.variant.findUniqueOrThrow({
-      where: { id: variantId },
+  if (unmappedLineItems.length > 0) {
+    logger.warn("Order has line items with no local variant", {
+      shopifyOrderId,
+      count: unmappedLineItems.length,
+      shopifyVariantIds: unmappedLineItems.map((u) => u.shopifyVariantId),
     });
-    await syncInventory({ admin, variant });
   }
+
+  // Sync inventory for all affected variants (after transaction commits)
+  await syncVariants(admin, affectedVariantIds);
 
   // If payment is already captured, credit the consignor balance immediately
   if (financialStatus === ORDER_PAYMENT_STATUS.PAID) {
@@ -176,7 +260,7 @@ export async function creditOrder({
       const grossAmount = item.price;
       const feeRate = item.listing.consignor.feeRate;
       const { feeAmount, consignorAmount } = calculateFee(grossAmount, feeRate);
-      const listingCost = item.listing.cost ?? 0;
+      const listingCost = item.listing.cost ?? ZERO;
       await tx.transaction.create({
         data: {
           consignorId: item.listing.consignorId,
@@ -197,11 +281,13 @@ export async function creditOrder({
         data: { status: LISTING_STATUS.SOLD },
       });
 
+      // Email bodies are display text, so money becomes a number here. This is
+      // a deliberate, documented boundary: nothing downstream of it writes.
       const soldItem = {
         product: item.listing.variant.product.title,
         size: item.listing.variant.size,
-        salePrice: item.price,
-        payoutAmount: consignorAmount,
+        salePrice: item.price.toNumber(),
+        payoutAmount: consignorAmount.toNumber(),
       };
       const bucket = soldByConsignor.get(item.listing.consignorId);
       if (bucket) {

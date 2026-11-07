@@ -148,7 +148,7 @@ async function main() {
     });
     if (txs.length === 0) continue;
 
-    const amt = Math.round(txs.reduce((s, t) => s + t.consignorAmount, 0) * 100) / 100;
+    const amt = Math.round(txs.reduce((s, t) => s + t.consignorAmount.toNumber(), 0) * 100) / 100;
     const statuses = ["pending", "invoiced", "paid"] as const;
     const status = statuses[poCnt % 3];
 

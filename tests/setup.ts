@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { beforeEach, afterAll } from "vitest";
 
 export const prisma = new PrismaClient();
@@ -37,4 +37,19 @@ export async function createTestConsignor(overrides: { name?: string; email?: st
       storeOwned: overrides.storeOwned ?? false,
     },
   });
+}
+
+/**
+ * Decimal -> number for assertions.
+ *
+ * Money columns are numeric(10,2), so Prisma hands back Prisma.Decimal.
+ * `expect(decimal).toBe(30)` fails on Object.is even when the value is right,
+ * and `toBe` takes `unknown` so TypeScript cannot warn about it.
+ *
+ * Preserves null and undefined rather than coercing them to 0 the way Number()
+ * would, so an assertion can still tell "no price" from "zero price".
+ */
+export function money(value: Prisma.Decimal | number | null | undefined): number | null | undefined {
+  if (value === null || value === undefined) return value;
+  return Prisma.Decimal.isDecimal(value) ? value.toNumber() : value;
 }

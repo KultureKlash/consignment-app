@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { toPlainMoney } from "~/lib/finance";
 import { getConsignorBalance, getConsignorPaidTotal } from "~/services/orders";
 import { buildNotifications } from "./notifications.server";
 import { LISTING_STATUS } from "~/lib/listing-statuses";
@@ -195,17 +196,24 @@ export async function getConsignorDashboard(consignorId: string, opts: { storeOw
         }),
   ]);
 
-  return buildDashboardResponse({
-    storeOwned, paidTotal, activeCount, soldCount, pendingPayouts,
-    awaitingInvoiceAgg, invoiceSentAgg, unbatchedAgg,
-    recentSales, earningsTransactions, listingsByStatus, recentPayouts,
-    storeOwnedProfitAgg, inventoryValueAgg, totalSalesRevenueAgg,
-  });
+  // Display boundary on the INPUTS, not the output: everything below this line
+  // is chart and summary shaping, which the coding standards allow to be plain
+  // numbers because none of it drives a write, a comparison or a payout. Putting
+  // the conversion here keeps buildDashboardResponse entirely number-based.
+  // See app/lib/finance/serialize.ts.
+  return buildDashboardResponseRaw(
+    toPlainMoney({
+      storeOwned, paidTotal, activeCount, soldCount, pendingPayouts,
+      awaitingInvoiceAgg, invoiceSentAgg, unbatchedAgg,
+      recentSales, earningsTransactions, listingsByStatus, recentPayouts,
+      storeOwnedProfitAgg, inventoryValueAgg, totalSalesRevenueAgg,
+    }),
+  );
 }
 
 // ── Transform raw query results into dashboard response ──
 
-function buildDashboardResponse({
+function buildDashboardResponseRaw({
   storeOwned, paidTotal, activeCount, soldCount, pendingPayouts,
   awaitingInvoiceAgg, invoiceSentAgg, unbatchedAgg,
   recentSales, earningsTransactions, listingsByStatus, recentPayouts,

@@ -1,5 +1,7 @@
+import { Prisma } from "@prisma/client";
 import prisma from "~/db.server";
 import { ORDER_STATUS, TRANSACTION_TYPE } from "~/lib/domain";
+import { toPlainMoney, ZERO } from "~/lib/finance";
 
 export async function getOrderDetail(id: string) {
   const order = await prisma.order.findUnique({
@@ -21,22 +23,23 @@ export async function getOrderDetail(id: string) {
 
   if (!order) throw new Error("Order not found");
 
-  // Compute financial summary from transactions
-  let totalFees = 0;
-  let storeOwnedProfit = 0;
-  let totalConsignorPayout = 0;
+  // Compute financial summary from transactions. Decimal while summing; the
+  // whole payload crosses the display boundary via toPlainMoney at the return.
+  let totalFees: Prisma.Decimal = ZERO;
+  let storeOwnedProfit: Prisma.Decimal = ZERO;
+  let totalConsignorPayout: Prisma.Decimal = ZERO;
   const refundedCount = order.items.filter((i) => i.status === "refunded").length;
 
   for (const item of order.items) {
     for (const tx of item.transactions) {
-      totalFees += tx.feeAmount;
+      totalFees = totalFees.plus(tx.feeAmount);
       if (item.listing.consignor.storeOwned) {
         // Store-owned: profit = sale price - cost (no payout to self)
         if (tx.type === TRANSACTION_TYPE.SALE) {
-          storeOwnedProfit += tx.grossAmount - tx.cost;
+          storeOwnedProfit = storeOwnedProfit.plus(tx.grossAmount.minus(tx.cost));
         }
       } else {
-        totalConsignorPayout += tx.consignorAmount;
+        totalConsignorPayout = totalConsignorPayout.plus(tx.consignorAmount);
       }
     }
   }
@@ -90,16 +93,18 @@ export async function getOrderDetail(id: string) {
 
   timeline.reverse();
 
-  return {
+  // Display boundary: one conversion for the whole payload, so adding a money
+  // column to the query above cannot skip it. See app/lib/finance/serialize.ts.
+  return toPlainMoney({
     order,
     summary: {
       totalFees,
       storeOwnedProfit,
-      ourCut: totalFees + storeOwnedProfit,
+      ourCut: totalFees.plus(storeOwnedProfit),
       totalConsignorPayout,
       itemCount: order.items.length,
       refundedCount,
     },
     timeline,
-  };
+  });
 }

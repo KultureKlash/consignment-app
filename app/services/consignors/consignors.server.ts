@@ -1,4 +1,5 @@
 import prisma from "~/db.server";
+import { toPlainMoney } from "~/lib/finance";
 import { getConsignorBalance } from "~/services/orders";
 import { LISTING_STATUS } from "~/lib/domain";
 import { CONSIGNOR_STATUS } from "~/lib/domain";
@@ -31,7 +32,10 @@ export async function getConsignorDetail(id: string) {
     counts[row.status] = row._count.status;
   }
 
-  return { consignor, balance, counts };
+  // Display boundary: this feeds the admin consignor detail page, which renders
+  // the balance and passes it to computeTax for an invoice figure. Nothing here
+  // drives a write. See app/lib/finance/serialize.ts.
+  return toPlainMoney({ consignor, balance, counts });
 }
 
 /**

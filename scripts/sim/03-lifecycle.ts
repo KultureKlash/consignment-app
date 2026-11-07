@@ -147,7 +147,7 @@ async function pickListingForConsignor(consignorId: string, opts: { category?: "
   const l = pool[0];
   return {
     id: l.id,
-    price: l.price!,
+    price: l.price!.toNumber(),
     variantId: l.variantId,
     shopifyVariantId: l.variant.shopifyVariantId!,
     productCategory: l.variant.product.category,
@@ -207,13 +207,13 @@ async function scenarioA() {
     name: "A2. Transaction.feeAmount matches calculateFee()",
     expected: `${expected.feeAmount.toFixed(2)}`,
     actual: `${txn?.feeAmount.toFixed(2) ?? "(no txn)"}`,
-    ok: !!txn && Math.abs(txn.feeAmount - expected.feeAmount) < 0.01,
+    ok: !!txn && Math.abs(txn.feeAmount.toNumber() - expected.feeAmount.toNumber()) < 0.01,
   });
   check({
     name: "A3. Transaction.consignorAmount matches calculateFee()",
     expected: `${expected.consignorAmount.toFixed(2)}`,
     actual: `${txn?.consignorAmount.toFixed(2) ?? "(no txn)"}`,
-    ok: !!txn && Math.abs(txn.consignorAmount - expected.consignorAmount) < 0.01,
+    ok: !!txn && Math.abs(txn.consignorAmount.toNumber() - expected.consignorAmount.toNumber()) < 0.01,
   });
   check({
     name: "A4. Transaction.type = sale",
@@ -235,7 +235,7 @@ async function scenarioB() {
     orderBy: { price: "asc" },
     select: { price: true },
   });
-  const fixedPrice = lowest?.price ? Math.max(0.01, Math.round((lowest.price - 1) * 100) / 100) : 1.0;
+  const fixedPrice = lowest?.price ? Math.max(0.01, Math.round((lowest.price!.toNumber() - 1) * 100) / 100) : 1.0;
   const oldDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const newDate = new Date();
 

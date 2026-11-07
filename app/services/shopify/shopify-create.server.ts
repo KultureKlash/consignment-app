@@ -269,6 +269,6 @@ export async function addVariantToExistingProduct(
   try {
     await reorderVariantsBySizes(admin, shopifyProductId);
   } catch (err) {
-    logger.error("Failed to reorder size options", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Failed to reorder size options", { error: err });
   }
 }

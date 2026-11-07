@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { toPlainMoney } from "~/lib/finance";
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -14,10 +15,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const balances: Record<string, number> = {};
   for (const c of consignors) {
-    balances[c.id] = await getConsignorBalance(c.id);
+    // Loader boundary: the page only renders this balance.
+    balances[c.id] = (await getConsignorBalance(c.id)).toNumber();
   }
 
-  return { consignors, balances };
+  return toPlainMoney({ consignors, balances });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {

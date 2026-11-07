@@ -33,6 +33,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "@prisma/client";
+import { findOverpaidConsignors } from "~/services/orders/balance.server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -619,6 +620,38 @@ async function main() {
     for (const e of errors.slice(0, 10)) console.log(`    ${e}`);
     if (errors.length > 10) console.log(`    ... and ${errors.length - 10} more`);
   }
+
+  await reconcileBalances();
+}
+
+/**
+ * Fail loudly if any consignor has been paid more than they earned.
+ *
+ * This import deliberately creates no Transaction or Payout rows (see header),
+ * so a clean run must find nothing. A hit means the Neon truncate did not take
+ * and financial rows survived a wipe that dropped the listings they referenced,
+ * leaving payouts stranded against a catalog that no longer backs them. Worth
+ * stopping the world for rather than printing and moving on.
+ */
+async function reconcileBalances() {
+  console.log("\n=== RECONCILIATION: paid vs net earned ===");
+
+  const overpaid = await findOverpaidConsignors({ client: prisma });
+
+  if (overpaid.length === 0) {
+    console.log("  OK - no consignor is paid more than net earned.");
+    return;
+  }
+
+  console.error(`\n  FAILED - ${overpaid.length} consignor(s) paid more than net earned:`);
+  for (const o of overpaid) {
+    console.error(
+      `    ${o.name} <${o.email}> paid $${o.paid.toFixed(2)} > net $${o.net.toFixed(2)} (over by $${o.overage.toFixed(2)})`,
+    );
+  }
+  console.error("\n  Financial rows survived the wipe, or payouts exist without their sales.");
+  console.error("  Do NOT treat this import as complete. Investigate before any payout runs.");
+  process.exitCode = 1;
 }
 
 main()

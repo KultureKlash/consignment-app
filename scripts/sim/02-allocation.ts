@@ -44,7 +44,7 @@ async function loadAllActiveListings(): Promise<ActiveListing[]> {
       variantId: r.variantId,
       consignorId: r.consignorId,
       consignorName: r.consignor.name,
-      price: r.price as number,
+      price: r.price!.toNumber(),
       createdAt: r.createdAt,
     }));
 }

@@ -3,7 +3,7 @@ import { fmt } from "~/lib/currency";
 import { computeTax } from "~/lib/tax";
 import {
   ArrowLeft, ShoppingBag, DollarSign,
-  TrendingUp, Users,
+  TrendingUp, Users, AlertTriangle,
 } from "lucide-react";
 import { ORDER_STATUS, ORDER_PAYMENT_STATUS, TRANSACTION_TYPE } from "~/lib/order-statuses";
 import { OrderItems } from "./OrderItems";
@@ -31,6 +31,17 @@ function getStatusBadge(order: { status: string; paymentStatus: string }): { lab
   if (order.paymentStatus === ORDER_PAYMENT_STATUS.PAID) return { label: "Paid", bg: "#ecfdf5", color: "#059669" };
   if (order.paymentStatus === "voided") return { label: "Voided", bg: "#f3f4f6", color: "#6d7175" };
   return { label: "Pending", bg: "#fffbeb", color: "#d97706" };
+}
+
+type UnmappedLineItem = { shopifyVariantId: string; quantity: number; price: number; reason: string };
+
+/** Order.unmappedLineItems is a Json column, so narrow it before rendering. */
+function readUnmappedLineItems(value: unknown): UnmappedLineItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (v): v is UnmappedLineItem =>
+      typeof v === "object" && v !== null && typeof (v as UnmappedLineItem).shopifyVariantId === "string",
+  );
 }
 
 function formatDate(dateStr: string): string {
@@ -79,6 +90,7 @@ export function OrderDetailPage({ order, summary, timeline }: OrderDetailPagePro
   const orderName = displayOrderName(order);
   const orderDate = formatDate(order.createdAt as unknown as string);
   const statusBadge = getStatusBadge(order);
+  const unmapped = readUnmappedLineItems(order.unmappedLineItems);
 
   return (
     <s-page>
@@ -120,6 +132,37 @@ export function OrderDetailPage({ order, summary, timeline }: OrderDetailPagePro
             {orderDate}
           </p>
         </div>
+
+        {unmapped.length > 0 && (
+          <div className="mb-6 rounded-[10px] border border-amber-300 bg-amber-50 px-4 py-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={15} color="#d97706" className="mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="m-0 text-[13px] font-semibold text-amber-900">
+                  {unmapped.length} line item{unmapped.length === 1 ? "" : "s"} not tracked by this app
+                </p>
+                <p className="m-0 mt-1 text-[12px] text-amber-800">
+                  These were sold in Shopify but have no matching variant here, so they are excluded
+                  from the order total, consignor balances, and inventory sync.
+                </p>
+                <ul className="m-0 mt-2 list-none p-0">
+                  {unmapped.map((item) => (
+                    <li
+                      key={item.shopifyVariantId}
+                      className="text-[12px] text-amber-900 font-mono break-all py-0.5"
+                    >
+                      {item.shopifyVariantId.replace("gid://shopify/ProductVariant/", "Variant ")}
+                      {" — qty "}
+                      {item.quantity}
+                      {" @ $"}
+                      {fmt(item.price)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

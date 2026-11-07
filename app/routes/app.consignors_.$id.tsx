@@ -54,7 +54,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
           await syncInventory({ admin, variant });
         } catch (err) {
-          logger.error("Shopify sync failed for variant", { variantId, error: err instanceof Error ? err.message : String(err) });
+          logger.error("Shopify sync failed for variant", { variantId, error: err });
         }
       }
 
@@ -74,7 +74,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           const variant = await prisma.variant.findUniqueOrThrow({ where: { id: variantId } });
           await syncInventory({ admin, variant });
         } catch (err) {
-          logger.error("Shopify sync failed for variant", { variantId, error: err instanceof Error ? err.message : String(err) });
+          logger.error("Shopify sync failed for variant", { variantId, error: err });
         }
       }
 

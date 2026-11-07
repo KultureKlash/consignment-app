@@ -55,6 +55,7 @@ fly secrets set \
   SCOPES="write_products,read_products,write_inventory,read_inventory" \
   RESEND_API_KEY="<from-resend>" \
   RESEND_FROM_EMAIL="no-reply@konsign.shopkultureklash.com" \
+  CRON_SECRET="$(openssl rand -hex 32)" \
   SENTRY_DSN="<optional-from-sentry>"
 ```
 
@@ -64,6 +65,120 @@ Notes:
   generates one). Save it somewhere safe — losing it logs everyone out
 - Get `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` from
   [Shopify Partners](https://partners.shopify.com) → Apps → Kulture Konsign → API credentials
+- **`CRON_SECRET` is required.** `validateEnv()` fails the boot without it. It gates
+  `/cron/retention`, which erases customer PII past the 90-day window; a missing secret
+  makes that route return 404 and retention silently never happens
+- `SENTRY_DSN` stays optional, but the app now warns at boot without it, because error
+  reporting is then entirely off
+
+---
+
+## 3b. Schedule the PII retention job
+
+> **App name.** This guide writes `konsign.fly.dev`, but `fly.toml` currently says
+> `app = "consignment-app-cp9fjq"` — Fly assigned that when `konsign` turned out to be
+> taken. The live host is therefore `consignment-app-cp9fjq.fly.dev`. The commands below
+> read the name out of `fly.toml` so they stay correct either way; substitute your own
+> if you rename the app.
+
+### What it does
+
+`/cron/retention` nulls `WebhookEvent.rawPayload` on rows older than **90 days** and
+keeps the row. That is the PII control; see the retention section of
+[system-overview.md](system-overview.md). It is idempotent, so a missed day costs
+nothing and a double-run is harmless.
+
+Two windows apply to `WebhookEvent` and they are different controls:
+
+| Window | Mechanism | What happens |
+|---|---|---|
+| 90 days | `/cron/retention` (daily) | `rawPayload` nulled — PII gone, row kept for dedup and audit |
+| 365 days | `/app/cleanup` (manual, admin) | The row itself deleted — audit horizon |
+
+### Set the secret
+
+```bash
+fly secrets set CRON_SECRET="$(openssl rand -hex 32)"
+```
+
+Keep a copy. Setting it triggers a rolling restart, which is expected.
+
+### Create the scheduled machine
+
+Fly runs a scheduled machine on its own and exits; app secrets are injected into it
+automatically, so `CRON_SECRET` does **not** go on the command line.
+
+```bash
+APP="$(awk -F'"' '/^app =/{print $2}' fly.toml)"
+
+fly machine run curlimages/curl:latest \
+  --app "$APP" \
+  --region yul \
+  --schedule daily \
+  --restart no \
+  --vm-memory 256 \
+  --entrypoint /bin/sh \
+  -- -c "curl -fsS --retry 3 --max-time 60 -X POST \
+       -H \"Authorization: Bearer \$CRON_SECRET\" \
+       https://$APP.fly.dev/cron/retention"
+```
+
+- `--schedule daily` — Fly accepts `hourly`, `daily`, `weekly`, `monthly`. There is no
+  cron expression, so you do not get to pick the hour
+- `--restart no` — it is a one-shot job, not a service; without this the machine loops
+- `--entrypoint /bin/sh` — the curl image's entrypoint is `curl` itself, so a shell is
+  needed for `$CRON_SECRET` to expand **inside** the machine
+- `\$CRON_SECRET` is escaped so your local shell leaves it alone; the machine resolves
+  it from the app's secrets
+- `--retry 3` covers a cold start on a scaled-to-zero machine
+
+Flag names have moved between flyctl versions — check `fly machine run --help` if one
+is rejected.
+
+### Verify before trusting it
+
+```bash
+APP="$(awk -F'"' '/^app =/{print $2}' fly.toml)"
+curl -fsS -X POST -H "Authorization: Bearer <CRON_SECRET>" \
+  "https://$APP.fly.dev/cron/retention"
+# {"ok":true,"redactedPayloads":0,"retentionDays":90,"olderThan":"...","ts":"..."}
+
+fly machine list --app "$APP"          # confirm the scheduled machine exists
+fly logs --app "$APP" | grep retention # confirm it fired
+```
+
+A **404** means the secret did not match, or `CRON_SECRET` is unset where the request
+came from. The route returns 404 rather than 401 so it is not discoverable by probing —
+so a 404 is the expected response to a wrong secret, not a routing problem.
+
+`redactedPayloads: 0` is the normal steady state once the job has been running: it only
+counts rows redacted on that run.
+
+### If you would rather not use a Fly machine
+
+Any scheduler that can send one daily request works — the route accepts POST or GET.
+GitHub Actions, using the repo you already have:
+
+```yaml
+# .github/workflows/retention.yml
+name: PII retention
+on:
+  schedule:
+    - cron: "0 4 * * *" # 04:00 UTC daily
+  workflow_dispatch:
+jobs:
+  redact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redact expired webhook payloads
+        run: |
+          curl -fsS --retry 3 --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/cron/retention"
+```
+
+Add `CRON_SECRET` and `APP_URL` as repository secrets. This buys you a real cron
+expression and a visible run history, at the cost of the schedule living outside Fly.
 
 ---
 

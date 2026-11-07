@@ -83,7 +83,7 @@ async function main() {
     where: { consignorId: consignor.id, status: "paid" },
     _sum: { amount: true },
   });
-  const balanceBefore = (txAggBefore._sum.amount ?? 0) - (payoutAggBefore._sum.amount ?? 0);
+  const balanceBefore = Number(txAggBefore._sum.amount ?? 0) - Number(payoutAggBefore._sum.amount ?? 0);
   console.log("STEP 4: Balance before refund");
   console.log(`  Total earnings: $${(txAggBefore._sum.amount ?? 0).toFixed(2)}`);
   console.log(`  Total payouts:  $${(payoutAggBefore._sum.amount ?? 0).toFixed(2)}`);
@@ -172,7 +172,7 @@ async function main() {
       where: { consignorId: consignor.id, status: "paid" },
       _sum: { amount: true },
     });
-    const balanceAfter = (txAggAfter._sum.amount ?? 0) - (payoutAggAfter._sum.amount ?? 0);
+    const balanceAfter = Number(txAggAfter._sum.amount ?? 0) - Number(payoutAggAfter._sum.amount ?? 0);
 
     console.log("STEP 7: Balance after refund");
     console.log(`  Total earnings: $${(txAggAfter._sum.amount ?? 0).toFixed(2)}`);
@@ -189,8 +189,8 @@ async function main() {
 
     // ── Step 9: Show what resale would look like ────────────────
     const resaleGross = newListing.price;
-    const resaleFee = resaleGross * shopConsignor.feeRate;
-    const resaleConsignorAmount = resaleGross - resaleFee;
+    const resaleFee = Number(resaleGross) * shopConsignor.feeRate;
+    const resaleConsignorAmount = Number(resaleGross) - resaleFee;
     console.log("STEP 9: If shop resells this item:");
     console.log(`  Sale price:      $${resaleGross}`);
     console.log(`  Fee (100%):      $${resaleFee} (marketplace keeps)`);

@@ -38,6 +38,13 @@ model Consignor {
   gstNumber      String?                 // GST/HST registration number
   qstNumber      String?                 // QST number (Quebec only)
   storeOwned     Boolean  @default(false)  // true = store-owned inventory, excluded from payouts
+  // feeRate stays Float on purpose. Every money COLUMN is Decimal(10,2), but a
+  // fee rate is a ratio, not an amount: it has no currency, no 2-decimal
+  // meaning, and is never summed, compared against a balance, or paid out.
+  // Making it Decimal would buy nothing and would force a Decimal multiply in
+  // the one place that must stay integer arithmetic — calculateFee converts
+  // gross to integer cents and multiplies by this rate there, which is why
+  // rounding lives in that single function.
   feeRate        Float    @default(0.15)  // consignment fee — e.g. 0.15 = 15% fee, consignor keeps 85%
   status         String   @default("active") // "active" | "suspended"
   suspensionReason String?               // admin-provided reason for suspension
@@ -104,8 +111,8 @@ model Listing {
   consignorId     String
   variantId       String
 
-  price           Float?                // null = awaiting_price (admin created without price, consignor will set)
-  cost            Float?                // acquisition cost (store-owned inventory only)
+  price           Decimal?  @db.Decimal(10, 2) // null = awaiting_price (admin created without price, consignor will set)
+  cost            Decimal?  @db.Decimal(10, 2) // acquisition cost (store-owned inventory only)
   status          String    @default("active") // "submitted" | "approved_awaiting_dropoff" | "awaiting_price" | "active" | "paused" | "pending_sale" | "sold" | "cancelled" | "rejected" | "withdrawal_requested" | "pending_pickup" | "withdrawn"
 
   // Lifecycle timestamps
@@ -139,10 +146,27 @@ model Order {
   id            String      @id @default(cuid())
   shopifyId     String?     @unique
   orderNumber   String?     // Shopify order name e.g. "#KK1042"
-  total         Float
+  total         Decimal     @db.Decimal(10, 2)
   status        String      @default("open")
   paymentStatus String      @default("pending") // "pending" | "paid"
   fulfilledAt   DateTime?
+
+  // Shopify line items with no local Variant — gift cards, products created
+  // outside this app, deleted variants. Recorded rather than aborting the order
+  // so the consignment items in the same cart still settle. Shape:
+  // [{ shopifyVariantId, quantity, price, reason }]
+  unmappedLineItems Json?
+
+  // What Shopify says the customer was charged. Bookkeeping only — these never
+  // feed a consignor credit (see the discount rule in CLAUDE.md). `total` above
+  // stays the sum of allocated listing prices in every code path, so the two are
+  // never interchangeable: `total` is what we owe consignors against, these are
+  // what the customer paid.
+  shopifySubtotal  Decimal? @db.Decimal(10, 2) // line items after line-level discounts, pre-tax, pre-shipping
+  shopifyDiscounts Decimal? @db.Decimal(10, 2) // total discount applied to the order
+  shopifyTax       Decimal? @db.Decimal(10, 2)
+  shopifyShipping  Decimal? @db.Decimal(10, 2)
+  shopifyTotal     Decimal? @db.Decimal(10, 2) // grand total charged, incl. tax + shipping
 
   items     OrderItem[]
 
@@ -156,7 +180,7 @@ model OrderItem {
   orderId   String
   listingId String
 
-  price     Float
+  price     Decimal  @db.Decimal(10, 2)
   status    String   @default("sold") // "sold" | "pending_sale" | "refunded" — see ORDER_ITEM_STATUS
 
   order     Order    @relation(fields: [orderId], references: [id])
@@ -172,16 +196,17 @@ model Transaction {
   type             String          // "sale" | "refund"
 
   // Audit-grade breakdown (immutable snapshot at creation time)
-  salePrice        Float    @default(0) // unit price at time of sale
-  cost             Float    @default(0) // acquisition cost snapshot (store-owned only, 0 for consignment)
+  salePrice        Decimal  @default(0) @db.Decimal(10, 2) // unit price at time of sale
+  cost             Decimal  @default(0) @db.Decimal(10, 2) // acquisition cost snapshot (store-owned only, 0 for consignment)
+  // feeRate is a RATE, not an amount — see the note on Consignor.feeRate.
   feeRate          Float    @default(0) // fee rate snapshot — e.g. 0.15 = 15%
-  grossAmount      Float    @default(0) // salePrice (per-item, always 1 unit)
-  feeAmount        Float    @default(0) // grossAmount × feeRate
-  consignorAmount  Float    @default(0) // grossAmount × (1 - feeRate)
+  grossAmount      Decimal  @default(0) @db.Decimal(10, 2) // salePrice (per-item, always 1 unit)
+  feeAmount        Decimal  @default(0) @db.Decimal(10, 2) // grossAmount × feeRate
+  consignorAmount  Decimal  @default(0) @db.Decimal(10, 2) // grossAmount × (1 - feeRate)
 
   // Net amount for balance calculations
   // Sales: +consignorAmount. Refunds: -consignorAmount
-  amount           Float
+  amount           Decimal  @db.Decimal(10, 2)
 
   consignor        Consignor  @relation(fields: [consignorId], references: [id])
   orderItem        OrderItem? @relation(fields: [orderItemId], references: [id])
@@ -203,13 +228,22 @@ model WebhookEvent {
   processedAt     DateTime?
   createdAt       DateTime  @default(now())
 
+  // Exactly what Shopify sent, stored before the handler runs. Lets a corrupted
+  // order be replayed from source, and lets the reconciler compare the ledger
+  // against Shopify's own numbers without an Admin API call per order.
+  //
+  // CONTAINS CUSTOMER PII (name, email, shipping address, phone). It is retained
+  // only as long as the WebhookEvent row; prune it on the same schedule — see the
+  // cleanup route. Do not surface it in the portal or any consignor-facing view.
+  rawPayload      Json?
+
   @@index([topic, status, createdAt])
 }
 
 model Payout {
   id           String   @id @default(cuid())
   consignorId  String
-  amount       Float
+  amount       Decimal  @db.Decimal(10, 2)
   status       String   @default("pending") // "pending" | "invoiced" | "paid"
   invoiceSent  Boolean  @default(false)      // auto-set when invoice uploaded
   invoiceData  String?                       // base64-encoded PDF

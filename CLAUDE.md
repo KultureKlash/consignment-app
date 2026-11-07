@@ -53,6 +53,20 @@ Use `LISTING_STATUS`, `ORDER_STATUS`, `PAYOUT_STATUS`, `TRANSACTION_TYPE`, `CONS
 ### Finance
 Use `calculateFee` from `~/lib/finance`. Never inline `price * feeRate`.
 
+### Discounts — the store absorbs them
+Consignors set their price and are credited on **their listing price**, never on
+what the customer actually paid. The store takes only its fee percentage, so any
+order discount comes entirely out of the store's side.
+
+`grossAmount` on a Transaction is therefore the local listing price, not a Shopify
+line amount. Never recompute a consignor's credit from Shopify's discounted line
+total.
+
+Consequence to watch: a discount larger than the fee rate means the store paid out
+more than it collected on that item. Operationally consignment variants are meant
+to be excluded from discounts in Shopify; `scripts/sim/10-reconcile-shopify.ts`
+flags any discount that lands on one anyway.
+
 ### Imports
 Import from the folder, not the file:
 ```typescript
@@ -64,7 +78,7 @@ import { createListing } from "~/services/listings/mutations.server"; // bad
 
 ## Working rules (how I want you to work)
 
-1. **Tests before commit.** Run `npm run build && npx vitest run` before every commit. Currently ~418 tests passing.
+1. **Tests before commit.** Run `npm run build && npx vitest run` before every commit. Currently 514 tests passing.
 2. **Feature branches only.** Never commit directly to `main`.
 3. **Mobile responsive.** All portal pages must work on mobile.
 4. **Read first.** Search ALL files before claiming something doesn't exist. Don't assume from memory.
@@ -94,3 +108,14 @@ Before ending a session, ask yourself:
 - Did the test count change meaningfully? → update the number in this file
 
 The Stop hook will remind you.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.

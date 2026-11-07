@@ -104,16 +104,16 @@ export async function createListing({
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (attempt < 3) {
-          logger.warn("Shopify sync attempt failed, retrying", { attempt, error: msg });
+          logger.warn("Shopify sync attempt failed, retrying", { attempt, error: err });
           await new Promise((r) => setTimeout(r, attempt * 2000));
         } else {
-          logger.error("Shopify sync failed after 3 attempts (will retry on next operation)", { error: msg });
+          logger.error("Shopify sync failed after 3 attempts (will retry on next operation)", { error: err });
         }
       }
     }
   };
   backgroundSync().catch((err) => {
-    logger.error("Background sync crashed unexpectedly", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Background sync crashed unexpectedly", { error: err });
   });
 
   return listings[0];
