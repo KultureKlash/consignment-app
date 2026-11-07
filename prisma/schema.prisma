@@ -144,6 +144,12 @@ model Order {
   paymentStatus String      @default("pending") // "pending" | "paid"
   fulfilledAt   DateTime?
 
+  // Shopify line items with no local Variant — gift cards, products created
+  // outside this app, deleted variants. Recorded rather than aborting the order
+  // so the consignment items in the same cart still settle. Shape:
+  // [{ shopifyVariantId, quantity, price, reason }]
+  unmappedLineItems Json?
+
   items     OrderItem[]
 
   createdAt DateTime @default(now())

@@ -49,11 +49,22 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
         opts.handler({ shop, payload, shopifyObjectId, request }),
       );
       logger.info("Webhook processed", { topic, shopifyObjectId });
+      return new Response();
     } catch (error) {
-      logger.error("Webhook processing failed", { topic, shopifyObjectId, error: error instanceof Error ? error.message : String(error) });
+      // 500 so Shopify redelivers. withWebhookDedup has already marked this
+      // event "failed", and its failed branch deletes the row on redelivery,
+      // so the retry re-runs the handler instead of being deduped away.
+      // Swallowing this as a 200 made every transient Shopify or database
+      // error permanent — nothing else in the system replays a failed event.
+      logger.error("Webhook processing failed", {
+        topic,
+        shop,
+        webhookId,
+        shopifyObjectId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return new Response("Webhook processing failed", { status: 500 });
     }
-
-    return new Response();
   };
 }
 
