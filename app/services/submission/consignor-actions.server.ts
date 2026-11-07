@@ -240,7 +240,7 @@ export async function setUnpricedListingPrice({
       await syncInventory({ admin, variant: syncedVariant });
     }
   } catch (err) {
-    logger.error("Shopify sync failed after initial price set (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify sync failed after initial price set (will retry on next operation)", { error: err });
   }
 
   return updated;
@@ -307,12 +307,12 @@ export async function bulkSetUnpricedListingPrices({
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           syncErrors.push(`Variant ${variantId}: ${msg}`);
-          logger.error("Shopify sync failed during bulk price set", { variantId, error: msg });
+          logger.error("Shopify sync failed during bulk price set", { variantId, error: err });
         }
       }
     }
   } catch (err) {
-    logger.error("Bulk price sync setup failed", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Bulk price sync setup failed", { error: err });
   }
 
   return { updated: listings.length, syncErrors };
@@ -365,7 +365,7 @@ export async function updateActiveListingPrice({
       await syncInventory({ admin, variant });
     }
   } catch (err) {
-    logger.error("Shopify price sync failed (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify price sync failed (will retry on next operation)", { error: err });
   }
 
   return updated;
@@ -423,7 +423,7 @@ export async function bulkUpdateActiveListingPrice({
       }
     }
   } catch (err) {
-    logger.error("Shopify price sync failed during bulk update (will retry on next operation)", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify price sync failed during bulk update (will retry on next operation)", { error: err });
   }
 
   return { updated: eligible.length, skipped: listingIds.length - eligible.length };
@@ -473,7 +473,7 @@ export async function requestWithdrawal({
       await syncInventory({ admin, variant });
     }
   } catch (err) {
-    logger.error("Shopify sync failed during withdrawal request", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify sync failed during withdrawal request", { error: err });
   }
 
   return updated;

@@ -188,7 +188,7 @@ export async function bulkRequestWithdrawal({
       await syncVariantsOnce(admin, eligible.map((l) => l.variant), "withdrawal requested");
     }
   } catch (err) {
-    logger.error("Shopify sync failed during bulk withdrawal request", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify sync failed during bulk withdrawal request", { error: err });
   }
 
   return { requested: eligible.length, skipped: listingIds.length - eligible.length };

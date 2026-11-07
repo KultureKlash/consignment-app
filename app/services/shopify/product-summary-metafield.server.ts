@@ -164,7 +164,7 @@ export async function syncProductSummaryMetafield({
   } catch (err) {
     logger.error("syncProductSummaryMetafield crashed", {
       productId,
-      error: err instanceof Error ? err.message : String(err),
+      error: err,
     });
   }
 }

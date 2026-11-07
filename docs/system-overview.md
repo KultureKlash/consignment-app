@@ -514,6 +514,78 @@ arrives after the 5-minute stale window.
 
 ---
 
+## PII retention — WebhookEvent.rawPayload
+
+`rawPayload` is the only place this app stores storefront-customer PII: an order
+payload carries the customer's name, email, phone and shipping address. The row
+around it holds no PII (ids, topic, status) and is what dedup and audit depend on.
+
+**Retention window: 90 days.** Long enough to replay a corrupted order and to
+reconcile a closed quarter; short enough to be a defensible retention period.
+Retention nulls the payload and **keeps the row**.
+
+| Trigger | Effect |
+|---|---|
+| Daily `/cron/retention` | Nulls `rawPayload` where `createdAt` is older than 90 days |
+| `customers/redact` | Nulls it for the named orders, plus any payload whose embedded `customer.id` matches |
+| `shop/redact` | Nulls every stored payload |
+
+`/cron/retention` has no Shopify session to authenticate against, so it is guarded
+by a `CRON_SECRET` bearer token compared with `timingSafeEqual`, and returns **404**
+on a bad secret so it is not discoverable by probing. `CRON_SECRET` is required in
+production — without it the route 404s and retention silently never happens, so
+`validateEnv()` fails the boot instead. Scheduling is in `docs/DEPLOY-FLY.md`.
+
+Rules this depends on:
+- No portal service, route, or component may reference `rawPayload` or query
+  `WebhookEvent` at all. `tests/pii-retention.test.ts` asserts both by scanning the
+  portal surface, and keeps an allowlist of the files permitted to touch it.
+- The privacy-compliance handlers pass `storePayload: false`, because their payloads
+  name the very customer being erased — storing them would manufacture the PII the
+  request exists to remove.
+
+### Mandatory privacy-compliance webhooks
+
+Declared under `[webhooks.privacy_compliance]` in `shopify.app.toml`. Shopify requires
+all three for any app that can read customer data.
+
+| Topic | Route | Behavior |
+|---|---|---|
+| `customers/data_request` | `webhooks.customers.data_request.tsx` | Logs the request and how many stored payloads are held. Shopify gives the **merchant** 30 days to deliver the data; the app cannot email it |
+| `customers/redact` | `webhooks.customers.redact.tsx` | Redacts that customer's payloads |
+| `shop/redact` | `webhooks.shop.redact.tsx` | Redacts all payloads 48h after uninstall |
+
+Scope note on `shop/redact`: it clears customer PII only. Consignors, listings, orders,
+transactions and payouts are deliberately retained — that is the store's financial
+record, and deleting it on uninstall would destroy payout history the merchant may
+still owe against. Erasing it is a business decision with accounting consequences, not
+something a webhook should do silently.
+
+---
+
+## Error reporting
+
+`logger.error` sends the **original Error** to `Sentry.captureException`, so the stack
+survives and Sentry groups by it. It previously called `captureMessage` with a constant
+log line, which collapsed every unrelated failure sharing that line into one issue and
+carried no stack — and every call site passed `err.message`, destroying the stack before
+Sentry could see it. Pass the Error itself:
+
+```typescript
+logger.error("Webhook processing failed", { topic, shop, shopifyEventId, orderId, error });
+```
+
+These meta keys are promoted to searchable Sentry **tags**: `topic`, `shop`,
+`shopifyEventId`, `orderId`, `consignorId`. Everything else becomes a non-searchable
+extra. `captureMessage` is now only the fallback for conditions with no Error (Shopify
+`userErrors`, for instance).
+
+`logger.error` returns a promise. Await it on paths about to return a response —
+the webhook error path does, then calls `flushSentry()`, because a fire-and-forget
+capture can be lost when the response is flushed and the request torn down.
+
+---
+
 ## Routes
 
 ### File-System Routing

@@ -112,7 +112,7 @@ export async function resolveShopifyTaxonomyId(
     taxonomyCache.set(searchTerm, id);
     return id;
   } catch (err) {
-    logger.error("Taxonomy resolution failed", { error: err instanceof Error ? err.message : String(err), searchTerm });
+    logger.error("Taxonomy resolution failed", { error: err, searchTerm });
     return null;
   }
 }

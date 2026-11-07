@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import type { Prisma } from "@prisma/client";
 import prisma from "~/db.server";
-import { logger } from "~/lib/system";
+import { logger, flushSentry } from "~/lib/system";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -17,6 +17,14 @@ interface WebhookHandlerOptions {
    * Defaults to `gid://shopify/Order/${payload.id}`.
    */
   getObjectId?: (payload: Record<string, any>) => string;
+  /**
+   * Persist the raw payload on the WebhookEvent row. Default true.
+   *
+   * Set false for the privacy-compliance topics: their payloads name the very
+   * customer whose data we are being told to erase, so storing them would
+   * manufacture the PII the request exists to remove.
+   */
+  storePayload?: boolean;
   /** The actual business logic. Receives everything it might need. */
   handler: (ctx: {
     shop: string;
@@ -51,7 +59,7 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
         topic,
         shopifyObjectId,
         () => opts.handler({ shop, payload, shopifyObjectId, request }),
-        payload,
+        opts.storePayload === false ? undefined : payload,
       );
       logger.info("Webhook processed", { topic, shopifyObjectId });
       return new Response();
@@ -61,13 +69,18 @@ export function createWebhookHandler(opts: WebhookHandlerOptions) {
       // so the retry re-runs the handler instead of being deduped away.
       // Swallowing this as a 200 made every transient Shopify or database
       // error permanent — nothing else in the system replays a failed event.
-      logger.error("Webhook processing failed", {
+      // The Error itself, not its message — the stack is the point. Tag names
+      // match what Sentry alert rules filter on.
+      await logger.error("Webhook processing failed", {
         topic,
         shop,
-        webhookId,
-        shopifyObjectId,
-        error: error instanceof Error ? error.message : String(error),
+        shopifyEventId: webhookId,
+        orderId: shopifyObjectId,
+        error,
       });
+      // We are about to return, so the request can be torn down before a
+      // fire-and-forget capture reaches Sentry.
+      await flushSentry();
       return new Response("Webhook processing failed", { status: 500 });
     }
   };

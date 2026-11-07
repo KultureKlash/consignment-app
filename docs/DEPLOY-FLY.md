@@ -55,6 +55,7 @@ fly secrets set \
   SCOPES="write_products,read_products,write_inventory,read_inventory" \
   RESEND_API_KEY="<from-resend>" \
   RESEND_FROM_EMAIL="no-reply@konsign.shopkultureklash.com" \
+  CRON_SECRET="$(openssl rand -hex 32)" \
   SENTRY_DSN="<optional-from-sentry>"
 ```
 
@@ -64,6 +65,41 @@ Notes:
   generates one). Save it somewhere safe — losing it logs everyone out
 - Get `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` from
   [Shopify Partners](https://partners.shopify.com) → Apps → Kulture Konsign → API credentials
+- **`CRON_SECRET` is required.** `validateEnv()` fails the boot without it. It gates
+  `/cron/retention`, which erases customer PII past the 90-day window; a missing secret
+  makes that route return 404 and retention silently never happens
+- `SENTRY_DSN` stays optional, but the app now warns at boot without it, because error
+  reporting is then entirely off
+
+---
+
+## 3b. Schedule the PII retention job
+
+`/cron/retention` nulls `WebhookEvent.rawPayload` on rows older than 90 days, keeping
+the row for dedup and audit. It must run daily. See the PII retention section of
+[system-overview.md](system-overview.md) for what the window covers.
+
+All the job needs is one request a day carrying `Authorization: Bearer <CRON_SECRET>`.
+Any scheduler works; the route accepts POST or GET. On Fly:
+
+```bash
+fly machine run curlimages/curl:latest \
+  --schedule=daily --region yul \
+  --env CRON_SECRET="<same-value-as-the-app-secret>" \
+  -- sh -c 'curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://konsign.fly.dev/cron/retention'
+```
+
+Verify by hand before trusting the schedule:
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer <CRON_SECRET>" \
+  https://konsign.fly.dev/cron/retention
+# {"ok":true,"redactedPayloads":0,"retentionDays":90,"olderThan":"...","ts":"..."}
+```
+
+A 404 means the secret did not match, or `CRON_SECRET` is unset where the request
+originated. The route deliberately returns 404 rather than 401 so it is not
+discoverable by probing.
 
 ---
 

@@ -50,7 +50,7 @@ export async function checkinListing({
     const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: variant.id } });
     await safeSyncInventory({ admin, variant: syncedVariant, context: "activation" });
   } catch (err) {
-    logger.error("Shopify sync failed during activation", { error: err instanceof Error ? err.message : String(err) });
+    logger.error("Shopify sync failed during activation", { error: err });
   }
 
   sendListingLiveEmail(updated.consignor, [{

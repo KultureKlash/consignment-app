@@ -46,7 +46,7 @@ export async function adminEditProduct({
     try {
       await updateShopifyProductImage({ admin, productId, shopifyProductId: updated.shopifyProductId, imageData });
     } catch (err) {
-      logger.error("Image upload to Shopify failed", { error: err instanceof Error ? err.message : String(err) });
+      logger.error("Image upload to Shopify failed", { error: err });
     }
   }
 
@@ -54,7 +54,7 @@ export async function adminEditProduct({
     try {
       await updateShopifyProduct({ admin, product: updated });
     } catch (err) {
-      logger.error("Shopify product update failed", { error: err instanceof Error ? err.message : String(err) });
+      logger.error("Shopify product update failed", { error: err });
     }
   }
 
@@ -154,7 +154,7 @@ export async function adminEditListing({
       const syncedVariant = await prisma.variant.findUniqueOrThrow({ where: { id: updated.variantId } });
       await syncInventory({ admin, variant: syncedVariant });
     } catch (err) {
-      logger.error("Shopify sync failed after admin price activation", { error: err instanceof Error ? err.message : String(err), listingId });
+      logger.error("Shopify sync failed after admin price activation", { error: err, listingId });
     }
   } else if (admin && [LISTING_STATUS.ACTIVE, LISTING_STATUS.PENDING_SALE].includes(listing.status as any) && updated.variant.shopifyVariantId) {
     const shopifyProductId = updated.variant.product.shopifyProductId;
@@ -178,7 +178,7 @@ export async function adminEditListing({
 
         await syncInventory({ admin, variant: updated.variant });
       } catch (err) {
-        logger.error("Shopify sync after listing edit failed", { error: err instanceof Error ? err.message : String(err), listingId });
+        logger.error("Shopify sync after listing edit failed", { error: err, listingId });
       }
     }
   }
@@ -274,7 +274,7 @@ export async function bulkEditListings({
           await updateShopifyProduct({ admin, product: fresh });
         }
       } catch (err) {
-        logger.error("Bulk edit: Shopify product sync failed", { productId, error: err instanceof Error ? err.message : String(err) });
+        logger.error("Bulk edit: Shopify product sync failed", { productId, error: err });
       }
     }
   }

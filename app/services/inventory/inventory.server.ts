@@ -186,6 +186,6 @@ export async function safeSyncInventory({
   try {
     await syncInventory({ admin, variant });
   } catch (err) {
-    logger.error(`Shopify sync failed${context ? ` during ${context}` : ""}`, { error: err instanceof Error ? err.message : String(err) });
+    logger.error(`Shopify sync failed${context ? ` during ${context}` : ""}`, { error: err });
   }
 }
