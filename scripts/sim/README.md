@@ -67,7 +67,7 @@ npx tsx scripts/sim/09-stress.ts 100 --keep # keep the data in prod
 
 | Script | Catches |
 |---|---|
-| 01 audit | Null/zero prices, FK orphans, missing Shopify links, duplicate emails |
+| 01 audit | Null/zero prices, FK orphans, missing Shopify links, duplicate emails, consignors paid more than net earned |
 | 02 allocation | Drift between `processOrder()` SQL and the documented FIFO/lowest-price rule |
 | 03 lifecycle | Broken `creditOrder`/`createPayout`/`markPaid`/`refundOrder`/`ReassignmentLog` flow |
 | 04 parity | Shopify variant qty != count(active listings at lowest price) |
@@ -79,8 +79,12 @@ npx tsx scripts/sim/09-stress.ts 100 --keep # keep the data in prod
 
 ## Findings surfaced by these sims
 
-1. **Variant recreation after refund/reassign (FIXED on branch `fix/refund-reassign-shopify-variant-recreation`)** — when a size's last unit sold, the deleted Shopify variant was never recreated on refund-restore or post-payout reassignment.
-2. **OTP rate limit is dead code (OPEN)** — `requestOtp` deletes all prior `OtpCode` rows (otp.server.ts:42) before the per-hour count window (otp.server.ts:35-38) can accumulate, so the "max 3 per hour" guard never fires. `06-otp.ts` check 8 documents this.
+1. **Variant recreation after refund/reassign (FIXED, merged to `main`)** — when a size's last unit sold, the deleted Shopify variant was never recreated on refund-restore or post-payout reassignment.
+2. **OTP rate limit was dead code (FIXED in `49df987`)** — `requestOtp` deleted all prior `OtpCode` rows before the per-hour count window could accumulate, so the "max 3 per hour" guard never fired. It now soft-invalidates (sets `usedAt`) so the window survives. `06-otp.ts` check 8 covers it.
+3. **Webhook failures were silently dropped (FIXED)** — `createWebhookHandler` returned 200 on handler error, so Shopify never redelivered, and nothing replays `WebhookEvent` rows with status `failed`. It returns 500 now. See `docs/system-overview.md`.
+4. **Invariant 4 in `09-stress.ts` was a false positive (FIXED)** — it compared `paid`, summed from payouts created during the run, against `net` scoped to `runOrderIds`. Phase 2 selects payout transactions with no run filter (line 133), so a run payout also settles pre-existing unpaid sales. Any consignor carrying unpaid sales before the run tripped it, and the reported overage was always exactly their pre-existing eligible balance. It now calls `findOverpaidConsignors()`, which compares whole populations per consignor.
+
+   The lesson generalizes: **never scope one side of a money invariant and not the other.** A payout settles transactions by age, not by batch.
 
 ## Known gotcha — null categories in imported data
 

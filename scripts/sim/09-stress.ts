@@ -17,6 +17,7 @@ import { prisma, check, printSummary, header } from "./_shared.js";
 import { creditOrder } from "~/services/orders/processing.server.js";
 import { refundOrder } from "~/services/orders/refunds.server.js";
 import { createPayout, markInvoiced, markPaid } from "~/services/admin/payouts.server.js";
+import { findOverpaidConsignors } from "~/services/orders/balance.server.js";
 import { calculateFee } from "~/lib/fee-calc.js";
 
 const COUNT = Number(process.argv.find((a) => /^\d+$/.test(a))) || 100;
@@ -213,29 +214,26 @@ async function main() {
     ok: refundBad === 0,
   });
 
-  // 4. System invariant: for each consignor, outstanding owed >= 0 and
-  //    paid out <= net earned.
-  const consignorIds = [...new Set(runTxns.map((t) => t.consignorId))];
-  let balanceBad = 0;
-  const balDetails: string[] = [];
-  for (const cid of consignorIds) {
-    const cTx = runTxns.filter((t) => t.consignorId === cid);
-    const net = cTx.reduce((s, t) => s + t.amount, 0); // sales positive, refunds negative
-    // payouts for this consignor from this run
-    const payouts = await prisma.payout.findMany({
-      where: { id: { in: created.payoutIds }, consignorId: cid },
-      select: { amount: true, status: true },
-    });
-    const paid = payouts.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-    // paid must never exceed net earned (can't pay out more than owed)
-    if (paid - net > 0.02) { balanceBad++; balDetails.push(`  consignor ${cid}: paid $${paid.toFixed(2)} > net $${net.toFixed(2)}`); }
-  }
+  // 4. System invariant: no consignor is paid more than net earned.
+  //
+  // This must compare WHOLE populations, not run-scoped subsets. Phase 2 selects
+  // payout transactions with `{ consignorId, type: sale, payoutItems: none }` and
+  // no run filter (line 133), so a run payout settles pre-existing unpaid sales
+  // too. Measuring `paid` from those payouts against a `net` scoped to
+  // `runOrderIds` compared two different populations and reported a false
+  // positive for every consignor who already had unpaid sales — the overage was
+  // always exactly their pre-existing eligible balance.
+  const consignorCount = await prisma.consignor.count();
+  const overpaid = await findOverpaidConsignors({ client: prisma });
   check({
     name: "4. No consignor paid out more than net earned",
-    expected: `${consignorIds.length} consignors OK`,
-    actual: `${consignorIds.length - balanceBad} OK`,
-    ok: balanceBad === 0,
-    details: balDetails.slice(0, 10).join("\n"),
+    expected: `${consignorCount} consignors OK`,
+    actual: `${consignorCount - overpaid.length} OK`,
+    ok: overpaid.length === 0,
+    details: overpaid
+      .slice(0, 10)
+      .map((o) => `  ${o.name}: paid $${o.paid.toFixed(2)} > net $${o.net.toFixed(2)} (over by $${o.overage.toFixed(2)})`)
+      .join("\n"),
   });
 
   // 5. Post-payout refunds created reassignments, NOT clawback negative txns.

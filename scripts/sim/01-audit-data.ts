@@ -9,6 +9,7 @@
 //   6. Distinct counts: consignors / products / variants / active listings
 
 import { prisma, check, printSummary, header } from "./_shared.js";
+import { findOverpaidConsignors } from "~/services/orders/balance.server.js";
 
 async function main() {
   header("scripts/sim/01-audit-data.ts");
@@ -158,6 +159,24 @@ async function main() {
     expected: "0 variants with empty size",
     actual: `${emptySizes} variants`,
     ok: emptySizes === 0,
+  });
+
+  // ── Check 7: reconciliation — nobody paid more than they earned ──
+  // The one check here that is about money rather than referential integrity.
+  // A hit means real overpayment: either payouts outlived the sales backing
+  // them, or refunds landed after a payout without reassignment.
+  const overpaid = await findOverpaidConsignors({ client: prisma });
+  check({
+    name: "No consignor is paid more than net earned",
+    expected: "0 overpaid consignors",
+    actual: `${overpaid.length} overpaid`,
+    ok: overpaid.length === 0,
+    details:
+      overpaid.length > 0
+        ? overpaid
+            .map((o) => `${o.name} <${o.email}>: paid $${o.paid.toFixed(2)} > net $${o.net.toFixed(2)} (over by $${o.overage.toFixed(2)})`)
+            .join("\n")
+        : undefined,
   });
 
   printSummary();
